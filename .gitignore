@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env*
+# Personal training data (exports, notes) stays out of git; it lives in Google Drive.
+data/private/

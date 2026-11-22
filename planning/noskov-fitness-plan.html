@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noskov Fitness Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a planning document for a founder who programs workouts
+   IDEA the gym's programming spreadsheet, made live: week rows, color-coded day headers
+   PICTURE the zoomable program calendar (year / 8 weeks / week) at the top
+   COLOUR white ground, near-black ink, the sheet's own W salmon, G blue, M yellow; marker red accent
+   TYPE Inter Tight 700 for titles, Inter for text
+   LAYOUT title and summary across the top, calendar full width beneath; sections stack below */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#121417);--ink:light-dark(#15171c,#e9eaee);--mute:light-dark(#5d6270,#a3a8b5);--line:light-dark(#e3e5ea,#2a2e36);--panel:light-dark(#f6f7f9,#1a1d22);--acc:light-dark(#c8352a,#ff6b5c);
+--W:#E69999;--G:#99CCFF;--M:#FFFF99;--L1:#D9D9D9;--L2:#999999;--L3:#222222;--V1:#9FC5E8;--V2:#6FA8DC;--V3:#0B5394;--task:#FF9900;--time:#674EA7}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Inter Tight",Inter,sans-serif;letter-spacing:-.02em;line-height:1.08;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,4.4vw,50px)}h2{font-size:clamp(24px,2.8vw,34px);margin-bottom:10px}h3{font-size:19px;margin-bottom:6px}
+p{margin:0 0 12px;max-width:70ch}
+.band{padding:clamp(26px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.alt{background:var(--panel)}
+.nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:4px;overflow-x:auto;padding:8px max(5vw,16px)}
+.nav a{flex:none;color:var(--ink);text-decoration:none;font-size:14px;padding:8px 10px;border-radius:6px}
+.nav a:hover{background:var(--panel)}
+.top{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:32px;align-items:end;margin-bottom:22px}
+.lede{font-size:18px;color:var(--ink)}
+.small{font-size:13px;color:var(--mute)}
+.chip{font-style:normal;display:inline-block;font-size:12px;font-weight:600;line-height:1;padding:4px 6px;border-radius:3px;color:#15171c;white-space:nowrap}
+.w{background:var(--W)}.g{background:var(--G)}.m{background:var(--M)}
+.l1{background:var(--L1)}.l2{background:var(--L2)}.l3{background:var(--L3);color:#fff}
+.v1{background:var(--V1)}.v2{background:var(--V2)}.v3{background:var(--V3);color:#fff}
+.task{background:var(--task)}.time{background:var(--time);color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--mute);align-items:center}
+.legend span{display:inline-flex;gap:4px;align-items:center}
+.zoom{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.cal{border:1px solid var(--line);border-radius:10px;overflow:auto;background:var(--bg)}
+.yr{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:2px;padding:10px;min-width:520px}
+.yr .wk{font-size:11px;color:var(--mute);align-self:center}
+.yr .d{height:16px;display:flex;border-radius:2px;overflow:hidden;cursor:pointer;border:0;padding:0;min-height:0;background:var(--panel)}
+.yr .d i{flex:1}
+.yr .d.b{outline:2px solid var(--acc);outline-offset:-2px}
+.yr .hd{font-size:11px;color:var(--mute);text-align:center}
+.ew{display:grid;grid-template-columns:62px repeat(7,minmax(118px,1fr));min-width:900px}
+.ew>div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;font-size:12px}
+.ew .lab{font-size:12px;color:var(--mute);font-weight:600}
+.hdr{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:4px}
+.hdr .chip{font-size:11px;padding:3px 4px}
+.ttl{font-weight:600;line-height:1.3}
+.bm{color:var(--acc);font-weight:700}
+.week{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));min-width:1060px}
+.week>div{border-right:1px solid var(--line);padding:10px}
+.week .dt{font-weight:600;font-size:14px;margin-bottom:6px}
+.week pre{white-space:pre-wrap;font:13px/1.45 Inter,sans-serif;margin:6px 0 0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:16px}
+.alt .card{background:var(--bg)}
+figure{margin:0}figcaption{font-size:13px;color:var(--mute);margin-top:6px}
+svg.dg{width:100%;height:auto;display:block;color:var(--ink)}
+svg text{font-family:Inter,sans-serif;font-size:13px;fill:currentColor}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:13px;color:var(--mute)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto}
+.bars .row{display:grid;grid-template-columns:150px minmax(0,1fr) 52px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.bars .trk{position:relative;height:16px;background:var(--panel);border-radius:3px}
+.bars .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--ink)}
+.bars .tgt{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed var(--acc)}
+.bars .row b{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.heat td{padding:3px 4px;text-align:center;font-size:12px;border-bottom:1px solid var(--line)}
+.heat td:first-child{text-align:left;white-space:nowrap}
+.heat .grp td{font-weight:700;padding-top:10px}
+.phone{border:10px solid #15171c;border-radius:30px;padding:16px 14px;background:var(--bg);max-width:340px;font-size:14px}
+.phone .who{font-weight:700;font-size:18px;font-family:"Inter Tight",sans-serif}
+.note{border-left:3px solid var(--acc);padding:8px 10px;background:var(--panel);border-radius:0 6px 6px 0;margin-top:10px;font-size:13.5px}
+.rule{display:flex;gap:10px;align-items:baseline;margin:6px 0}
+.rule b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:12px;display:inline-grid;place-items:center}
+ol.q{padding-left:22px}ol.q li{margin:8px 0;max-width:75ch}
+.phase{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.phase div{border-top:6px solid var(--ink);padding:8px 4px 0;font-size:13.5px}
+.phase div:nth-child(n+5){border-top-color:var(--mute)}
+.phase b{display:block;font-family:"Inter Tight",sans-serif;font-size:16px}
+.sl{display:grid;grid-template-columns:170px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
+input[type=range]{width:100%;accent-color:var(--acc);height:28px}
+@media(max-width:900px){.top,.grid2{grid-template-columns:minmax(0,1fr)}.grid3{grid-template-columns:minmax(0,1fr)}.phase{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.bars .row{grid-template-columns:100px minmax(0,1fr) 44px}.sl{grid-template-columns:110px minmax(0,1fr) 40px}table{font-size:13px}th,td{padding:6px 4px}}
+@media(prefers-reduced-motion:no-preference){.yr .d{transition:transform .12s}.yr .d:hover{transform:scaleY(1.4)}}
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="Sections">
+<a href="#calendar">Calendar</a><a href="#system">System</a><a href="#movements">Movements</a><a href="#workouts">Workouts</a><a href="#engine">Engine</a><a href="#analysis">Analysis</a><a href="#group">Group scaling</a><a href="#athlete">Athlete view</a><a href="#profile">Fitness profile</a><a href="#roadmap">Roadmap</a><a href="#platform">Platform</a><a href="#questions">Questions</a>
+</nav>
+
+<section class="band" id="calendar"><div class="wrap">
+<div class="top">
+<div>
+<h1>Noskov Fitness: your programming spreadsheet, made live</h1>
+<p class="small" style="margin-top:8px">Planning draft v1 · November 22, 2026 · Phase 1 scope: workout programming + basic results for Vadim, Olga, Sasha and Anton</p>
+</div>
+<p class="lede">The main screen is your <b>2017 (2013)</b> sheet as an app. Each week is a row and each day has the color-coded header. You can zoom out to a year to check variety. Every number in the header is <b>computed from the workout itself</b>, not typed by hand. That way the analysis map stays accurate automatically.</p>
+</div>
+<div class="legend">
+<span><i class="chip w">W</i> weightlifting</span><span><i class="chip g">G</i> gymnastics</span><span><i class="chip m">M</i> monostructural</span>
+<span>load <i class="chip l1">light</i><i class="chip l2">med</i><i class="chip l3">heavy</i></span>
+<span>volume <i class="chip v1">low</i><i class="chip v2">med</i><i class="chip v3">high</i></span>
+<span>priority <i class="chip task">task</i><i class="chip time">time</i></span>
+<span><b class="bm">★</b> benchmark</span>
+</div>
+<div class="zoom" role="group" aria-label="Zoom">
+<button id="zY" aria-pressed="true">Year</button><button id="z8" aria-pressed="false">8 weeks</button><button id="zW" aria-pressed="false">Week</button>
+</div>
+<div class="cal" id="cal"></div>
+<p class="small" style="margin-top:8px" id="calnote">Weeks of Dec 17, 2012 to Jan 6, 2013 are transcribed from your 2017 (2013) sheet. The rest of the year is generated sample data so you can see the zoomed-out view. Click any day to open its week.</p>
+</div></section>
+
+<section class="band alt" id="system"><div class="wrap">
+<h2>One loop: program, perform, measure, adjust</h2>
+<p>Everything hangs off two clean libraries: <b>movements</b> and <b>workouts</b>. You place workouts on the calendar as the group's Rx version. Each athlete gets an automatic scaled copy with their own coaching notes. Their results feed back into the analysis and the engine's next suggestions.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1000 330" role="img" aria-label="System loop: movement and workout libraries feed the calendar; calendar produces per-athlete versions; results feed profiles and variance tracking back into the engine.">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<g fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="10" y="30" width="170" height="64" rx="8"/><rect x="10" y="130" width="170" height="64" rx="8"/>
+<rect x="250" y="80" width="190" height="64" rx="8" stroke="#c8352a" stroke-width="2.5"/>
+<rect x="510" y="80" width="190" height="64" rx="8"/>
+<rect x="780" y="20" width="200" height="56" rx="8"/><rect x="780" y="92" width="200" height="56" rx="8"/><rect x="780" y="164" width="200" height="56" rx="8"/>
+<rect x="510" y="250" width="190" height="64" rx="8"/><rect x="250" y="250" width="190" height="64" rx="8"/>
+<path d="M180 62H215V100H248" marker-end="url(#ar)"/><path d="M180 162H215V124H248" marker-end="url(#ar)"/>
+<path d="M440 112H508" marker-end="url(#ar)"/>
+<path d="M700 112H740V48H778" marker-end="url(#ar)"/><path d="M700 120H778" marker-end="url(#ar)"/><path d="M700 128H740V192H778" marker-end="url(#ar)"/>
+<path d="M880 220V282H702" marker-end="url(#ar)"/>
+<path d="M510 282H442" marker-end="url(#ar)"/>
+<path d="M345 250V146" marker-end="url(#ar)"/>
+</g>
+<text x="95" y="58" text-anchor="middle" font-weight="600">Movement library</text><text x="95" y="78" text-anchor="middle">one canonical entry each</text>
+<text x="95" y="158" text-anchor="middle" font-weight="600">Workout library</text><text x="95" y="178" text-anchor="middle">benchmarks ★ + history</text>
+<text x="345" y="108" text-anchor="middle" font-weight="600">Programming engine</text><text x="345" y="128" text-anchor="middle">rules + suggestions</text>
+<text x="605" y="108" text-anchor="middle" font-weight="600">Program calendar</text><text x="605" y="128" text-anchor="middle">group Rx, you approve</text>
+<text x="880" y="53" text-anchor="middle">Vadim's version + notes</text><text x="880" y="125" text-anchor="middle">Olga's version + notes</text><text x="880" y="197" text-anchor="middle">Sasha · Anton versions</text>
+<text x="605" y="278" text-anchor="middle" font-weight="600">Results</text><text x="605" y="298" text-anchor="middle">time · rounds+reps · loads</text>
+<text x="345" y="278" text-anchor="middle" font-weight="600">Analysis</text><text x="345" y="298" text-anchor="middle">variety map · fitness profile</text>
+<text x="352" y="200">feeds next</text><text x="352" y="216">suggestions</text>
+</svg>
+<figcaption>The engine (red) only suggests. Nothing reaches the calendar until you approve it.</figcaption>
+</figure>
+</div></section>
+
+<section class="band" id="movements"><div class="wrap">
+<h2>Movements: one entry per movement, with variations underneath</h2>
+<div class="grid2">
+<div>
+<p>Your BTWB history shows the duplicate problem clearly. It has <b>about 1,480 different movement spellings</b>, for example "Row Calories", "Row Calorie" and "Row (calories)". Basic cleanup brings that to <b>about 580</b>. The real number of movements is probably <b>150 to 200</b>.</p>
+<p>The fix is structural. A <b>movement</b> is the base pattern. A <b>variation</b> is a named child with fixed attributes: style, implement, assistance and standard. Typed names become <b>aliases</b>, so text in a workout always resolves to one entry. Adding a new movement first shows the closest existing matches.</p>
+<div class="bars" id="dupbars"></div>
+<p class="small">Counts come from your file btwb_2026-11-22-workout_sessions.csv. The 150–200 figure is my estimate, to be confirmed when we review the list together.</p>
+</div>
+<figure>
+<svg class="dg" viewBox="0 0 560 330" role="img" aria-label="Movement family tree: Pull-up family with variations and scaling ladder, each variation having attributes and aliases.">
+<g fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="190" y="10" width="180" height="46" rx="8" stroke="#c8352a" stroke-width="2.5"/>
+<path d="M280 56V80M60 80H500M60 80V96M170 80V96M280 80V96M390 80V96M500 80V96"/>
+<rect x="10" y="96" width="100" height="40" rx="6"/><rect x="120" y="96" width="100" height="40" rx="6"/><rect x="230" y="96" width="100" height="40" rx="6"/><rect x="340" y="96" width="100" height="40" rx="6"/><rect x="450" y="96" width="100" height="40" rx="6"/>
+<rect x="10" y="176" width="540" height="62" rx="6" stroke-dasharray="4 3"/>
+<rect x="10" y="262" width="540" height="58" rx="6" stroke-dasharray="4 3"/>
+</g>
+<text x="280" y="31" text-anchor="middle" font-weight="700">Pull-up</text><text x="280" y="48" text-anchor="middle">G · vertical pull</text>
+<text x="60" y="121" text-anchor="middle">Strict</text><text x="170" y="121" text-anchor="middle">Kipping</text><text x="280" y="121" text-anchor="middle">Butterfly</text><text x="390" y="121" text-anchor="middle">Chest-to-bar</text><text x="500" y="121" text-anchor="middle">Jumping</text>
+<text x="20" y="160" font-weight="600">Scaling ladder (easier ← → harder)</text>
+<text x="20" y="200">Ring row → Jumping → Banded → Kipping → Chest-to-bar → Bar MU</text>
+<text x="20" y="222" class="small">each step stores how its reps convert, e.g. 1 C2B ≈ 1.3 pull-ups</text>
+<text x="20" y="285" font-weight="600">Aliases → resolve to "Pull-up, kipping"</text>
+<text x="20" y="306">"pullups", "Pull-ups", "PU", "kipping pull-up"</text>
+</svg>
+<figcaption>A family, its variations, a scaling ladder and aliases. Scaled versions for each athlete come from the ladder.</figcaption>
+</figure>
+</div>
+<h3 style="margin-top:22px">Each movement carries the tags the analysis needs</h3>
+<div class="scroll"><table class="stack">
+<thead><tr><th>Movement</th><th>Modality</th><th>Pattern</th><th>Implement</th><th>Unit</th><th>Variations</th><th class="n">Used (your history)</th></tr></thead>
+<tbody id="mvtable"></tbody></table></div>
+<p class="small">Sample rows. Usage counts are approximate matches from your BTWB export.</p>
+</div></section>
+
+<section class="band alt" id="workouts"><div class="wrap">
+<h2>Workouts: structured once, so they can be repeated and compared</h2>
+<div class="grid2">
+<div>
+<p>A <b>workout</b> is a reusable record: a structure (for time, AMRAP, intervals, sets, EMOM, Tabata, skill practice) plus movements with reps, loads and Rx standards. A <b>day</b> holds one main workout. It can optionally start with a short <b>practice</b> part (lift technique or gymnastics skill). A heavy lift is the whole day.</p>
+<p>The header tags are <b>derived</b>, not typed. Modality pattern, number of movements, load, volume, time domain and priority are worked out from the structure. You can override one when your judgment differs.</p>
+<p>A workout marked <b class="bm">★ benchmark</b> gets a retest interval. When one is due, the engine offers it for a day that fits.</p>
+</div>
+<div class="card">
+<div class="hdr"><i class="chip w">W</i><i class="chip g">G</i><i class="chip l2">med</i><i class="chip">~5 min</i><i class="chip v2">med</i><i class="chip time">time</i></div>
+<h3><span class="bm">★</span> Fran</h3>
+<table>
+<tr><th>Structure</th><td>For time · rounds 21-15-9</td></tr>
+<tr><th>Movements</th><td>Thruster (barbell) 95/65 lb · Pull-up, kipping</td></tr>
+<tr><th>Derived tags</th><td>WG couplet · short (&lt;8 min) · medium load · medium volume (90 reps) · time priority · glycolytic</td></tr>
+<tr><th>Score type</th><td>Time; capped result stored as reps completed</td></tr>
+<tr><th>Benchmark</th><td>Retest every 4–6 months · last done Jul 13, 2025 (5:04) · best 4:00 (Dec 17, 2021)</td></tr>
+</table>
+<p class="small" style="margin-top:8px">Last and best times are from your BTWB history.</p>
+</div>
+</div>
+</div></section>
+
+<section class="band" id="engine"><div class="wrap">
+<h2>The engine: rules you control, suggestions you approve</h2>
+<p>"Varied is not random": the engine looks at the <b>gaps</b>. It compares the last few weeks against your target mix on every dimension, then ranks candidate workouts by how much each one fills those gaps. Hard rules filter out anything unacceptable first. All targets and weights are settings you can edit, not code.</p>
+<div class="grid2">
+<div>
+<h3>Hard rules (from your brief)</h3>
+<div id="rules"></div>
+<h3 style="margin-top:18px">Ranking weights (adjustable)</h3>
+<div id="sliders"></div>
+<p class="small">Weakness focus is capped by default, so variety always leads and weaknesses only nudge the choice.</p>
+</div>
+<div>
+<h3>Proposal for the next open day</h3>
+<div id="cands"></div>
+<p class="small">Sample proposals. The score comes from the weights on the left. Move the sliders and the ranking updates.</p>
+</div>
+</div>
+</div></section>
+
+<section class="band alt" id="analysis"><div class="wrap">
+<h2>Analysis: your map sheet, plus the mix on every dimension</h2>
+<p>The movement map is your <b>map-2017</b> sheet, computed live: movements grouped by modality, one column per week, with the total and the date last used. Beside it is the mix against your targets, similar to BTWB's Program Analysis.</p>
+<div class="zoom" role="group" aria-label="Analysis window"><button id="a4" aria-pressed="false">Last 4 weeks</button><button id="a12" aria-pressed="true">Last 12 weeks</button><button id="a52" aria-pressed="false">Year</button></div>
+<div class="grid2">
+<div class="card scroll"><table class="heat" id="heat"></table></div>
+<div class="card"><div class="bars" id="mix"></div><p class="small">Black bar = actual share in the window. Dashed red line = your target. All computed from the sample calendar above.</p></div>
+</div>
+</div></section>
+
+<section class="band" id="group"><div class="wrap">
+<h2>Group scaling: same workout, same clock, a different version for each person</h2>
+<div class="grid2">
+<div>
+<p>The group does one Rx workout. Each person's version is <b>time-matched</b>: the engine knows each person's pace on a movement and sets reps so everyone spends roughly the same time on it. If someone's pace is too slow, the engine steps down the movement's scaling ladder.</p>
+<p><b>reps = intended seconds × that person's pace</b>, rounded. The pace is estimated from their recent results and updated after every workout.</p>
+<p>Aggregate planning: the engine ranks gaps using the <b>group's</b> profile, so the shared workout targets shared weaknesses. Individual weaknesses get an optional <b>5–10 minute personal practice</b> before the group workout. That way nobody's weakness gets lost in the average.</p>
+</div>
+<figure>
+<svg class="dg" id="tm" viewBox="0 0 560 250" role="img" aria-label="Time-matched scaling: four athletes spend about the same time per movement with different reps and variations."></svg>
+<figcaption>AMRAP 12: 30 double-unders · 10 power cleans · 5 ring muscle-ups. Sample paces and loads, to be replaced by real ones.</figcaption>
+</figure>
+</div>
+<div class="scroll"><table class="stack" id="scaletable"><thead><tr><th>Athlete</th><th>Double-unders</th><th>Power clean</th><th>Ring muscle-up</th><th>Expected rounds</th></tr></thead><tbody></tbody></table></div>
+</div></section>
+
+<section class="band alt" id="athlete"><div class="wrap">
+<h2>Athlete view: the workout, their version and their coaching notes</h2>
+<p>Coaching notes appear only in each person's own view. The group calendar shows the Rx version. Notes come from that person's own history: last result, best result, a pacing plan, and for lifts, warm-up and working weights.</p>
+<div class="grid3">
+<div class="phone">
+<div class="small">Thu · Jan 22</div><div class="who">Vadim</div>
+<div class="hdr" style="margin-top:6px"><i class="chip w">W</i><i class="chip l3">heavy</i><i class="chip v1">low</i><i class="chip task">task</i></div>
+<b>Back Squat 5-5-5-5-5</b>
+<div class="note"><b>Last time</b> (Jan 22, 2026): 135 · 155 · 165 · 185 · 205<br><b>Best</b> (Jan 11, 2025): 210 · 225 · 245 · 255 · 255<br><b>Warm-up:</b> bar ×10, 95 ×5, 135 ×3, 165 ×2<br><b>Sets:</b> 185 · 200 · 210 · 220 · 225+<br>Goal: top set above 205. Stop a set when depth or bar path slips.</div>
+<p class="small" style="margin-top:8px">Results are from your BTWB history. The suggested weights are the rule's output.</p>
+</div>
+<div class="phone">
+<div class="small">Thu · Jan 22</div><div class="who">Olga</div>
+<div class="hdr" style="margin-top:6px"><i class="chip m">M</i><i class="chip w">W</i><i class="chip g">G</i><i class="chip l2">med</i><i class="chip">12 min</i><i class="chip task">task</i></div>
+<b>AMRAP 12, your version</b><br>30 double-unders<br>10 power cleans, 75 lb<br>5 chest-to-bar + 5 ring dips (band)
+<div class="note"><b>Last similar:</b> 5 rounds + 12<br><b>Plan:</b> 6 rounds. DUs in 2 sets, cleans touch-and-go in sets of 5, 2:00 per round.<br><b>Practice first (8 min):</b> kipping swing → muscle-up transition drill.</div>
+<p class="small" style="margin-top:8px">Sample. Olga's real numbers come once her results are logged.</p>
+</div>
+<div class="phone">
+<div class="small">Thu · Jan 22</div><div class="who">Log result</div>
+<label for="rr" style="display:block;margin-top:8px;font-weight:600">Rounds</label><input id="rr" type="number" value="6" style="width:100%;font-size:16px;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)">
+<label for="rp" style="display:block;margin-top:8px;font-weight:600">Extra reps</label><input id="rp" type="number" value="14" style="width:100%;font-size:16px;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)">
+<p class="small" style="margin-top:8px">Version: Olga scaled (C2B + ring dips, 75 lb)<br>Rounds and extra reps are stored separately, so 6 + 14 is never stored as 6.14.</p>
+<button style="width:100%;margin-top:6px;background:var(--ink);color:var(--bg)">Save result</button>
+</div>
+</div>
+</div></section>
+
+<section class="band" id="profile"><div class="wrap">
+<h2>Fitness profile: our own, transparent method</h2>
+<div class="grid2">
+<div>
+<p>Each category is scored 0–100 from that person's results, with the method visible. A category with no data shows <b>"not measured"</b>, never "weak". Categories are similar to BTWB's: power lifts, Olympic lifts, speed, endurance, bodyweight, plus light, heavy and long metcons.</p>
+<p>The <b>group line</b> is the average. The engine leans toward categories where the group line is low. Each person's lowest category drives their personal practice.</p>
+<p class="small">Sample values. Real levels need a reference scale. I suggest age- and sex-adjusted reference standards published in CrossFit sources and similar tables, never a fake population percentile.</p>
+</div>
+<div class="card"><div id="prof"></div></div>
+</div>
+</div></section>
+
+<section class="band alt" id="roadmap"><div class="wrap">
+<h2>Roadmap: one usable step at a time</h2>
+<div class="phase">
+<div><b>0 · Foundation</b>Repo, data model, movement library seeded from your map sheet and BTWB export, then a dedupe review. Import Vadim's 2,673 sessions.</div>
+<div><b>1 · Program</b>Workout builder, benchmarks, calendar with zoom and color codes, live analysis map. You program by hand: the spreadsheet, live.</div>
+<div><b>2 · Record</b>Four family logins, result entry on the phone, history per workout, comparisons and PRs.</div>
+<div><b>3 · Scale + notes</b>Per-athlete versions, time-matched reps, scaling ladders, coaching notes from history.</div>
+<div><b>4 · Suggest</b>Engine fills open days with ranked proposals. Editable rules and targets.</div>
+<div><b>5 · Profile</b>Fitness profile, weakness focus, group aggregate, personal practice blocks.</div>
+</div>
+<p style="margin-top:18px"><b>Later, on the same engine:</b> native mobile app · dumbbell-only track (the "Strength After 40" offer for Olga's audience, as an equipment profile, not a separate app) · buddy groups across locations · a general public track · subscriptions.</p>
+</div></section>
+
+<section class="band" id="platform"><div class="wrap">
+<h2>Platform: Claude Code + GitHub to build, any host to run</h2>
+<div class="grid2">
+<div>
+<p><b>Recommendation:</b> build with Claude Code in a GitHub repository. The engine is the heart of the product and needs automated tests that prove the rules hold, which suits this workflow best. You can still open and run the same repo in Replit, or host it there.</p>
+<p><b>Stack:</b> TypeScript, Next.js (web), PostgreSQL, and a pure TypeScript engine package with its own tests. The phone app later uses the same API. Phase 1 is a responsive web app the family can add to their phone home screens.</p>
+</div>
+<div class="scroll"><table>
+<tr><th></th><th>Claude Code + GitHub</th><th>Replit (Agent)</th></tr>
+<tr><td>Engine with tests</td><td>Strong: written and checked against tests</td><td>Possible, less control over structure</td></tr>
+<tr><td>Hosting</td><td>Any: Replit, Vercel, Fly</td><td>Built in, one click</td></tr>
+<tr><td>Ownership / move later</td><td>Your repo from day one</td><td>Export needed; database separate</td></tr>
+<tr><td>Your involvement</td><td>Review, approve, test in browser</td><td>Prompt and click</td></tr>
+</table></div>
+</div>
+</div></section>
+
+<section class="band alt" id="questions"><div class="wrap">
+<h2>Questions before I start building</h2>
+<ol class="q">
+<li><b>Weekly rhythm:</b> fixed calendar days (for example Sunday rest), 3-on/1-off, or 5-on/2-off? Do all four of you train on the same days?</li>
+<li><b>Where and with what:</b> a full gym (barbells, rings, rower, rope, GHD), a home setup, or both? Phase 1 is "all equipment", but I need each location's real equipment list.</li>
+<li><b>Sasha and Anton:</b> ages, and roughly where each is now (for example, do they lift with a barbell, have pull-ups, double-unders)? This sets their starting scaling.</li>
+<li><b>Units:</b> pounds everywhere, or kg for some people?</li>
+<li><b>Logging:</b> does each person log on their own phone, or does one person log for the group after the workout? Both are possible.</li>
+<li><b>Your targets:</b> starting mix, for example couplets+triplets 65%, single modality 20%, 4+ movements 15%; task 60% / time 40%. Should I propose defaults from your 2016–2025 history?</li>
+<li><b>Time domains:</b> keep your sheet's definitions (short &lt;4 min, medium 4–12, long 12–20, endurance 20–60)?</li>
+<li><b>Benchmarks:</b> start with the Girls, Heroes, Open workouts and your Misc WODs tabs? Any you want retested on a fixed rhythm?</li>
+<li><b>Auto-programming depth:</b> the engine proposes and you pick, or it fills a whole week that you then edit?</li>
+<li><b>Coaching notes:</b> plain rule-based notes first, or written by an AI model from each person's history (more natural, small running cost)?</li>
+<li><b>Platform:</b> are you comfortable with Claude Code + GitHub as the build home, hosting decided later?</li>
+<li><b>Other family history:</b> do Olga or the kids have BTWB data to import too?</li>
+</ol>
+</div></section>
+
+<script>
+{
+const R=(s=>()=>(s=s*16807%2147483647)/2147483647)(20250105);
+const pick=a=>a[Math.floor(R()*a.length)];
+const LIB={g:['Pull-up','Push-up','Air Squat','HSPU','Toes-to-bar','Muscle-up','Burpee','Box Jump','Ring Dip','Sit-up','Pistol','Rope Climb'],w:['Deadlift','Back Squat','Front Squat','Thruster','Power Clean','Snatch','Push Press','KB Swing','Wall Ball','OHS','Clean & Jerk','Press'],m:['Run','Row','Double-under','Bike']};
+const BM=[['Fran','wg','med',5,'v2','time',['Thruster','Pull-up']],['Helen','mwg','light',11,'v2','time',['Run','KB Swing','Pull-up']],['Cindy','ggg','light',20,'v3','task',['Pull-up','Push-up','Air Squat']],['Grace','w','med',4,'v1','time',['Clean & Jerk']],['Diane','wg','heavy',7,'v2','time',['Deadlift','HSPU']],['Murph','mggg','light',45,'v3','task',['Run','Pull-up','Push-up','Air Squat']],['DT','www','heavy',10,'v2','time',['Deadlift','Power Clean','Push Press']],['Annie','mg','light',10,'v3','time',['Double-under','Sit-up']],['Karen','w','light',8,'v2','time',['Wall Ball']],['Jackie','mwg','light',9,'v2','time',['Row','Thruster','Pull-up']],['Row 2k','m','',8,'v1','time',['Row']],['Run 5k','m','',24,'v1','time',['Run']]];
+const real=[
+[['12/17','mgmw','light',15,'v2','task','A. Max effort Barski snatch · B. 800m run, 80 V-ups, 800m run',['Run','Sit-up','Snatch']],['12/18','wgw','med',8,'v3','time','A. OTM 10: power clean ×3 · B. Tabata KB swing + burpee',['Power Clean','KB Swing','Burpee']],['12/19','wgm','light',17,'v3','time','Football Gone Bad: DB thruster, box jump, push-up, DU, cal row',['Thruster','Box Jump','Push-up','Double-under','Row']],['12/20','wwg','heavy',15,'v2','time','AMRAP 15: 7 push press, 10 OHS 135, 15 GHD sit-ups',['Push Press','OHS','Sit-up']],['12/21','gw','light',6,'v2','time','A. Bench 5-5-5-5-5 · B. AMRAP 6 muscle-ups',['Muscle-up']],['12/22','mmw','heavy',0,'v1','task','A. Power clean 1×7 · B. 5 RFT: 35 DU, 200m run',['Power Clean','Double-under','Run']],['12/23','wg','light',20,'v3','task','For time: 50-40-30-20-10 MB clean, 25-20-15-10-5 pull-ups',['Wall Ball','Pull-up']]],
+[['12/24','wg','med',12,'v2','task','A. Heavy TnG deadlift ×5 · B. 5 RFT: 5 DL 275, 10 burpees',['Deadlift','Burpee']],null,['12/26','wgm','heavy',10,'v2','task','A. Row 1000m · B. 30 push press 175, 60 pull-ups',['Row','Push Press','Pull-up']],['12/27','w','light',8,'v3','task','★Randy: 75 power snatches 75 lb',['Snatch']],['12/28','mggw','light',20,'v3','time','A. Press 1RM · B. 4× (5 min: 400m run + AMRAP dip/burpee/K2E)',['Press','Run','Ring Dip','Burpee']],['12/29','ww','heavy',20,'v1','task','Russian Stim 2.0: back squat 88%, power clean 80%',['Back Squat','Power Clean']],['12/30','wgm','med',30,'v2','task','★Nutts (Hero)',['HSPU','Deadlift','Box Jump','Pull-up','Wall Ball','Double-under','Run']]],
+[['12/31','wm','light',20,'v2','task','A. L-sit, pistols, ring rows NFT · B. row/KB swing ladder',['Pistol','Row','KB Swing']],['1/1','wgw','heavy',10,'v2','task','A. Front squat 5×5 · B. Freddy\'s Revenge',['Front Squat','Clean & Jerk','Burpee']],['1/2','gggw','light',15,'v3','task','A. Power clean 2×8 · B. lunge / pull-up / sit-up descending',['Power Clean','Pull-up','Sit-up']],['1/3','wwww','light',20,'v2','task','A. Snatch balance 3×5 · B. 7 RFT snatch / balance / OHS',['Snatch','OHS']],['1/4','mg','med',15,'v1','task','DU / rope climb ladder 50-40-30-20-10',['Double-under','Rope Climb']],['1/5','ggg','light',20,'v3','time','★Cindy: AMRAP 20 of 5 pull-ups, 10 push-ups, 15 squats',['Pull-up','Push-up','Air Squat']],['1/6','w','heavy',0,'v1','','A. Power clean 3×5 · B. flexibility',['Power Clean']]]];
+const PAT=['wg','wg','gm','mw','wgm','wgm','mgw','w','g','m','ggw','wwg','mmg','gg','ww','wgmg','mwgw'];
+const S=['For time','AMRAP','Intervals','EMOM','Tabata','Rounds for time','Sets'];
+function gen(){const d0=new Date(2012,11,17);const weeks=[];for(let w=0;w<52;w++){const days=[];for(let i=0;i<7;i++){const dt=new Date(d0);dt.setDate(d0.getDate()+w*7+i);const lbl=(dt.getMonth()+1)+'/'+dt.getDate();
+if(w<3){const r=real[w][i];days.push(r?{d:lbl,mods:r[1],load:r[2],t:r[3],vol:r[4],pr:r[5],ttl:r[6],mv:r[7],bm:r[6].includes('★')}:{d:lbl,rest:true});continue}
+if(i===1&&w%2===0||i===6&&w%2===1){days.push({d:lbl,rest:true});continue}
+if(R()<.07){const b=pick(BM);days.push({d:lbl,mods:b[1],load:b[2],t:b[3],vol:b[4],pr:b[5],ttl:'★'+b[0],mv:b[6],bm:true});continue}
+const heavy=R()<.16;if(heavy){const mv=pick(['Back Squat','Deadlift','Front Squat','Press','Clean & Jerk','Snatch','Push Press']);days.push({d:lbl,mods:'w',load:'heavy',t:0,vol:'v1',pr:'task',ttl:mv+' '+pick(['5-5-5-5-5','3-3-3-3-3','1-1-1-1-1-1-1','find 1RM']),mv:[mv]});continue}
+const p=pick(PAT);const mv=[...p].map(c=>pick(LIB[c]));const t=pick([4,6,8,10,12,15,20,25]);const st=pick(S);
+days.push({d:lbl,mods:p,load:pick(['light','light','med','med','heavy','']),t,vol:pick(['v1','v2','v2','v3']),pr:st==='AMRAP'||st==='Tabata'||st==='EMOM'?'time':'task',ttl:st+(st==='AMRAP'?' '+t:'')+': '+mv.join(' / '),mv})}weeks.push(days)}return weeks}
+const WK=gen();
+const L={light:'l1',med:'l2',heavy:'l3'};
+const chips=d=>[...d.mods].map(c=>`<i class="chip ${c}">${c.toUpperCase()}</i>`).join('')+(d.load?`<i class="chip ${L[d.load]}">${d.load}</i>`:'')+(d.t?`<i class="chip">${d.t}′</i>`:'')+`<i class="chip ${d.vol}">${{v1:'low',v2:'med',v3:'high'}[d.vol]}</i>`+(d.pr?`<i class="chip ${d.pr}">${d.pr}</i>`:'');
+const cal=document.getElementById('cal');let wSel=0;
+const DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function year(){cal.innerHTML=`<div class="yr"><span></span>${DN.map(n=>`<span class="hd">${n}</span>`).join('')}${WK.map((w,wi)=>`<span class="wk">${w[0].d}</span>`+w.map(d=>d.rest?`<button class="d" data-w="${wi}" aria-label="${d.d} rest"></button>`:`<button class="d${d.bm?' b':''}" data-w="${wi}" aria-label="${d.d} ${d.ttl}" title="${d.d}: ${d.ttl.replace(/"/g,'')}">${[...d.mods].map(c=>`<i class="${c}"></i>`).join('')}<i class="${L[d.load]||''}" style="flex:.6"></i></button>`).join('')).join('')}</div>`}
+function eight(){const s=Math.min(wSel,44);cal.innerHTML=`<div class="ew"><div class="lab">Week</div>${DN.map(n=>`<div class="lab">${n}</div>`).join('')}${WK.slice(s,s+8).map((w,k)=>`<div class="lab">${w[0].d}</div>`+w.map(d=>d.rest?`<div class="small">${d.d} · rest</div>`:`<div style="cursor:pointer" data-w="${s+k}"><div class="small">${d.d}</div><div class="hdr">${chips(d)}</div><div class="ttl">${d.ttl.replace('★','<span class="bm">★</span> ')}</div></div>`).join('')).join('')}</div>`}
+function week(){const w=WK[wSel];cal.innerHTML=`<div class="week">${w.map((d,i)=>`<div><div class="dt">${DN[i]} ${d.d}</div>${d.rest?'<span class="small">Rest day</span>':`<div class="hdr">${chips(d)}</div><div class="ttl">${d.ttl.replace('★','<span class="bm">★</span> ')}</div><pre>${d.mv.join('\n')}</pre>`}</div>`).join('')}</div><div style="padding:8px 10px;display:flex;gap:6px"><button id="pw">← Previous week</button><button id="nw">Next week →</button></div>`;document.getElementById('pw').onclick=()=>{wSel=Math.max(0,wSel-1);week()};document.getElementById('nw').onclick=()=>{wSel=Math.min(51,wSel+1);week()}}
+const zb={zY:year,z8:eight,zW:week};
+function zoom(id){for(const k in zb)document.getElementById(k).setAttribute('aria-pressed',k===id);zb[id]()}
+for(const k in zb)document.getElementById(k).onclick=()=>zoom(k);
+cal.addEventListener('click',e=>{const t=e.target.closest('[data-w]');if(t){wSel=+t.dataset.w;zoom('zW')}});
+year();
+
+// duplicates bars
+const dup=[['Raw spellings',1483],['After basic cleanup',584],['Real movements (est.)',180]];
+document.getElementById('dupbars').innerHTML=dup.map(([l,v])=>`<div class="row"><span>${l}</span><div class="trk"><div class="fill" style="width:${v/1483*100}%;${v===180?'background:var(--acc)':''}"></div></div><b>${v===180?'~':''}${v}</b></div>`).join('');
+const MV=[['Pull-up','G','vertical pull','bar / rings','reps','strict, kipping, butterfly, C2B, jumping',360],['Double-under','M','jump rope','rope','reps','single-under, crossover',540],['Deadlift','W','hinge','barbell, DB, KB','reps · load','sumo, Romanian, single-leg',600],['Row','M','row','rower','m · cal','meters, calories',560],['Squat clean','W','clean','barbell, DB','reps · load','power, hang, squat',310],['Handstand push-up','G','vertical push','wall / parallettes','reps','strict, kipping, deficit, pike',160]];
+document.getElementById('mvtable').innerHTML=MV.map(r=>`<tr>${r.slice(0,6).map(c=>`<td>${c}</td>`).join('')}<td class="n">~${r[6]}</td></tr>`).join('');
+
+// engine
+const RU=['One main workout per day; an optional short practice part may come first','Never a heavy lifting session plus an intense metcon on the same day','Heavy lifting stands alone as the day\'s workout','A practice part is technique or skill only: light load, low stress','A gymnastics practice can be the whole day','No movement two days in a row (adjustable)','A benchmark that is due gets offered first on a day that fits','Every athlete has a valid version before the day can be published'];
+document.getElementById('rules').innerHTML=RU.map((r,i)=>`<div class="rule"><b>${i+1}</b><span>${r}</span></div>`).join('');
+const W=[['Variety gap','v',50],['Movement freshness','f',20],['Weakness focus','k',15],['Benchmark due','b',15]];
+document.getElementById('sliders').innerHTML=W.map(([l,k,v])=>`<div class="sl"><label for="s${k}">${l}</label><input type="range" id="s${k}" min="0" max="60" value="${v}"><b id="o${k}">${v}</b></div>`).join('');
+const C=[{n:'AMRAP 15: row 15 cal / 10 toes-to-bar / 5 power snatch',tag:'mgw',why:'fills: MGW triplet, long time domain, time priority',v:.9,f:.8,k:.6,b:0},{n:'★ Diane: 21-15-9 deadlift 225 / HSPU',tag:'wg',why:'benchmark due (last 7 months ago), short couplet',v:.5,f:.6,k:.4,b:1},{n:'Every 2:00 ×6: 200m run + max ring dips',tag:'mg',why:'fills: intervals, MG couplet; dips are a group weakness',v:.7,f:.7,k:1,b:0},{n:'Back squat 3-3-3-3-3',tag:'w',why:'heavy day due, but squat was used 2 days ago',v:.6,f:.1,k:.5,b:0}];
+function rank(){const w={};for(const [,k] of W){w[k]=+document.getElementById('s'+k).value;document.getElementById('o'+k).textContent=w[k]}const t=w.v+w.f+w.k+w.b||1;
+const sc=C.map(c=>({...c,s:Math.round((c.v*w.v+c.f*w.f+c.k*w.k+c.b*w.b)/t*100)})).sort((a,b)=>b.s-a.s);
+document.getElementById('cands').innerHTML=sc.map((c,i)=>`<div class="card" style="margin-bottom:8px;${i===0?'border-color:var(--acc);border-width:2px':''}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="hdr">${[...c.tag].map(x=>`<i class="chip ${x}">${x.toUpperCase()}</i>`).join('')}</div><b style="white-space:nowrap">${c.s} pts</b></div><div class="ttl">${c.n.replace('★','<span class="bm">★</span>')}</div><div class="small">${c.why}</div></div>`).join('')}
+for(const [,k] of W)document.getElementById('s'+k).addEventListener('input',rank);rank();
+
+// analysis
+const GR={'Gymnastics':LIB.g,'Weightlifting':LIB.w,'Monostructural':LIB.m};
+function analysis(n){const end=52,st=end-n,wins=WK.slice(st,end);const cols=n===52?13:n;const per=Math.ceil(n/cols);
+let h=`<tr><th>Movement</th>${Array.from({length:cols},(_,i)=>`<th class="n">${wins[i*per]?wins[i*per][0].d:''}</th>`).join('')}<th class="n">Total</th><th class="n">Last</th></tr>`;
+for(const g in GR){h+=`<tr class="grp"><td colspan="${cols+3}">${g}</td></tr>`;for(const mv of GR[g]){let tot=0,last='—';const cells=[];for(let c=0;c<cols;c++){let k=0;for(const w of wins.slice(c*per,c*per+per))for(const d of w)if(!d.rest&&d.mv.includes(mv)){k++;last=d.d}tot+=k;cells.push(k)}
+h+=`<tr><td>${mv}</td>${cells.map(k=>`<td style="background:${k?`color-mix(in srgb,var(--V3) ${Math.min(100,k*35)}%,transparent)`:'transparent'};color:${k>1?'#fff':'inherit'}">${k||''}</td>`).join('')}<td class="n"><b>${tot}</b></td><td class="n">${last}</td></tr>`}}
+document.getElementById('heat').innerHTML=h;
+const ds=wins.flat().filter(d=>!d.rest),N=ds.length||1;const sh=f=>Math.round(ds.filter(f).length/N*100);
+const M=[['Single modality',d=>new Set(d.mods).size===1,20],['Couplet / triplet',d=>d.mods.length>=2&&d.mods.length<=3,65],['4+ movements',d=>d.mods.length>=4,15],['Short (<8 min)',d=>d.t>0&&d.t<8,30],['Medium (8–15)',d=>d.t>=8&&d.t<=15,40],['Long (>15)',d=>d.t>15,20],['Task priority',d=>d.pr==='task',60],['Heavy load',d=>d.load==='heavy',20],['Benchmarks',d=>d.bm,8]];
+document.getElementById('mix').innerHTML=M.map(([l,f,t])=>{const v=sh(f);return `<div class="row"><span>${l}</span><div class="trk"><div class="fill" style="width:${v}%"></div><div class="tgt" style="left:${t}%"></div></div><b>${v}%</b></div>`}).join('')}
+const ab={a4:4,a12:12,a52:52};for(const k in ab)document.getElementById(k).onclick=()=>{for(const j in ab)document.getElementById(j).setAttribute('aria-pressed',j===k);analysis(ab[k])};
+analysis(12);
+
+// time-matched scaling
+const ATH=[['Vadim','30 DU','10 @ 135 lb','5 ring MU',[30,40,35],'6+'],['Olga','30 DU','10 @ 75 lb','5 C2B + 5 band dips',[32,38,40],'5+'],['Sasha','24 DU','10 @ 65 lb','4 pull-up + 4 dip',[30,36,38],'5+'],['Anton','18 DU','10 @ 45 lb','6 jumping MU',[31,40,36],'5+']];
+const tm=document.getElementById('tm');const sx=s=>110+s*3.4;
+tm.innerHTML=`<text x="110" y="18" class="small">seconds per round →</text>`+[0,30,60,90,120].map(s=>`<line x1="${sx(s)}" y1="26" x2="${sx(s)}" y2="226" stroke="currentColor" stroke-opacity=".15"/><text x="${sx(s)}" y="244" text-anchor="middle">${s}</text>`).join('')+ATH.map((a,i)=>{const y=36+i*48;let x=0;const cols=['#FFFF99','#E69999','#99CCFF'];return `<text x="0" y="${y+21}" font-weight="600">${a[0]}</text>`+a[4].map((s,j)=>{const r=`<rect x="${sx(x)}" y="${y}" width="${s*3.4-2}" height="32" rx="3" fill="${cols[j]}"/><text x="${sx(x)+6}" y="${y+21}" style="fill:#15171c;font-size:12px">${a[1+j].split(' ')[0]}</text>`;x+=s;return r}).join('')}).join('');
+document.querySelector('#scaletable tbody').innerHTML=ATH.map(a=>`<tr><td><b>${a[0]}</b></td><td>${a[1]}</td><td>${a[2]}</td><td>${a[3]}</td><td class="n">${a[5]}</td></tr>`).join('');
+
+// profile
+const CAT=['Power lifts','Olympic lifts','Speed','Endurance','Bodyweight','Light metcon','Heavy metcon','Long metcon'];
+const P={Vadim:[56,39,33,65,45,68,71,null],Olga:[40,30,45,50,35,55,null,48],Sasha:[30,25,60,42,50,58,null,40],Anton:[25,20,62,38,44,52,null,null]};
+const pc={Vadim:'#15171c',Olga:'#c8352a',Sasha:'#0B5394',Anton:'#674EA7'};
+document.getElementById('prof').innerHTML=`<div class="legend" style="margin-bottom:8px">${Object.keys(P).map(n=>`<span><i style="width:10px;height:10px;border-radius:50%;background:${pc[n]};display:inline-block"></i>${n}</span>`).join('')}<span><i style="width:14px;border-top:2px dashed var(--acc);display:inline-block"></i>group</span></div>`+CAT.map((c,i)=>{const vals=Object.values(P).map(v=>v[i]).filter(v=>v!=null);const g=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+return `<div class="bars"><div class="row"><span>${c}</span><div class="trk" style="height:22px">${Object.entries(P).map(([n,v])=>v[i]==null?'':`<i title="${n} ${v[i]}" style="position:absolute;left:calc(${v[i]}% - 5px);top:6px;width:10px;height:10px;border-radius:50%;background:${pc[n]}"></i>`).join('')}<div class="tgt" style="left:${g}%"></div></div><b>${g}</b></div></div>`}).join('')+`<p class="small" style="margin-top:6px">A missing dot means not measured. The number is the group average of measured athletes. Sample data.</p>`;
+}
+</script>
+</body>
+</html>

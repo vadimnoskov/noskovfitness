@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>NF-01 Planning Brief</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">NF-01 Planning Brief</h1>
+</header>
+<h1 id="noskov-fitness--planning-brief-v1">Noskov Fitness — Planning
+Brief v1</h1>
+<p>November 22, 2026 · Companion to the visual plan
+(noskov-fitness-plan.html)</p>
+<h2 id="1-decision-in-one-paragraph">1. Decision in one paragraph</h2>
+<p>Build Noskov Fitness as a <strong>CrossFit-only programming
+app</strong> for our family first. It starts as the 2017 (2013)
+programming spreadsheet turned into a live, zoomable calendar, plus a
+basic result log for Vadim, Olga, Sasha and Anton. Two clean libraries
+sit underneath it: <strong>movements</strong> (one canonical entry each)
+and <strong>workouts</strong> (structured, repeatable, with benchmarks).
+A rules-based <strong>programming engine</strong> suggests workouts and
+Vadim approves them. The engine is built as a separate, tested module so
+features can be added one at a time. The dumbbell-only "Strength After
+40" track, buddy groups and a public track come later, built on the same
+engine as additional equipment profiles and groups.</p>
+<h2 id="2-ground-rules">2. Ground rules</h2>
+<ul>
+<li>CrossFit methodology is the baseline for everything: constantly
+varied, functional movements, executed at relatively high intensity. No
+other strength and conditioning methodology unless the programmer
+explicitly asks for it.</li>
+<li>Varied is not random. Variance is tracked across: modality (G/W/M)
+and their combinations, number of movements, volume, time domain, energy
+pathway, structure (AMRAP, for time, intervals, EMOM, Tabata, sets),
+task vs time priority, load, and specific movements.</li>
+<li>One workout of the day. An optional short practice part (lift
+technique or gymnastics skill) may come before a metcon. A heavy lifting
+day stands alone, never followed by an intense metcon. A gymnastics
+practice can be the entire day.</li>
+<li>The ultimate goal is balance across all ten general physical skills.
+Weakness focus only nudges a varied program and never dominates it.</li>
+</ul>
+<h2 id="3-core-concepts-glossary">3. Core concepts (glossary)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Movement</td>
+<td>One canonical movement (e.g. Pull-up), with modality, pattern,
+implement and unit.</td>
+</tr>
+<tr class="even">
+<td>Variation</td>
+<td>A named child of a movement with fixed attributes (strict, kipping,
+chest-to-bar, jumping, banded…).</td>
+</tr>
+<tr class="odd">
+<td>Alias</td>
+<td>Any spelling that resolves to one movement/variation. Typed text
+never creates a new movement silently.</td>
+</tr>
+<tr class="even">
+<td>Scaling ladder</td>
+<td>An ordered list of variations from easiest to hardest, with rough
+rep conversions.</td>
+</tr>
+<tr class="odd">
+<td>Workout</td>
+<td>A reusable structure + movements + Rx loads/standards + score type.
+Can be marked <strong>benchmark</strong> with a retest interval.</td>
+</tr>
+<tr class="even">
+<td>Day</td>
+<td>One main workout, optionally preceded by a practice part. Placed on
+the program calendar.</td>
+</tr>
+<tr class="odd">
+<td>Derived tags</td>
+<td>Modality pattern, # movements, load, volume, time domain, priority,
+energy pathway — computed from the workout, overridable.</td>
+</tr>
+<tr class="even">
+<td>Program / track</td>
+<td>A calendar of days for a group (family now; buddy groups, public
+track later).</td>
+</tr>
+<tr class="odd">
+<td>Athlete version</td>
+<td>The automatic scaled copy of the group Rx workout for one person,
+with their coaching notes.</td>
+</tr>
+<tr class="even">
+<td>Result</td>
+<td>What actually happened: version done, time / rounds+reps / loads per
+set, capped or completed, notes.</td>
+</tr>
+<tr class="odd">
+<td>Policy</td>
+<td>Editable targets, weights and rules the engine uses.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-the-screens-phase-13">4. The screens (phase 1–3)</h2>
+<ol type="1">
+<li><strong>Program calendar</strong>: week rows, color-coded day
+headers (W/G/M, load, time, volume, priority, ★ benchmark). Zoom from
+week, to 8 weeks, to a year.</li>
+<li><strong>Workout builder</strong>: pick a structure, add movements
+from the library, set reps/loads. Tags are derived automatically.</li>
+<li><strong>Movement library</strong>: families, variations, aliases,
+scaling ladders. Adding a movement starts with a duplicate check.</li>
+<li><strong>Benchmarks</strong>: Girls, Heroes, Open workouts, our own,
+each with a retest interval and history.</li>
+<li><strong>Analysis</strong>: the live map-2017 view (movement × week,
+total, last used) plus the mix against targets on every dimension.
+Windows: 4 weeks, 12 weeks, year.</li>
+<li><strong>Athlete view</strong> (phone first): today's workout in
+their version, coaching notes, result entry, history.</li>
+<li><strong>Engine panel</strong>: proposals for open days with a score
+breakdown; editable rules and weights.</li>
+</ol>
+<h2 id="5-programming-engine-how-it-decides">5. Programming engine (how
+it decides)</h2>
+<ol type="1">
+<li><strong>Filter</strong> candidates with hard rules (one main
+workout; no heavy lift + intense metcon on the same day; no same
+movement on consecutive days; equipment available; every athlete has a
+valid version).</li>
+<li><strong>Score</strong> the survivors: variety gap (how much a
+candidate moves the recent mix toward target) + movement freshness +
+weakness focus (capped, default about 15%) + benchmark due.</li>
+<li><strong>Propose</strong> the top few for each open day. Vadim picks,
+edits or writes his own. Nothing is published automatically.</li>
+<li>All targets and weights live in an editable policy, so the "core
+algorithm" can be adjusted without code changes. The engine is a
+separate TypeScript package with automated tests for every rule.</li>
+</ol>
+<h2 id="6-group-programming-and-scaling">6. Group programming and
+scaling</h2>
+<ul>
+<li>One Rx workout for the group, so everyone trains together.</li>
+<li><strong>Time-matched scaling:</strong> reps for each person =
+intended seconds on that movement × that person's pace. Pace comes from
+their history and updates after each result. If the pace is too low,
+step down the scaling ladder. Example: Vadim does 30 double-unders in
+about 30 s; Anton's version gets the number he can do in about 30
+s.</li>
+<li><strong>Group aggregate:</strong> the engine ranks gaps on the
+group's average profile, so the shared workout targets shared
+weaknesses. Individual weaknesses get an optional 5–10 minute
+<strong>personal practice</strong> before the group workout.</li>
+<li><strong>Coaching notes</strong> appear only in each person's own
+view: last result, best result, pacing plan; for lifts, warm-up sets and
+working weights from previous results.</li>
+</ul>
+<h2 id="7-fitness-profile">7. Fitness profile</h2>
+<p>Our own transparent method, not a copy of BTWB's population ranking.
+Categories similar to BTWB's (power lifts, Olympic lifts, speed,
+endurance, bodyweight, light, heavy and long metcons), each scored 0–100
+against published reference standards adjusted for age and sex. A
+category with no data is "not measured", never "weak". Imbalances are
+shown as in BTWB (e.g. front squat vs back squat, snatch vs clean). The
+group line is the average of the people measured in each category.</p>
+<h2 id="8-data-we-already-have">8. Data we already have</h2>
+<ul>
+<li><strong>BTWB export</strong> (2,673 sessions, Aug 2008 – Nov 2026;
+2,443 Rx, 230 scaled). It contains 1,876 distinct workout names and
+about 1,480 raw movement spellings (about 580 after basic cleanup). It
+is the seed for Vadim's history, the benchmark list and the
+movement-library dedupe review.</li>
+<li><strong>NF-WODs spreadsheet</strong>: 2011–2026 programming sheets,
+the map sheets (movement list grouped by modality + benchmark list), and
+the Girls, Hero, Misc WODs and ALL OPEN tabs.</li>
+<li><strong>CrossFit Journal library</strong> (what-is-fitness,
+foundations and others) as the methodology reference.</li>
+<li>Earlier "Strength After 40" planning package: useful later for the
+dumbbell track and the commercial phase. Its data-model cautions are
+adopted: rounds and extra reps stored separately; a capped finish is not
+a completed time; a scaled version never creates a false PR.</li>
+</ul>
+<h2 id="9-roadmap">9. Roadmap</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Phase</th>
+<th>Deliverable</th>
+<th>Done when</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0 Foundation</td>
+<td>Repo, data model, movement library seeded + dedupe review, import of
+Vadim's history</td>
+<td>The library has no duplicates and all of Vadim's history is linked
+to it</td>
+</tr>
+<tr class="even">
+<td>1 Program</td>
+<td>Workout builder, benchmarks, zoomable calendar, live analysis
+map</td>
+<td>Vadim programs a month in the app instead of the sheet</td>
+</tr>
+<tr class="odd">
+<td>2 Record</td>
+<td>Four family logins, result entry, history, PRs</td>
+<td>All four log a week of workouts</td>
+</tr>
+<tr class="even">
+<td>3 Scale + notes</td>
+<td>Athlete versions, time-matched reps, ladders, coaching notes</td>
+<td>Each person sees their own version and notes</td>
+</tr>
+<tr class="odd">
+<td>4 Suggest</td>
+<td>Engine proposals, editable policy</td>
+<td>Vadim accepts most proposals with light edits</td>
+</tr>
+<tr class="even">
+<td>5 Profile</td>
+<td>Fitness profile, weakness focus, group aggregate</td>
+<td>The profile matches Vadim's judgment of each person</td>
+</tr>
+<tr class="odd">
+<td>Later</td>
+<td>Mobile app, dumbbell track (Strength After 40), buddy groups, public
+track, subscriptions</td>
+<td>Each added as its own step</td>
+</tr>
+</tbody>
+</table>
+<h2 id="10-platform-recommendation">10. Platform recommendation</h2>
+<p>Build with <strong>Claude Code in a GitHub repository</strong>:
+TypeScript, Next.js, PostgreSQL, with the engine as a separate tested
+package. Phase 1 is a responsive web app the family adds to their phone
+home screens; a native app later uses the same API. The repo can be
+opened or hosted on Replit at any time, so nothing locks us in.</p>
+<h2 id="11-open-questions">11. Open questions</h2>
+<ol type="1">
+<li>Weekly rhythm: fixed days (e.g. Sunday rest), 3-on/1-off, or
+5-on/2-off? Same days for all four?</li>
+<li>Training location(s) and real equipment list for each.</li>
+<li>Sasha and Anton: ages and current abilities (barbell, pull-ups,
+double-unders…).</li>
+<li>Units: lb for everyone, or kg for some?</li>
+<li>Logging: each person on their own phone, or one person logs for the
+group?</li>
+<li>Target mix: use proposed defaults, or derive them from Vadim's
+2016–2025 history?</li>
+<li>Time domains: keep the sheet's (short &lt; 4, medium 4–12, long
+12–20, endurance 20–60 min)?</li>
+<li>Benchmarks: start from the Girls / Hero / Open / Misc WODs tabs? Any
+on a fixed retest rhythm?</li>
+<li>Engine depth: propose-and-pick, or fill a week to edit?</li>
+<li>Coaching notes: rule-based first, or written by an AI model from
+history?</li>
+<li>OK with Claude Code + GitHub as the build home, hosting decided
+later?</li>
+<li>Do Olga or the kids have BTWB data to import?</li>
+</ol>
+</body>
+</html>
