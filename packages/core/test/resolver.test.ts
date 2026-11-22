@@ -10,7 +10,8 @@ describe('movement resolver', () => {
     const rows = ['Row Calories', 'Row Calorie', 'Row (calories)', 'row (calories)s', 'Rows', 'row (meters)'];
     expect(new Set(rows.map(key))).toEqual(new Set(['row']));
     expect(new Set(['Toes-to-bars', 'toes to bars', 'Toes-to-bar'].map(key)).size).toBe(1);
-    expect(new Set(['Pull-ups', 'pull-up', 'Pullups', 'Pull up'].map(key)).size).toBe(1);
+    expect(new Set(['Pull-ups', 'pull-up', 'Pullups', 'Pull up', 'Kipping Pull-up'].map(key)).size).toBe(1);
+    expect(key('Kipping Handstand Push-ups')).toBe(key('Handstand Push-ups'));
   });
 
   it('keeps prescription details out of identity', () => {

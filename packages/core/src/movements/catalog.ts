@@ -123,7 +123,7 @@ export const FAMILIES: Family[] = [
     variants: ['curl', 'rear-delt-fly', 'skull-crusher', 'kickback', 'arm-lift'], unit: 'reps', match: ['curls?', 'flies', 'skull', 'kick ?back', 'arm lift'] },
 
   // ---------- Gymnastics ----------
-  { id: 'hspu', name: 'Handstand Push-up', modality: 'G', pattern: 'vertical-push', implements: ['wall', 'parallettes', 'plate'], style: ['strict', 'kipping'],
+  { id: 'hspu', name: 'Handstand Push-up', modality: 'G', pattern: 'vertical-push', implements: ['wall', 'parallettes', 'plate'], style: ['kipping', 'strict'],
     variants: ['pike'], unit: 'reps', match: ['handstand push', '\\bhspu', 'pike push'] },
   { id: 'handstand-walk', name: 'Handstand Walk', modality: 'G', pattern: 'inversion', implements: ['bodyweight'], unit: 'distance', match: ['handstand walk'] },
   { id: 'handstand-hold', name: 'Handstand Hold', modality: 'G', pattern: 'inversion', implements: ['wall', 'bodyweight'], variants: ['freestanding'], unit: 'time',

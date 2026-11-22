@@ -148,7 +148,7 @@ export function resolve(raw: string): Resolution {
   const rc = firstMatch(RECEIVE_RX, s);
   if (rc && fam.receive?.includes(rc)) ref.receive = rc;
   const sty = firstMatch(STYLE_RX, s);
-  if (sty && fam.style?.includes(sty)) ref.style = sty;
+  if (sty && fam.style?.includes(sty) && sty !== fam.style[0]) ref.style = sty; // first listed style is the family default (e.g. kipping pull-up)
   const pos = firstMatch(POSITION_RX, s);
   if (pos && fam.position?.includes(pos)) ref.position = pos;
   if (fam.id === 'carry' && !ref.position) ref.position = 'farmers';
