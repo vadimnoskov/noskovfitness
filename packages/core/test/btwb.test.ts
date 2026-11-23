@@ -35,6 +35,12 @@ describe('BTWB import', () => {
     expect(bear.workout.movements.map((m) => nameOf(m.movement))).toEqual(['Power Clean', 'Front Squat', 'Push Press', 'Back Squat', 'Push Press']);
   });
 
+  it('reads EMOM from the description and decimal rounds', () => {
+    const p = parseBtwbRow(row('Chelsea', 'Every 1 min for 30 mins:\n5 Pull-ups\n10 Push-ups\n15 Air Squats', '19.0 rounds'), 'male');
+    expect(p.workout.structure).toEqual({ kind: 'emom', minutes: 30, everySec: 60 });
+    expect(p.result.score.rounds).toBe(19);
+  });
+
   it('marks scaled sessions and converts kg loads', () => {
     const p = parseBtwbRow(row('Deadlift : 1 Rep Max', '1 Deadlift 100 kg', '100 kg', '100', 'modified'), 'male');
     expect(p.result.asPrescribed).toBe(false);

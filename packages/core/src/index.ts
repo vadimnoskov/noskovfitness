@@ -4,3 +4,4 @@ export * from './model/types';
 export * from './workouts/tags';
 export * from './import/btwb';
 export * from './workouts/benchmarks';
+export * from './workouts/format';

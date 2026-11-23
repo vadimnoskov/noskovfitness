@@ -36,7 +36,7 @@ export function parseStructure(name: string, desc: string, scoreType: ScoreType)
   if ((m = n.match(/^AMRAP (\d+) mins?/i)) || (m = d.match(/^(\d+):00 amrap/m))) return { kind: 'amrap', minutes: Number(m[1]) };
   if ((m = n.match(/^AMReps (\d+) mins?/i))) return { kind: 'amrap', minutes: Number(m[1]) };
   if ((m = n.match(/^(?:Alt )?EMOM (\d+) mins?/i))) return { kind: 'emom', minutes: Number(m[1]) };
-  if ((m = n.match(/^Every (\d+) mins? for (\d+) mins?/i))) return { kind: 'emom', minutes: Number(m[2]), everySec: Number(m[1]) * 60 };
+  if ((m = n.match(/^Every (\d+) mins? for (\d+) mins?/i)) || (m = d.match(/^every (\d+) mins? for (\d+) mins?/m))) return { kind: 'emom', minutes: Number(m[2]), everySec: Number(m[1]) * 60 };
   if (/tabata/i.test(n) || /tabata/.test(d)) return { kind: 'tabata' };
   if ((m = n.match(/^(\d+)x (\d+) mins/i))) return { kind: 'intervals', rounds: Number(m[1]), restSec: 0, workSec: Number(m[2]) * 60, scored: 'reps' };
   if ((m = n.match(/^(\d+)x RFT/i)) || (m = d.match(/^(\d+) rounds, each round for time/m))) {
@@ -124,7 +124,7 @@ export function parseScore(formatted: string, resultRaw: string, type: ScoreType
   const score: Result['score'] = {};
   if (type === 'time') score.timeSec = Number(resultRaw) > 0 ? Number(resultRaw) / 1000 : parseTimeSec(head);
   if (type === 'rounds-reps') {
-    score.rounds = Number(head.match(/(\d+)\s*rounds?/)?.[1] ?? 0);
+    score.rounds = Math.floor(Number(head.match(/([\d.]+)\s*rounds?/)?.[1] ?? 0));
     const extra = [...head.matchAll(/\+\s*(\d+)\s+(?!m\b)([A-Za-z])/g)].reduce((a, m) => a + Number(m[1]), 0);
     score.reps = extra;
   }

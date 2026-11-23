@@ -40,7 +40,8 @@ function withFemaleRx(w: Workout): Workout {
   const bm = w.name ? benchmarkOf(w.name) : undefined;
   const fx = bm ? FEMALE_RX[bm.name] : undefined;
   if (!fx) return w;
-  return { ...w, movements: w.movements.map((m) => (m.load && fx[m.movement.family] && m.load.female === undefined ? { ...m, load: { ...m.load, female: fx[m.movement.family] } } : m)) };
+  const inUnit = (lb: number, unit: string) => (unit === 'kg' ? Math.round(lb / 2.20462) : lb); // FEMALE_RX is in lb
+  return { ...w, movements: w.movements.map((m) => (m.load && fx[m.movement.family] && m.load.female === undefined ? { ...m, load: { ...m.load, female: inUnit(fx[m.movement.family]!, m.load.unit) } } : m)) };
 }
 
 const workoutIds = new Map<string, string>();
