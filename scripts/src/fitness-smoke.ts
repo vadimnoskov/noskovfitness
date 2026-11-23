@@ -52,6 +52,18 @@ try {
     await page.screenshot({ path: new URL('settings.jpg', out).pathname });
   }
   await page.goto(`${base}/`);
+  // With APP_PASSWORD set, development requires sign-in too: use SMOKE_NAME / SMOKE_PASSWORD from the environment
+  // (e.g. SMOKE_NAME=Vadim SMOKE_PASSWORD="$APP_PASSWORD" before the coach has set an own password). Never hard-code them.
+  await page.waitForLoadState('networkidle');
+  if (new URL(page.url()).pathname === '/login') {
+    const name = process.env.SMOKE_NAME, password = process.env.SMOKE_PASSWORD;
+    if (!name || !password) throw new Error('Sign-in required: run with SMOKE_NAME and SMOKE_PASSWORD set (coach account), or without APP_PASSWORD in development.');
+    await page.getByLabel('Your name').fill(name);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.waitForURL((u) => u.pathname !== '/login');
+    if (new URL(page.url()).pathname === '/account') await page.goto(`${base}/`); // first coach sign-in lands on "set your password"
+  }
   await page.locator('.datebar').waitFor(); // home is Today
   await page.getByRole('link', { name: 'History', exact: true }).click();
   await page.getByRole('heading', { name: 'My history', exact: true }).waitFor();
@@ -70,12 +82,15 @@ try {
   await page.locator('.heat').waitFor();
   await page.getByRole('link', { name: 'Benchmarks', exact: true }).click();
   await page.getByRole('heading', { name: 'The Girls', exact: false }).waitFor();
-  await page.goto(`${base}/login`);
-  await page.getByLabel('Your name').fill('nobody');
-  await page.getByLabel('Password').fill('not-a-real-password');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.getByText("Name or password didn't match.", { exact: false }).waitFor();
-  await page.screenshot({ path: new URL('login.jpg', out).pathname });
+  // Sign-in rejection, checked in a fresh signed-out context so the session above is untouched.
+  const anon = await browser.newPage();
+  await anon.goto(`${base}/login`);
+  await anon.getByLabel('Your name').fill('nobody');
+  await anon.getByLabel('Password').fill('not-a-real-password');
+  await anon.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await anon.getByText("Name or password didn't match.", { exact: false }).waitFor();
+  await anon.screenshot({ path: new URL('login.jpg', out).pathname });
+  await anon.close();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${base}/calendar?view=week&d=2099-01-05`);
   await page.locator('.week').waitFor();

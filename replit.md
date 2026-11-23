@@ -8,7 +8,7 @@ CrossFit workout programming and tracking for the family. This is a faithful por
 - Do not start dev commands at the workspace root.
 - `pnpm --filter @workspace/fitness-core test` — original engine, resolver, and importer tests
 - `pnpm --filter @workspace/noskov-fitness typecheck` — frontend check
-- `pnpm --filter @workspace/scripts test:fitness-ui` — browser smoke check against the running development workflows (requires password-free development access).
+- `SMOKE_NAME=Vadim SMOKE_PASSWORD="$APP_PASSWORD" pnpm --filter @workspace/scripts test:fitness-ui` — browser smoke check against the running development workflows. With `APP_PASSWORD` set it signs in as the coach from these environment variables (use the coach's own development password once one is set). Never put passwords in code.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
