@@ -12,9 +12,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="top">
           <Link href="/calendar" className="brand">Noskov Fitness</Link>
           <nav aria-label="Main">
+            <Link href="/program">Program</Link>
             <Link href="/calendar">Calendar</Link>
             <Link href="/analysis">Analysis</Link>
             <Link href="/benchmarks">Benchmarks</Link>
+            <Link href="/settings">Settings</Link>
           </nav>
         </header>
         <main>{children}</main>

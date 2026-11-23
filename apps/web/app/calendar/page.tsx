@@ -24,7 +24,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <h1>Program calendar</h1>
-      <p className="small">Showing training history imported from BTWB (the coach's sessions define each day; everyone's results are listed under it). Planned weeks will appear here once the engine proposes them.</p>
+      <p className="small">Past days come from the imported history (everyone's results listed under each workout). Future days come from the <Link href="/program">Program</Link>: faded = proposed, solid = approved.</p>
       <div className="bar">
         <Link className="btn" aria-current={view === 'year'} href={href('year', anchor)}>Year</Link>
         <Link className="btn" aria-current={view === '8w'} href={href('8w', anchor)}>8 weeks</Link>
@@ -57,7 +57,7 @@ function YearGrid({ from, to, days }: { from: string; to: string; days: Map<stri
           if (!day) return <span key={date} className="d" title={`${date}: no workout`} />;
           const h = dayHeader(day);
           return (
-            <Link key={date} className={`d${h.benchmark ? ' b' : ''}`} href={`/calendar?view=week&d=${date}`} title={`${date}: ${day.parts.map((p) => workoutTitle({ ...p.workout, name: p.name ?? undefined, benchmark: p.benchmark as never })).join(' + ')}`}>
+            <Link key={date} className={`d${h.benchmark ? ' b' : ''}${day.parts.every((p) => p.planStatus === 'proposed') ? ' prop' : ''}`} href={`/calendar?view=week&d=${date}`} title={`${date}: ${day.parts.map((p) => workoutTitle({ ...p.workout, name: p.name ?? undefined, benchmark: p.benchmark as never })).join(' + ')}`}>
               {h.mods.map((m, k) => <i key={k} className={m.toLowerCase()} />)}<i className={LOAD[h.load]} style={{ flex: 0.6 }} />
             </Link>
           );
@@ -87,7 +87,7 @@ function EightWeeks({ from, days }: { from: string; days: Map<string, Day> }) {
             <div key={date}>
               <div className="small">{short(date)}</div>
               <Chips {...h} />
-              {day.parts.map((p) => <div key={p.workoutId} className="ttl">{p.benchmark && p.benchmark.category !== 'lift' ? <span className="bm">★ </span> : null}{title(p)}</div>)}
+              {day.parts.map((p) => <div key={p.workoutId} className={`ttl${p.planStatus === 'proposed' ? ' prop' : ''}`}>{p.benchmark && p.benchmark.category !== 'lift' ? <span className="bm">★ </span> : null}{title(p)}</div>)}
             </div>
           );
         }),
@@ -113,6 +113,7 @@ function Week({ from, days }: { from: string; days: Map<string, Day> }) {
                     <div className="ttl">{day.parts.length > 1 ? `${String.fromCharCode(65 + k)}. ` : ''}{p.benchmark && p.benchmark.category !== 'lift' ? <span className="bm">★ </span> : null}{p.name && !p.name.includes(':') ? p.name : structureLabel(p.workout.structure)}</div>
                     {p.name && !p.name.includes(':') ? <div className="small">{structureLabel(p.workout.structure)}</div> : null}
                     <ul>{p.workout.movements.map((m, j) => <li key={j}>{movementLine(m)}</li>)}</ul>
+                    {p.planStatus ? <div className="small">{p.planStatus}</div> : null}
                     <div className="res">{p.results.map((r) => [<b key={r.athleteId + 'n'}>{r.athlete}</b>, <span key={r.athleteId + 's'} className="sc">{scoreText(r)}{r.rx ? '' : ' (scaled)'}</span>])}</div>
                   </div>
                 ))}

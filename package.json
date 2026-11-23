@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
-    "movements:report": "tsx tools/movement-report.ts"
+    "movements:report": "tsx tools/movement-report.ts",
+    "check": "npm test -w @nf/core && tsc --noEmit -p . && tsc --noEmit -p apps/web"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

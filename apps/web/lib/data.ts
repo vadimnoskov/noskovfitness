@@ -12,6 +12,8 @@ export interface Part {
   workout: Workout;
   tags: WorkoutTags;
   minutes?: number;
+  /** Set for days that come from the program rather than history. */
+  planStatus?: 'proposed' | 'approved' | 'done' | 'skipped';
   results: { athleteId: string; athlete: string; score: Result['score']; rx: boolean; completed: boolean; notes: string | null }[];
 }
 export interface Day { date: string; parts: Part[] }
@@ -35,6 +37,17 @@ export async function getDays(from: string, to: string): Promise<Map<string, Day
       day.parts.push(part);
     }
     part.results.push({ athleteId: r.athlete_id, athlete: r.athlete, score: r.score, rx: r.as_prescribed, completed: r.completed, notes: r.notes });
+  }
+  const planned = await sql`
+    SELECT d.date::text AS date, d.status, w.id, w.name, w.benchmark, w.structure, w.movements, w.score_type, w.tags
+    FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
+    WHERE d.group_id = ${GROUP_ID} AND d.date BETWEEN ${from} AND ${to} AND d.status IN ('proposed','approved')`;
+  for (const r of planned) {
+    const day: Day = days.get(r.date) ?? { date: r.date, parts: [] };
+    days.set(r.date, day);
+    if (day.parts.some((p) => p.workoutId === r.id)) continue;
+    const workout = { id: r.id, name: r.name ?? undefined, structure: r.structure, movements: r.movements, scoreType: r.score_type };
+    day.parts.push({ workoutId: r.id, name: r.name, benchmark: r.benchmark, workout, tags: r.tags, minutes: workMinutes(workout), planStatus: r.status, results: [] });
   }
   // Strength / practice parts first, the metcon last (like "A." and "B." in the sheet).
   for (const d of days.values()) d.parts.sort((a, b) => strengthRank(a) - strengthRank(b));

@@ -72,14 +72,14 @@ async function loadPicture(groupId: string, from: string, excludeProposedFrom?: 
  * Propose workouts for every open training day in [from, to]. Existing proposed days in the range are replaced;
  * approved and done days are kept and taken into account.
  */
-export async function proposeRange(groupId: string, from: string, to: string) {
+export async function proposeRange(groupId: string, from: string, to: string, opts: { extraDates?: string[] } = {}) {
   const [policy, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   // Workout history reaches back a year so "not repeated within N days" sees older repeats.
   const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(from, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), from);
   const existing = await sql`SELECT date::text AS date, status, equipment_profile_id FROM program_days WHERE group_id = ${groupId} AND date BETWEEN ${from} AND ${to}`;
   const fixed = new Set(existing.filter((d) => d.status !== 'proposed').map((d) => d.date));
   const locByDate = new Map(existing.map((d) => [d.date, d.equipment_profile_id as string | null]));
-  const dates = trainingDatesBetween(from, to, group.training_days).filter((d) => !fixed.has(d));
+  const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
   const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 4 });
