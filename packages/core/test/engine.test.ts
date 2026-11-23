@@ -52,11 +52,18 @@ describe('equipment', () => {
 });
 
 describe('planner', () => {
-  const proposals = plan(input());
+  // The sample library is small, so allow two benchmarks a week to fill all ten days.
+  const roomy = withDefaults({ rules: { ...DEFAULT_POLICY.rules, maxBenchmarksPerWeek: 2 } });
+  const proposals = plan(input({ policy: roomy }));
 
   it('fills every training day it can, deterministically', () => {
     expect(proposals.length).toBe(10);
-    expect(plan(input()).map((p) => p.candidateId)).toEqual(proposals.map((p) => p.candidateId));
+    expect(plan(input({ policy: roomy })).map((p) => p.candidateId)).toEqual(proposals.map((p) => p.candidateId));
+  });
+
+  it('leaves a day open rather than break a rule when nothing fits', () => {
+    // Default policy: at most 1 benchmark a week. With this small library one day has no eligible workout.
+    expect(plan(input()).length).toBeLessThan(10);
   });
 
   it('never schedules heavy two days in a row or the same movement on consecutive days', () => {
