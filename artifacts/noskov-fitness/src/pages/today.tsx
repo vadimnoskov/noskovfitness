@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
-import { useGetToday, getGetTodayQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
+import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
 import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
@@ -55,12 +55,34 @@ function PersonalNote({ p, name }: { p: Planned; name: string }) {
 }
 
 /** "Plan for today" (coaching notes) and this person's recent results on the same workout. */
-function PlanAndHistory({ p, self, name }: { p: Planned; self: boolean; name: string }) {
+type AiNote = { approach: string; tips: string[] };
+
+/** The coach's plan: AI-written when available (loads after the page), otherwise the built-in notes. */
+function Plan({ p, athleteId }: { p: Planned; athleteId: string }) {
+  const params = { dayId: p.dayId, athleteId };
+  const q = useGetCoachingNote(params, { query: { queryKey: getGetCoachingNoteQueryKey(params), staleTime: 30 * 60_000, retry: false } });
+  const ai = (q.data as { note?: AiNote | null } | undefined)?.note;
+  if (ai) {
+    return (
+      <div className="plan">
+        <b>Plan for today</b>
+        <p>{ai.approach}</p>
+        {ai.tips.length ? <ul>{ai.tips.map((t, i) => <li key={i}>{t}</li>)}</ul> : null}
+        {p.coaching.length ? <details className="nums"><summary>The numbers</summary><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></details> : null}
+      </div>
+    );
+  }
+  if (!p.coaching.length) return null;
+  return (
+    <div className="plan"><b>Plan for today</b>{q.isLoading ? <span className="small"> · writing coach notes…</span> : null}
+      <ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+  );
+}
+
+function PlanAndHistory({ p, self, name, athleteId }: { p: Planned; self: boolean; name: string; athleteId: string }) {
   return (
     <>
-      {p.coaching.length ? (
-        <div className="plan"><b>Plan for today</b><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></div>
-      ) : null}
+      <Plan p={p} athleteId={athleteId} />
       {p.previousCount ? (
         <div className="prev">
           <b>{self ? 'Your' : `${name}'s`} results on this workout ({p.previousCount})</b>
@@ -149,7 +171,7 @@ export default function Today() {
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
               {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
-              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} />
+              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} athleteId={athlete.id} />
               {saved[p.dayId] ? <SavedBanner c={saved[p.dayId]!} /> : null}
               {logging === p.dayId
                 ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} totalReps={p.totalReps} onSaved={(c) => { setLogging(null); if (c) setSaved((x) => ({ ...x, [p.dayId]: c })); }} />

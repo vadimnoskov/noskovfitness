@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -226,6 +226,12 @@ router.get('/fitness/today', wrap(async (req, res) => {
   const p = GetTodayQueryParams.safeParse(req.query);
   if (!p.success || !date(p.data.date)) throw new logging.InputError('Choose a valid date.');
   return logging.getToday(p.data.date, subject(res, p.data.athleteId));
+}));
+
+router.get('/fitness/coaching-note', wrap(async (req, res) => {
+  const p = GetCoachingNoteQueryParams.safeParse(req.query);
+  if (!p.success || !UUID.test(p.data.dayId)) throw new logging.InputError('Select a program day.');
+  return logging.getCoachingNote(p.data.dayId, subject(res, p.data.athleteId));
 }));
 
 router.get('/fitness/history', wrap(async (req, res) => {

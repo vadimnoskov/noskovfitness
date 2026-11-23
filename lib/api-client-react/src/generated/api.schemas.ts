@@ -114,6 +114,11 @@ date: string;
 athleteId?: string;
 };
 
+export type GetCoachingNoteParams = {
+dayId: string;
+athleteId?: string;
+};
+
 export type GetHistoryParams = {
 athleteId?: string;
 q?: string;

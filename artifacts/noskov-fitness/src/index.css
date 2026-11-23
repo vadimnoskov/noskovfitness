@@ -9,6 +9,7 @@ h1{font-size:clamp(24px,3vw,34px)}h2{font-size:20px;margin:24px 0 10px}
 .brand{font-weight:800;text-decoration:none;font-size:17px}
 .top nav{display:flex;gap:4px;flex-wrap:wrap}.top nav a{text-decoration:none;padding:10px 12px;border-radius:6px;font-size:14px}.top nav a:hover{background:var(--panel)}
 main{padding:18px max(3vw,16px) 40px;max-width:1500px;margin:0 auto}
+main.full{max-width:none;padding-left:max(1.5vw,12px);padding-right:max(1.5vw,12px)}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .btn{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--line);text-decoration:none;font-size:14px;background:var(--bg)}
 .btn[aria-current=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -141,7 +142,8 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .loads input{width:90px;min-height:44px;font-size:17px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);text-align:right}
 .cap{color:var(--ink);font-weight:700}
 .plan{border:1px solid var(--line);border-left:4px solid #1d7a3a;border-radius:0 10px 10px 0;padding:8px 12px;font-size:14px}
-.plan ul{margin:4px 0 0;padding-left:18px}.plan li{margin:3px 0}
+.plan ul{margin:4px 0 0;padding-left:18px}.plan li{margin:3px 0}.plan p{margin:4px 0}
+.plan .nums{margin-top:6px;font-size:13px;color:var(--mute)}.plan .nums summary{cursor:pointer}
 .prev{font-size:14px;display:grid;gap:4px}.prev ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .prev li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:4px 0}
 .saved{margin:0;padding:10px 12px;border-radius:10px;background:var(--panel);font-weight:600}

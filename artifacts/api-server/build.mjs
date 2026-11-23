@@ -62,7 +62,7 @@ async function buildAll() {
       "@swc/*",
       "@aws-sdk/*",
       "@azure/*",
-      "@opentelemetry/*",
+      // "@opentelemetry/*" is bundled: the Anthropic SDK imports @opentelemetry/api, which is plain JS.
       "@google-cloud/*",
       "@google/*",
       "googleapis",

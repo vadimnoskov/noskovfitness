@@ -3,9 +3,10 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { sql } from '@workspace/fitness-db';
-import { deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
+import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
 import { GROUP_ID } from './data';
+import { noteFor, type NoteArgs } from './ai-notes';
 
 export class InputError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
@@ -63,6 +64,25 @@ export async function getToday(date: string, athleteId: string) {
   const results = await myResults(athleteId, sql`r.date = ${date}`);
   return { date, planned, results };
 }
+
+/** The AI-written plan for one person on one program day (null when AI notes are off or the call failed). */
+export async function getCoachingNote(dayId: string, athleteId: string) {
+  return noteFor(await coachingNoteArgs(dayId, athleteId));
+}
+
+/** The facts an AI note for this person and day is written from. */
+export async function coachingNoteArgs(dayId: string, athleteId: string): Promise<NoteArgs> {
+  const v = await versionFor(dayId, athleteId);
+  const [a] = await sql`SELECT birth_year FROM athletes WHERE id = ${athleteId}`;
+  const [d] = await sql`SELECT d.date::text AS date, d.coach_note, w.original_text FROM program_days d JOIN workouts w ON w.id = d.main_workout_id WHERE d.id = ${dayId}`;
+  const previous = await previousOn(v.standard.id, athleteId, d!.date);
+  return {
+    dayId, athleteId, birthYear: a?.birth_year ?? null, date: d!.date, sex: v.person.sex, units: v.person.units,
+    workoutText: (d!.original_text as string | null) ?? workoutTitleText(v.standard), version: v.version, changes: v.changes.map((c) => `${nameOf(v.standard.movements[c.index]!.movement)} ${c.from ?? '?'} → ${c.to} ${c.unit}`),
+    previous, coachNote: d!.coach_note,
+  };
+}
+const workoutTitleText = (w: Workout) => [w.name, ...w.movements.map((m) => `${m.reps ?? ''} ${nameOf(m.movement)}`.trim())].filter(Boolean).join('\n');
 
 /** This person's earlier results on a workout (before a date), newest first, in the shape coaching and comparison use. */
 async function previousOn(workoutId: string, athleteId: string, before: string): Promise<(PastResult & { id: string; notes: string | null })[]> {

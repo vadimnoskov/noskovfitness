@@ -13,6 +13,7 @@ export * from './fitnessActionResult';
 export * from './fitnessActionResultComparison';
 export * from './fitnessForm';
 export * from './fitnessPage';
+export * from './getCoachingNoteParams';
 export * from './getFitnessPageParams';
 export * from './getFitnessPageScreen';
 export * from './getHistoryParams';

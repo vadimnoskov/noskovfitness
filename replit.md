@@ -8,12 +8,12 @@ CrossFit workout programming and tracking for the family. This is a faithful por
 - Do not start dev commands at the workspace root.
 - `pnpm --filter @workspace/fitness-core test` — original engine, resolver, and importer tests
 - `pnpm --filter @workspace/noskov-fitness typecheck` — frontend check
-- `SMOKE_NAME=Vadim SMOKE_PASSWORD="$APP_PASSWORD" pnpm --filter @workspace/scripts test:fitness-ui` — browser smoke check against the running development workflows. With `APP_PASSWORD` set it signs in as the coach from these environment variables (use the coach's own development password once one is set). Never put passwords in code. If sign-in fails, the check prints the app's message; once the coach has set an own development password, put it in a `SMOKE_PASSWORD` secret and run with `SMOKE_PASSWORD="$SMOKE_PASSWORD"`.
+- `SMOKE_NAME=Vadim SMOKE_PASSWORD="$SMOKE_PASSWORD" pnpm --filter @workspace/scripts test:fitness-ui` — browser smoke check against the running development workflows. With `APP_PASSWORD` set it signs in as the coach from these environment variables (use the coach's own development password once one is set). Never put passwords in code. If sign-in fails, the check prints the app's message; once the coach has set an own development password, put it in a `SMOKE_PASSWORD` secret and run with `SMOKE_PASSWORD="$SMOKE_PASSWORD"`.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — PostgreSQL connection string. `APP_PASSWORD` is required in production.
+- Required env: `DATABASE_URL` — PostgreSQL connection string. `APP_PASSWORD` is required in production. `ANTHROPIC_API_KEY` (secret) turns on AI coaching notes.
 
 ## Stack
 
@@ -41,7 +41,9 @@ CrossFit workout programming and tracking for the family. This is a faithful por
 - Program page: week rows of 7 days with three zoom levels (saved per browser). The coach drags a workout to another date (swaps with an open day there) or uses More… → Move, Location, Time cap, Repeat, Push/Skip/Never propose, or picks any workout from the library. "+ Add" fills a rest day; the engine checks the days before and after it.
 - Time caps live in `workouts.structure.capMin` (coach-set) or are read from the workout text ("Time cap: 15 mins"). Logging rejects a time over the cap and asks for reps at the cap instead.
 - No-repeat window (Settings, default 180 days) applies to all workouts except benchmarks (own intervals) and workouts with a coach repeat (`workouts.repeat_every_days`, optional `repeat_until`), e.g. a retest every 4 weeks.
-- Today shows each person's earlier results on the workout, a short plan (target from last/best, pacing checkpoints, warm-up sets for lifts) and, after saving, how the result compares with last time and their best. These notes are rule-based (`lib/fitness-core/src/workouts/coaching.ts`), not AI.
+- Today shows each person's earlier results on the workout, a short plan (target from last/best, pacing checkpoints, warm-up sets for lifts) and, after saving, how the result compares with last time and their best. The numbers are rule-based (`lib/fitness-core/src/workouts/coaching.ts`).
+- AI coaching notes (`artifacts/api-server/src/fitness/ai-notes.ts`): with `ANTHROPIC_API_KEY` set, Today loads a short plan written by Claude Haiku 5.5 (low effort, JSON output) from the workout, the person's version, their earlier results and notes, the rule-based numbers and the coach's day note. CrossFit-only instructions. Sent: age, sex, units, workout and results; never names. Cached in `coaching_notes` per day and person and rewritten only when its inputs change. Without the key, or on any API error, Today shows the rule-based notes. Check it with `pnpm --filter @workspace/api-server run check:ai -- --name Vadim --date YYYY-MM-DD` (`--dry` prints the prompt and makes no API call).
+- The server bundle includes `@opentelemetry/api` (needed by the Anthropic SDK); keep it out of the esbuild externals.
 - Results logged in the app have `source = 'app'` and `entered_by`; only these can be deleted. Imported history (btwb-import, manual-notes) is never edited or deleted.
 - Keep PostgreSQL records and original domain logic unchanged; do not replace training history with sample workouts.
 - Use Replit's Publish flow for production schema changes, never custom startup or deployment DDL. Original migration tools are retained for legacy compatibility, not production hooks.

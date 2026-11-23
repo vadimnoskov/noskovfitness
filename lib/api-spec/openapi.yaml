@@ -194,6 +194,19 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/coaching-note:
+    get:
+      operationId: getCoachingNote
+      summary: AI-written plan for one person on one program day (note is null when AI notes are off or unavailable)
+      parameters:
+        - { in: query, name: dayId, required: true, schema: { type: string } }
+        - { in: query, name: athleteId, schema: { type: string } }
+      responses:
+        "200":
+          description: Coaching note
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory

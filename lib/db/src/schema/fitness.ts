@@ -87,3 +87,11 @@ export const sessions = pgTable('sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 }, t => [index('sessions_athlete_id_idx').on(t.athleteId)]);
+
+/** AI-written coaching note per person per program day; rewritten when anything it is based on changes (input_hash). */
+export const coachingNotes = pgTable('coaching_notes', {
+  dayId: uuid('day_id').notNull().references(() => programDays.id, { onDelete: 'cascade' }),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
+  inputHash: text('input_hash').notNull(), note: jsonb('note').notNull(), model: text('model').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);

@@ -167,6 +167,17 @@ export const GetTodayResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary AI-written plan for one person on one program day (note is null when AI notes are off or unavailable)
+ */
+export const GetCoachingNoteQueryParams = zod.object({
+  "dayId": zod.coerce.string(),
+  "athleteId": zod.coerce.string().optional()
+})
+
+export const GetCoachingNoteResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({

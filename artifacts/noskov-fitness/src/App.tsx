@@ -47,7 +47,8 @@ function Layout({ children }: { children: ReactNode }) {
           <Link href="/account">{me ? me.user.name : 'Account'}</Link>
         </nav>
       </header>
-      <main>{children}</main>
+      {/* The program planner uses the whole browser width so each day gets more room on big screens. */}
+      <main className={path.startsWith('/program') ? 'full' : undefined}>{children}</main>
     </>
   );
 }

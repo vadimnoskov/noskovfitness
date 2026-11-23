@@ -30,6 +30,7 @@ import type {
   FitnessActionResult,
   FitnessForm,
   FitnessPage,
+  GetCoachingNoteParams,
   GetFitnessPageParams,
   GetHistoryParams,
   GetTodayParams,
@@ -1080,6 +1081,114 @@ export function useGetToday<TData = Awaited<ReturnType<typeof getToday>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetTodayQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCoachingNoteUrl = (params: GetCoachingNoteParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/coaching-note?${stringifiedParams}` : `/api/fitness/coaching-note`
+}
+
+/**
+ * @summary AI-written plan for one person on one program day (note is null when AI notes are off or unavailable)
+ */
+export const getCoachingNote = async (params: GetCoachingNoteParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetCoachingNoteUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCoachingNoteQueryKey = (params?: GetCoachingNoteParams,) => {
+    return [
+    `/api/fitness/coaching-note`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCoachingNoteQueryOptions = <TData = Awaited<ReturnType<typeof getCoachingNote>>, TError = ErrorType<unknown>>(params: GetCoachingNoteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCoachingNoteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachingNote>>> = ({ signal }) => getCoachingNote(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCoachingNoteQueryResult = NonNullable<Awaited<ReturnType<typeof getCoachingNote>>>
+export type GetCoachingNoteQueryError = ErrorType<unknown>
+
+
+export function useGetCoachingNote<TData = Awaited<ReturnType<typeof getCoachingNote>>, TError = ErrorType<unknown>>(
+ params: GetCoachingNoteParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCoachingNote>>,
+          TError,
+          Awaited<ReturnType<typeof getCoachingNote>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCoachingNote<TData = Awaited<ReturnType<typeof getCoachingNote>>, TError = ErrorType<unknown>>(
+ params: GetCoachingNoteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCoachingNote>>,
+          TError,
+          Awaited<ReturnType<typeof getCoachingNote>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCoachingNote<TData = Awaited<ReturnType<typeof getCoachingNote>>, TError = ErrorType<unknown>>(
+ params: GetCoachingNoteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary AI-written plan for one person on one program day (note is null when AI notes are off or unavailable)
+ */
+
+export function useGetCoachingNote<TData = Awaited<ReturnType<typeof getCoachingNote>>, TError = ErrorType<unknown>>(
+ params: GetCoachingNoteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCoachingNote>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCoachingNoteQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
