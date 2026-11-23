@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolve } from '../src/movements/resolver';
+import { resolve, resolveSequence } from '../src/movements/resolver';
 import { FAMILIES } from '../src/movements/catalog';
 
 const name = (s: string) => resolve(s).name;
@@ -44,7 +44,30 @@ describe('movement resolver', () => {
 
   it('flags complexes and unknowns for human review instead of guessing silently', () => {
     expect(resolve('hang squat clean front squat squat clean').review).toBe('complex');
-    expect(resolve('virtual shovelings').review).toBe('unknown');
+    expect(resolve('virtual shovelings').review).toBe('ignored');
+    expect(resolve('obstacle course racing').review).toBe('ignored');
+    expect(resolve('bear complexes').review).toBe('workout');
+  });
+
+  it('applies coach decisions on defaults', () => {
+    expect(key('Dumbbell Snatches')).toBe(key('Single Arm Dumbbell Snatches'));
+    expect(name('Dumbbell Snatch')).toBe('Dumbbell Snatch');
+    expect(key('Alternating Dumbbell Snatches')).not.toBe(key('Dumbbell Snatches'));
+    expect(name('Snatches')).toBe('Snatch'); // athlete's choice of receiving position
+    expect(key('Snatches')).not.toBe(key('Squat Snatches'));
+    expect(name('Dips')).toBe('Ring Dip');
+    expect(name('Muscle-ups')).toBe('Ring Muscle-up');
+    expect(key('Kipping Handstand Push-ups')).toBe(key('Handstand Push-ups'));
+    expect(key('Strict Handstand Push-ups')).not.toBe(key('Handstand Push-ups'));
+  });
+
+  it('splits complexes into catalog movements in order', () => {
+    const names = (s: string) => resolveSequence(s).map((r) => r.name);
+    expect(names('hang squat clean front squat squat clean')).toEqual(['Hang Squat Clean', 'Front Squat', 'Squat Clean']);
+    expect(names('hang power snatch overhead squat squat snatch')).toEqual(['Hang Power Snatch', 'Overhead Squat', 'Squat Snatch']);
+    expect(names('kettlebell clean lunges')).toEqual(['Kettlebell Clean', 'Lunge']);
+    expect(names('burpee/push up/jumping jack/sit up/handstands')).toEqual(['Burpee', 'Push-up', 'Jumping Jack', 'Sit-up', 'Handstand Hold']);
+    expect(names('Back Squats')).toEqual(['Back Squat']);
   });
 
   it('every family has a unique id and at least one matcher', () => {

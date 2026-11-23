@@ -1,0 +1,112 @@
+<h1 id="nf-02--decisions-and-build-status">NF-02 — Decisions and build
+status</h1>
+<p>November 22, 2026</p>
+<h2 id="your-answers-now-requirements">Your answers, now
+requirements</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Topic</th>
+<th>Decision</th>
+<th>How the app handles it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Rhythm</td>
+<td>All four train together, usually 5 days a week</td>
+<td>Group calendar with default training days. Coach can
+<strong>skip</strong>, <strong>push forward</strong> (shift later days),
+<strong>insert</strong> an extra day or <strong>move</strong> a day.
+Later unapproved days are then re-planned to keep variety balanced.</td>
+</tr>
+<tr class="even">
+<td>Locations</td>
+<td>CrossFit gym (everything) or home garage (almost everything, limited
+quantity)</td>
+<td>Each location is an <strong>equipment profile</strong> with
+quantities and available loads. Every day is checked against its
+location; with 1 rower for 4 people the engine staggers or
+substitutes.</td>
+</tr>
+<tr class="odd">
+<td>Sasha (15), Anton (13)</td>
+<td>Do nearly all lifts and movements, including handstand walks, bar
+muscle-ups (learning) and double-unders</td>
+<td>Versions scaled by load and time-matched reps rather than easier
+movements. Bar muscle-up gets a progression step until it is solid.</td>
+</tr>
+<tr class="even">
+<td>Engine depth</td>
+<td>Fill the next week or several, coach approves or edits</td>
+<td>Engine fills a planning window (1–6 weeks) with
+<strong>proposed</strong> days; coach approves day by day or the whole
+week. Options stay available per day.</td>
+</tr>
+<tr class="odd">
+<td>Coaching notes</td>
+<td>Written by AI from each person's history and the workout</td>
+<td>Generated per athlete version and saved with a fingerprint of the
+inputs, so a note is regenerated only when history or the workout
+changes. Notes need an Anthropic API key at build time.</td>
+</tr>
+<tr class="even">
+<td>Olga's data</td>
+<td>Coming in a few days; meanwhile assume Vadim's results scaled for
+women's loads</td>
+<td>Placeholder profile from Vadim's numbers × the CrossFit
+women's/men's Rx load ratio, clearly marked as estimated until her
+export arrives.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="built-so-far-code-repository-noskov-fitness">Built so far (code
+repository "noskov-fitness")</h2>
+<ul>
+<li><strong>Movement catalog</strong>: 71 movement families with
+controlled attributes (implement, single/double/alternating, start
+position, receiving position, style, carry position, named
+variant).</li>
+<li><strong>Resolver</strong>: turns any typed or imported phrase into
+exactly one catalog movement. Prescription details (unbroken, weighted,
+tempo, pause, calories vs meters) are kept separate from identity. It
+resolves <strong>99.7%</strong> of the 11,952 movement mentions in the
+three BTWB exports: 704 spellings become 355 movements. Complexes and
+unknown phrases are flagged for review, never guessed.</li>
+<li><strong>Domain model</strong>: athletes, group, equipment profiles,
+workouts (structures: for time, AMRAP, EMOM, intervals, Tabata, sets,
+max, skill practice), derived tags, program days, schedule operations,
+athlete versions, AI coaching notes, results (rounds and extra reps
+stored separately; capped results kept apart from completed times).</li>
+<li><strong>Kids' records</strong>: 125 results and 33 measurements from
+Olga's notes structured and linked to the catalog; 7 are marked
+uncertain where the notes had a "?".</li>
+<li>Automated tests for the resolver. Code backup:
+<code>noskov-fitness-code.bundle</code> in this folder.</li>
+</ul>
+<h2 id="review-now">Review now</h2>
+<p>Movement Library Review page: six decisions plus the full library,
+searchable, with every old spelling filed under its movement.</p>
+<h2 id="still-open">Still open</h2>
+<ol type="1">
+<li>Sasha's sex, for default Rx loads and reference standards (the app
+needs it for women's/men's Rx).</li>
+<li>Which weekdays are the default 5 training days?</li>
+<li>Home garage equipment list with quantities (rower/bike count,
+barbells, dumbbell and kettlebell weights, rings, rope, GHD…).</li>
+<li>Units: lb for everyone?</li>
+<li>Logging: each person on their own phone, or one person logs for the
+group?</li>
+<li>A GitHub account or repository to hold the code, so it isn't only in
+this temporary workspace.</li>
+</ol>
+<h2 id="next-build-steps">Next build steps</h2>
+<ol type="1">
+<li>Lock the movement library after your review.</li>
+<li>Import all three BTWB histories into the database as structured
+workouts and results.</li>
+<li>Benchmark library (Girls, Heroes, Open, your Misc WODs) with retest
+intervals.</li>
+<li>The program calendar web app: week / 8-week / year zoom with your
+color coding, workout builder, live analysis map.</li>
+</ol>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Movement Library Review</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a review sheet the coach marks up before the library is locked
+   IDEA the map sheet's movement list, grouped by modality, with every old spelling filed under its movement
+   PICTURE the funnel from 704 spellings to 355 movements to 71 families, drawn as three bars
+   COLOUR white ground, near-black ink, the sheet's W salmon, G blue, M yellow; marker red for decisions
+   TYPE Inter Tight 700 for titles, Inter for text
+   LAYOUT title + funnel on top, decisions next, then the searchable library */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#121417);--ink:light-dark(#15171c,#e9eaee);--mute:light-dark(#5d6270,#a3a8b5);--line:light-dark(#e3e5ea,#2a2e36);--panel:light-dark(#f6f7f9,#1a1d22);--acc:light-dark(#c8352a,#ff6b5c);--W:#E69999;--G:#99CCFF;--M:#FFFF99}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Inter Tight",Inter,sans-serif;letter-spacing:-.02em;line-height:1.08;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,4.2vw,46px)}h2{font-size:clamp(22px,2.6vw,30px);margin-bottom:10px}
+p{margin:0 0 12px;max-width:72ch}
+.band{padding:clamp(24px,4vw,52px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}.alt{background:var(--panel)}
+.small{font-size:13px;color:var(--mute)}
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center}
+.fun .r{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:10px;align-items:center;margin:8px 0}
+.fun .b{height:38px;border-radius:4px;background:var(--ink);display:flex;align-items:center;padding:0 12px;color:var(--bg);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden}
+.fun .r:last-child .b{background:var(--acc)}
+.fun b{font:700 24px "Inter Tight",sans-serif;text-align:right;font-variant-numeric:tabular-nums}
+.dec{counter-reset:d;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dec>div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.dec h3{font-size:17px;margin-bottom:6px}.dec h3::before{counter-increment:d;content:counter(d) ". ";color:var(--acc)}
+.rec{font-size:14px;border-left:3px solid var(--acc);padding-left:10px;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{font-size:12.5px;padding:3px 7px;border-radius:4px;background:var(--panel);border:1px solid var(--line);white-space:nowrap}
+.chip i{font-style:normal;color:var(--mute);margin-left:4px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 16px}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input[type=search]{font:inherit;font-size:16px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);flex:1 1 220px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.fam{border-top:1px solid var(--line)}
+.fam summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 4px;min-height:44px}
+.fam summary::-webkit-details-marker{display:none}
+.mod{width:24px;height:24px;border-radius:4px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#15171c}
+.fam .nm{font-weight:600}.fam .nm span{font-weight:400;color:var(--mute);font-size:13px;margin-left:8px}
+.fam .ct{font-variant-numeric:tabular-nums;color:var(--mute);font-size:14px}
+.var{padding:0 4px 12px 42px}
+.var table{border-collapse:collapse;width:100%;font-size:14px}
+.var td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.var td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:60px}
+.var td.al{color:var(--mute);font-size:13px}
+.empty{padding:20px 0;color:var(--mute)}
+@media(max-width:800px){.top,.dec{grid-template-columns:minmax(0,1fr)}.var{padding-left:4px}}
+@media(max-width:600px){.var td.al{display:block;padding-top:0}.var tr{display:block;border-bottom:1px solid var(--line)}.var td{border:0}}
+</style>
+</head>
+<body>
+<section class="band"><div class="wrap top">
+<div>
+<h1>Movement library: 704 spellings become 355 movements in 71 families</h1>
+<p style="margin-top:12px">I ran every movement in Vadim's, Sasha's and Anton's BTWB history through the new catalog. <b id="pct"></b> of all mentions now resolve to exactly one movement. Please review the decisions below and skim your families. Once you agree, this list gets locked as the starting library.</p>
+<p class="small">Source: btwb exports of Nov 22, 2026 (2,815 sessions across three athletes). Counts are mentions inside workout descriptions.</p>
+</div>
+<div class="fun" id="fun"></div>
+</div></section>
+
+<section class="band alt"><div class="wrap">
+<h2>Decisions I need from you</h2>
+<div class="dec">
+<div><h3>Plain "Snatch" and "Clean"</h3><p>92 mentions say just "snatch" and 26 say just "clean", with no power or squat.</p><div class="rec">I recommend treating them as "athlete's choice" (any receiving position), kept as their own movement, not merged into Squat Snatch.</div></div>
+<div><h3>Default standards</h3><p>To avoid duplicates, the unspecified form is the default: Pull-up = kipping allowed, Handstand Push-up = kipping allowed, Dip = ring dip, Muscle-up = ring. Strict versions stay separate movements.</p><div class="rec">Confirm these four defaults, or tell me which differ for you.</div></div>
+<div><h3>Dumbbell counts</h3><p>"Dumbbell Snatch" (58), "Alternating Dumbbell Snatch" (38) and "Single-arm Dumbbell Snatch" (19) are three entries. The same split appears for presses and shoulder-to-overhead.</p><div class="rec">I recommend that unspecified means single-arm (switch arms as you like), so it merges with single-arm. Alternating stays separate because its standard is stricter.</div></div>
+<div><h3>Complexes are workouts, not movements</h3><p>10 phrases chain several movements, e.g. "hang squat clean + front squat + squat clean". Bear Complex is the same idea.</p><div class="rec">Store them as a sequence of catalog movements inside the workout, so each counts toward the movement map. Bear Complex becomes a benchmark workout.</div><div class="chips" id="cx"></div></div>
+<div><h3>Unknown phrases</h3><p>11 phrases (36 mentions) don't name a movement. Most are structure words. One needs your memory.</p><div class="rec">What was "Virtual Shoveling" (12 mentions)? Also, should obstacle course racing be in the library as a monostructural event?</div><div class="chips" id="unk"></div></div>
+<div><h3>Rarely used variations</h3><p><b id="rare"></b> variations appear only once or twice, for example Dumbbell Floor Press and Sled Pull.</p><div class="rec">I recommend keeping them all, since your history uses them. The workout builder will show the most-used variations first.</div></div>
+</div>
+</div></section>
+
+<section class="band"><div class="wrap">
+<h2>The library, by family</h2>
+<p>Each family lists its variations, and under each variation every spelling from your history now filed there. Open a family to check its spellings.</p>
+<div class="tools" role="group" aria-label="Filter">
+<button data-m="" aria-pressed="true">All</button><button data-m="G" aria-pressed="false">Gymnastics</button><button data-m="W" aria-pressed="false">Weightlifting</button><button data-m="M" aria-pressed="false">Monostructural</button>
+<label for="q" class="small" style="position:absolute;left:-9999px">Search movements</label><input id="q" type="search" placeholder="Search a movement or old spelling, e.g. chest to bar">
+</div>
+<div id="lib"></div>
+</div></section>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+{
+const D=JSON.parse(document.getElementById('data').textContent);
+const C={G:'var(--G)',W:'var(--W)',M:'var(--M)'};
+const fmt=n=>n.toLocaleString('en-US');
+document.getElementById('pct').textContent=(D.resolved/D.total*100).toFixed(1)+'%';
+const nf=new Set(D.canon.map(c=>c.f)).size;
+const F=[[`Old spellings`,D.phrases],[`Movements`,D.canon.length],[`Families`,nf]];
+document.getElementById('fun').innerHTML=F.map(([l,v])=>`<div class="r"><div class="b" style="width:${Math.max(18,v/D.phrases*100)}%">${l}</div><b>${fmt(v)}</b></div>`).join('');
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('cx').innerHTML=D.review.filter(r=>r.kind==='complex').map(r=>`<span class="chip">${esc(r.phrase)}<i>${r.n}</i></span>`).join('');
+document.getElementById('unk').innerHTML=D.review.filter(r=>r.kind==='unknown').map(r=>`<span class="chip">${esc(r.phrase)}<i>${r.n}</i></span>`).join('');
+document.getElementById('rare').textContent=D.canon.filter(c=>c.c<=2).length;
+const byFam={};for(const c of D.canon)(byFam[c.f]=byFam[c.f]||[]).push(c);
+const fams=D.fam.filter(f=>byFam[f.id]).map(f=>({...f,v:byFam[f.id],t:byFam[f.id].reduce((a,c)=>a+c.c,0)})).sort((a,b)=>b.t-a.t);
+let mod='',q='';
+function draw(){const qq=q.trim().toLowerCase();
+const out=fams.filter(f=>!mod||f.m===mod).map(f=>{const vs=qq?f.v.filter(c=>c.n.toLowerCase().includes(qq)||c.a.some(a=>a[0].includes(qq))||f.name.toLowerCase().includes(qq)):f.v;if(!vs.length)return'';
+return `<details class="fam"${qq?' open':''}><summary><span class="mod" style="background:${C[f.m]}">${f.m}</span><span class="nm">${esc(f.name)}<span>${vs.length} variation${vs.length>1?'s':''} · ${f.p}</span></span><span class="ct">${fmt(f.t)}</span></summary><div class="var"><table>${vs.map(c=>`<tr><td><b>${esc(c.n)}</b></td><td class="n">${fmt(c.c)}</td><td class="al">${c.a.map(a=>`${esc(a[0])} (${a[1]})`).join(' · ')}</td></tr>`).join('')}</table></div></details>`}).join('');
+document.getElementById('lib').innerHTML=out||'<p class="empty">No movement matches that search.</p>'}
+for(const b of document.querySelectorAll('[data-m]'))b.addEventListener('click',()=>{mod=b.dataset.m;for(const x of document.querySelectorAll('[data-m]'))x.setAttribute('aria-pressed',x===b);draw()});
+document.getElementById('q').addEventListener('input',e=>{q=e.target.value;draw()});
+draw();
+}
+</script>
+</body>
+</html>

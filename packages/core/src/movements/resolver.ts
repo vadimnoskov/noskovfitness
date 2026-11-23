@@ -30,7 +30,7 @@ export interface Resolution {
   name?: string;
   params: PrescriptionParams;
   /** Set when the phrase seems to name several movements (a complex) or nothing in the catalog. */
-  review?: 'complex' | 'unknown';
+  review?: 'complex' | 'unknown' | 'ignored' | 'workout';
 }
 
 const IMPLEMENT_RX: [Implement, RegExp][] = [
@@ -123,6 +123,11 @@ function matchesFamily(s: string): Family[] {
   return familyRx.filter(([, rxs]) => rxs.some((rx) => rx.test(s))).map(([f]) => f);
 }
 
+/** Retired or non-movement phrases (decided by the coach, Nov 23 2026): never become movements. */
+const IGNORED: RegExp[] = [/virtual shovel/, /obstacle course/, /^death by$/, /^ascending( reps)?$/, /^unbroken$/, /^with$/, /warm-?up$/, /^curtis ps$/];
+/** Names of workouts that appear inside descriptions; they belong in the workout library, not the movement catalog. */
+const WORKOUT_NAMES: RegExp[] = [/bear complex/];
+
 const SINGLE_WORD_OVERRIDES: Record<string, MovementRef> = {
   'muscle-up': { family: 'muscle-up' },
 };
@@ -134,6 +139,8 @@ export function resolve(raw: string): Resolution {
   if (/\bcal(orie)?s?\b|calories/.test(s)) params.unit = 'calories';
   else if (/\bmeters?\b/.test(s)) params.unit = 'meters';
 
+  if (IGNORED.some((rx) => rx.test(s))) return { input: raw, params, review: 'ignored' };
+  if (WORKOUT_NAMES.some((rx) => rx.test(s))) return { input: raw, params, review: 'workout' };
   const fams = matchesFamily(s);
   const fam = fams[0];
   if (!fam) return { input: raw, params, review: 'unknown' };
@@ -142,7 +149,7 @@ export function resolve(raw: string): Resolution {
   const imp = firstMatch(IMPLEMENT_RX, s);
   if (imp && fam.implements.includes(imp) && imp !== fam.implements[0]) ref.implement = imp;
   const cnt = firstMatch(COUNT_RX, s);
-  if (cnt && fam.count?.includes(cnt)) ref.count = cnt;
+  if (cnt && fam.count?.includes(cnt) && cnt !== fam.defaultCount?.[ref.implement ?? fam.implements[0]!]) ref.count = cnt;
   const st = firstMatch(START_RX, s);
   if (st && fam.start?.includes(st)) ref.start = st;
   const rc = firstMatch(RECEIVE_RX, s);
@@ -250,4 +257,31 @@ export function nameOf(r: MovementRef): string {
   }
   if (f.id === 'bike' && r.implement) base = '';
   return [...pre, base].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+}
+
+/**
+ * Split a phrase that names several movements in a row (a complex such as
+ * "hang squat clean front squat squat clean") into catalog movements, in order.
+ * Shortest resolvable span wins, extended only while the longer span names a different movement.
+ */
+export function resolveSequence(raw: string): Resolution[] {
+  const single = resolve(raw);
+  if (single.review !== 'complex') return [single];
+  const out: Resolution[] = [];
+  for (const seg of normalize(raw).split(/\s*(?:\/|\+|,|\bthen\b)\s*/).filter(Boolean)) {
+    const t = seg.split(' ');
+    let i = 0;
+    while (i < t.length) {
+      let j = i + 1, best: Resolution | undefined;
+      for (; j <= t.length; j++) { const r = resolve(t.slice(i, j).join(' ')); if (r.ref && !r.review) { best = r; break; } }
+      if (!best) { i++; continue; }
+      while (j < t.length) {
+        const r = resolve(t.slice(i, j + 1).join(' '));
+        if (r.ref && !r.review && r.key !== best.key) { best = r; j++; } else break;
+      }
+      out.push({ ...best, input: t.slice(i, j).join(' ') });
+      i = j;
+    }
+  }
+  return out.length ? out : [single];
 }

@@ -38,6 +38,8 @@ export interface Family {
   position?: Position[];
   /** Family-specific named variants (e.g. deadlift: sumo, romanian). */
   variants?: string[];
+  /** Count assumed when none is written, per implement (e.g. dumbbell snatch = single-arm, switch hands any time). */
+  defaultCount?: Partial<Record<Implement, Count>>;
   /** Natural unit for prescription. */
   unit: 'reps' | 'distance' | 'calories' | 'time' | 'distance-or-calories';
   /** Regex sources that identify the family in free text. Checked in catalog order (specific first). */
@@ -88,7 +90,8 @@ export const FAMILIES: Family[] = [
   { id: 'goblet-squat', name: 'Goblet Squat', modality: 'W', pattern: 'squat', implements: ['kettlebell', 'dumbbell', 'medball', 'plate'], unit: 'reps',
     match: ['goblet squat', 'bear hug squat', 'zercher squat', 'plate squats?'] },
   { id: 'snatch', name: 'Snatch', modality: 'W', pattern: 'snatch', implements: BB_DB_KB, count: ['single', 'alternating', 'double'],
-    start: ['floor', 'hang', 'high-hang', 'block'], receive: ['power', 'squat', 'split'], unit: 'reps', match: ['snatch(es)?\\b'] },
+    start: ['floor', 'hang', 'high-hang', 'block'], receive: ['power', 'squat', 'split'], defaultCount: { dumbbell: 'single', kettlebell: 'single' },
+    unit: 'reps', match: ['snatch(es)?\\b'] },
   { id: 'clean', name: 'Clean', modality: 'W', pattern: 'clean', implements: ['barbell', 'dumbbell', 'kettlebell', 'medball', 'sandbag', 'plate'],
     count: ['double', 'single', 'alternating'], start: ['floor', 'hang', 'high-hang', 'block'], receive: ['power', 'squat', 'split'], unit: 'reps',
     match: ['cleans?\\b(?! ?&| and)'] },
