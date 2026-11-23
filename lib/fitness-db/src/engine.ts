@@ -3,7 +3,7 @@
  * runs the pure planner from @nf/core, and saves proposed days.
  */
 import {
-  plan, withDefaults, workMinutes, keyOf, trainingDatesBetween, addDays,
+  plan, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
   type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags,
 } from '@workspace/fitness-core';
 import { sql } from './client';
@@ -29,19 +29,22 @@ export async function getEquipmentProfiles(groupId: string): Promise<EquipmentPr
 /** Every workout in the library that the engine may propose. */
 export async function loadCandidates(): Promise<Candidate[]> {
   const rows = await sql`
-    SELECT w.id, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags,
+    SELECT w.id, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text, w.repeat_every_days, w.repeat_until::text AS repeat_until,
       (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (r.score->>'timeSec')::numeric) FROM results r WHERE r.workout_id = w.id AND r.score ? 'timeSec') AS med
     FROM workouts w
-    WHERE w.programmable AND jsonb_array_length(w.movements) > 0 AND w.score_type <> 'none'
+    WHERE (w.programmable OR w.repeat_every_days IS NOT NULL) AND jsonb_array_length(w.movements) > 0 AND w.score_type <> 'none'
       AND coalesce(w.name, '') !~* '(warm-?up|lifting$|mobility|stretch)'`;
   return rows.map((r) => {
-    const workout: Workout = { id: r.id, name: r.name ?? undefined, structure: r.structure, movements: r.movements, scoreType: r.score_type };
-    return { id: r.id, workout, tags: r.tags as WorkoutTags, benchmark: r.benchmark, minutes: workMinutes(workout, r.med ? Number(r.med) : undefined) };
+    const workout: Workout = { id: r.id, name: r.name ?? undefined, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type };
+    return {
+      id: r.id, workout, tags: r.tags as WorkoutTags, benchmark: r.benchmark, minutes: workMinutes(workout, r.med ? Number(r.med) : undefined),
+      repeat: r.repeat_every_days ? { everyDays: r.repeat_every_days, ...(r.repeat_until ? { until: r.repeat_until } : {}) } : null,
+    };
   });
 }
 
 /** Group history (all athletes' results, one entry per date) plus planned days, from `from` on. */
-async function loadPicture(groupId: string, from: string, excludeProposedFrom?: string) {
+async function loadPicture(groupId: string, from: string, exclude?: { from: string; to: string }) {
   const res = await sql`
     SELECT r.date::text AS date, w.id, w.tags, w.benchmark, array_agg(DISTINCT wm.movement_key) AS keys
     FROM results r JOIN workouts w ON w.id = r.workout_id JOIN workout_movements wm ON wm.workout_id = w.id
@@ -50,7 +53,7 @@ async function loadPicture(groupId: string, from: string, excludeProposedFrom?: 
     SELECT d.date::text AS date, w.id, w.tags, w.benchmark, array_agg(DISTINCT wm.movement_key) AS keys
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id JOIN workout_movements wm ON wm.workout_id = w.id
     WHERE d.group_id = ${groupId} AND d.status IN ('approved','proposed') AND d.date >= ${from}
-      ${excludeProposedFrom ? sql`AND NOT (d.status = 'proposed' AND d.date >= ${excludeProposedFrom})` : sql``}
+      ${exclude ? sql`AND NOT (d.status = 'proposed' AND d.date BETWEEN ${exclude.from} AND ${exclude.to})` : sql``}
     GROUP BY d.date, w.id`;
   const byDate = new Map<string, PastDay>();
   const lastWorkout = new Map<string, string>(), lastMovement = new Map<string, string>();
@@ -75,7 +78,7 @@ async function loadPicture(groupId: string, from: string, excludeProposedFrom?: 
 export async function proposeRange(groupId: string, from: string, to: string, opts: { extraDates?: string[] } = {}) {
   const [policy, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   // Workout history reaches back a year so "not repeated within N days" sees older repeats.
-  const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(from, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), from);
+  const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(from, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from, to });
   const existing = await sql`SELECT date::text AS date, status, equipment_profile_id FROM program_days WHERE group_id = ${groupId} AND date BETWEEN ${from} AND ${to}`;
   const fixed = new Set(existing.filter((d) => d.status !== 'proposed').map((d) => d.date));
   const locByDate = new Map(existing.map((d) => [d.date, d.equipment_profile_id as string | null]));

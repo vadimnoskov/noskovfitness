@@ -10,3 +10,4 @@ export * from './engine/equipment';
 export * from './engine/planner';
 export * from './engine/schedule';
 export * from './workouts/personalize';
+export * from './workouts/coaching';

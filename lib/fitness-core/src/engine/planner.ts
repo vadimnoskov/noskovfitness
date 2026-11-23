@@ -16,6 +16,14 @@ export interface Candidate {
   benchmark?: { category: string; retestEveryDays: number; label?: string } | null;
   /** Typical minutes (median result or structure); undefined when unknown. */
   minutes?: number;
+  /** Coach exception: may repeat every N days (until a date), overriding the general no-repeat rule. */
+  repeat?: { everyDays: number; until?: string } | null;
+}
+
+/** A coach-set repeat that is active on this date and due (never done, or at least everyDays since last time). */
+export function repeatDue(c: Candidate, date: string, last: string | undefined): boolean {
+  if (!c.repeat || (c.repeat.until && date > c.repeat.until)) return false;
+  return !last || days(last, date) >= c.repeat.everyDays;
 }
 
 /** A day already in the picture: done in history or planned. */
@@ -88,11 +96,14 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   const weakness = wk && wk.size ? keys.reduce((a, k) => a + (wk.get(familyOf(k)) ?? 0), 0) / (keys.length || 1) : 0;
 
   // Benchmark: due (or never done) benchmarks score up to 1 by how overdue they are.
-  let benchmark = 0;
+  let benchmark = 0; // also used for coach-set repeats below
   if (c.benchmark && c.benchmark.category !== 'lift') {
     const overdue = lw ? days(lw, date) / c.benchmark.retestEveryDays : 2;
     if (overdue >= 1) { benchmark = Math.min(1, 0.5 + (overdue - 1) / 2); notes.push(`benchmark due${lw ? ` (last ${lw})` : ''}`); }
   }
+
+  // Coach-set repeat (e.g. a short testing block): when due, it ranks like a due benchmark.
+  if (repeatDue(c, date, lw)) { benchmark = Math.max(benchmark, 1); notes.push(`repeat due (every ${c.repeat!.everyDays} days)`); }
 
   // Soft penalties.
   let penalty = 0;
@@ -106,25 +117,32 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
 
   const w = policy.weights;
   const wsum = w.variety + w.freshness + w.weakness + w.benchmark || 1;
-  const total = (w.variety * variety + w.freshness * freshness + w.weakness * weakness + w.benchmark * benchmark) / wsum - penalty;
+  // A coach-set repeat that is due is an explicit instruction: it outranks the engine's own preferences.
+  const coachPriority = repeatDue(c, date, lw) ? 0.5 : 0;
+  const total = (w.variety * variety + w.freshness * freshness + w.weakness * weakness + w.benchmark * benchmark) / wsum - penalty + coachPriority;
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return { variety: r(variety), freshness: r(freshness), weakness: r(weakness), benchmark: r(benchmark), penalty: r(penalty), total: r(total), notes };
 }
 
 /** Hard rules. Returns the reason a candidate is not allowed on this date, or undefined. */
-export function blocked(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay): string | undefined {
+export function blocked(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay, tomorrow?: PastDay): string | undefined {
   const { rules } = input.policy;
   if (!c.workout.movements.length) return 'no movements';
   const lw = input.lastWorkoutDate.get(c.id);
   const due = c.benchmark && c.benchmark.category !== 'lift' && (!lw || days(lw, date) >= c.benchmark.retestEveryDays);
-  if (lw && days(lw, date) < rules.noRepeatWorkoutDays && !due) return 'done recently';
+  const repeating = c.repeat && (!c.repeat.until || date <= c.repeat.until);
+  if (repeating && !repeatDue(c, date, lw)) return 'repeat not due yet';
+  if (lw && days(lw, date) < rules.noRepeatWorkoutDays && !due && !repeating) return 'done recently';
   if (c.minutes && c.minutes > rules.maxMinutes) return 'too long';
-  if (yesterday) {
+  // Neighbouring days in both directions: a day inserted between planned days must respect the next day too.
+  for (const [nb, when] of [[yesterday, 'yesterday'], [tomorrow, 'tomorrow']] as const) {
+    if (!nb) continue;
+    if (nb.workoutIds.includes(c.id)) return `same workout ${when}`;
     if (rules.noSameMovementConsecutiveDays) {
-      const y = new Set(yesterday.movementKeys.map(familyOf));
-      if (candidateMovementKeys(c).some((k) => y.has(familyOf(k)))) return 'movement used yesterday';
+      const y = new Set(nb.movementKeys.map(familyOf));
+      if (candidateMovementKeys(c).some((k) => y.has(familyOf(k)))) return `movement used ${when}`;
     }
-    if (rules.noConsecutiveHeavyDays && yesterday.heavy && isHeavy(c.tags)) return 'heavy two days in a row';
+    if (rules.noConsecutiveHeavyDays && nb.heavy && isHeavy(c.tags)) return 'heavy two days in a row';
   }
   if (c.benchmark && c.benchmark.category !== 'lift') {
     const weekStart = new Date(Date.parse(date) - ((new Date(date).getUTCDay() + 6) % 7) * DAY).toISOString().slice(0, 10);
@@ -154,8 +172,9 @@ export function plan(input: PlanInput): Proposal[] {
     const window = timeline.filter((d) => d.date < date && days(d.date, date) <= input.policy.windowDays);
     const prevDay = timeline.filter((d) => d.date < date).at(-1);
     const yesterday = prevDay && days(prevDay.date, date) === 1 ? prevDay : undefined;
+    const tomorrow = timeline.find((d) => days(date, d.date) === 1);
     const ranked = input.candidates
-      .filter((c) => !blocked(c, date, local, window, yesterday))
+      .filter((c) => !blocked(c, date, local, window, yesterday, tomorrow))
       .map((c) => ({ c, s: score(c, date, local, window, yesterday) }))
       .sort((a, b) => b.s.total - a.s.total || a.c.id.localeCompare(b.c.id));
     const best = ranked[0];

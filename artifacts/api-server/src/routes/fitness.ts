@@ -134,7 +134,11 @@ router.post('/fitness/actions/:action', async (req, res) => {
   for (const [key, values] of Object.entries(body.data)) for (const value of Array.isArray(values) ? values : [values]) f.append(key, value);
   for (const key of ['date', 'from', 'to']) if (f.has(key) && !date(f.get(key))) { res.status(400).json({ error: 'Choose a valid date.' }); return; }
   for (const key of ['id', 'workoutId']) if (f.has(key) && !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(String(f.get(key)))) { res.status(400).json({ error: 'Invalid workout or day identifier.' }); return; }
-  if (['approve', 'unapprove', 'swap', 'setLocation', 'skip', 'neverPropose'].includes(action) && !f.get('id')) { res.status(400).json({ error: 'Select a program day.' }); return; }
+  if (['approve', 'unapprove', 'swap', 'setLocation', 'skip', 'neverPropose', 'move'].includes(action) && !f.get('id')) { res.status(400).json({ error: 'Select a program day.' }); return; }
+  if (action === 'move' && !date(f.get('date'))) { res.status(400).json({ error: 'Choose the new date.' }); return; }
+  if (['setCap', 'setRepeat'].includes(action) && !f.get('workoutId')) { res.status(400).json({ error: 'Select a workout.' }); return; }
+  if (action === 'setCap' && !(Number(f.get('capMin')) >= 0 && Number(f.get('capMin')) <= 120)) { res.status(400).json({ error: 'Use a time cap between 0 and 120 minutes.' }); return; }
+  if (action === 'setRepeat' && (!(Number(f.get('everyDays')) >= 0 && Number(f.get('everyDays')) <= 365) || (f.get('until') && !date(f.get('until'))))) { res.status(400).json({ error: 'Use 0–365 days and a valid end date.' }); return; }
   if (['swap', 'neverPropose'].includes(action) && !f.get('workoutId')) { res.status(400).json({ error: 'Select a workout.' }); return; }
   if (action === 'setLocation' && !f.get('equipmentId')) { res.status(400).json({ error: 'Select a location.' }); return; }
   if (action === 'insert' && !date(f.get('date'))) { res.status(400).json({ error: 'Choose a valid date.' }); return; }

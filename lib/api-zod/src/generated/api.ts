@@ -24,7 +24,7 @@ export const GetFitnessPageResponse = zod.record(zod.string(), zod.unknown())
  * @summary Perform an existing coach action
  */
 export const FitnessActionParams = zod.object({
-  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'savePolicyAction', 'resetPolicyAction'])
+  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'savePolicyAction', 'resetPolicyAction', 'move', 'setCap', 'setRepeat'])
 })
 
 export const FitnessActionBody = zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())]))
@@ -32,7 +32,8 @@ export const FitnessActionBody = zod.record(zod.string(), zod.union([zod.string(
 export const FitnessActionResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -48,7 +49,8 @@ export const FamilyLoginBody = zod.object({
 export const FamilyLoginResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -58,7 +60,8 @@ export const FamilyLoginResponse = zod.object({
 export const LogoutResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -79,7 +82,8 @@ export const ChangeMyPasswordBody = zod.object({
 export const ChangeMyPasswordResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -103,7 +107,8 @@ export const SetAthletePasswordBody = zod.object({
 export const SetAthletePasswordResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -124,7 +129,8 @@ export const SetLoadProfileBody = zod.object({
 export const SetLoadProfileResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -144,7 +150,8 @@ export const SetAthleteVersionBody = zod.object({
 export const SetAthleteVersionResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -223,7 +230,8 @@ export const LogResultBody = zod.object({
 export const LogResultResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -237,7 +245,8 @@ export const DeleteResultParams = zod.object({
 export const DeleteResultResponse = zod.object({
   "ok": zod.boolean(),
   "redirect": zod.string().optional(),
-  "id": zod.string().optional()
+  "id": zod.string().optional(),
+  "comparison": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 

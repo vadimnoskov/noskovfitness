@@ -107,6 +107,35 @@ describe('planner', () => {
   });
 });
 
+describe('coach-set repeats', () => {
+  it('repeats a workout every N days despite the 180-day rule, only until the end date', () => {
+    const row = { ...C.find((c) => c.id === 'kbdu')!, repeat: { everyDays: 14, until: '2026-12-31' } };
+    const others = C.filter((c) => c.id !== 'kbdu');
+    const last = new Map([['kbdu', '2026-11-20']]);
+    const base = { history: [], policy: DEFAULT_POLICY, equipmentFor: () => garage, lastMovementDate: new Map() };
+    expect(blocked(row, '2026-11-27', { ...base, dates: [], candidates: [], lastWorkoutDate: last }, [])).toBe('repeat not due yet');
+    expect(blocked(row, '2026-12-05', { ...base, dates: [], candidates: [], lastWorkoutDate: last }, [])).toBeUndefined();
+    const p = plan({ ...base, dates: ['2026-12-05'], candidates: [row, ...others], lastWorkoutDate: last });
+    expect(p[0]!.candidateId).toBe('kbdu');
+    expect(p[0]!.score.notes).toContain('repeat due (every 14 days)');
+    // After the end date the normal rule applies again.
+    expect(blocked(row, '2027-01-05', { ...base, dates: [], candidates: [], lastWorkoutDate: new Map([['kbdu', '2026-12-20']]) }, [])).toBe('done recently');
+  });
+});
+
+describe('inserting a day between planned days', () => {
+  it('respects the day after as well as the day before', () => {
+    // Wednesday already has KB swings + double-unders planned; filling Tuesday must not repeat it or its movements.
+    const wed = toPastDay('2026-12-09', [C.find((c) => c.id === 'kbdu')!]);
+    const p = plan(input({ dates: ['2026-12-08'], history: [wed], lastWorkoutDate: new Map([['kbdu', '2026-12-09']]) }));
+    const pick = C.find((c) => c.id === p[0]!.candidateId)!;
+    expect(pick.id).not.toBe('kbdu');
+    expect(pick.workout.movements.some((m) => ['kb-swing', 'jump-rope'].includes(m.movement.family))).toBe(false);
+    expect(blocked(C.find((c) => c.id === 'cindy')!, '2026-12-08', input({ history: [wed] }), [], undefined, wed)).toBeUndefined();
+    expect(blocked(C.find((c) => c.id === 'kbdu')!, '2026-12-08', input({ history: [wed] }), [], undefined, wed)).toBe('same workout tomorrow');
+  });
+});
+
 describe('schedule', () => {
   const td = [1, 2, 4, 5, 6];
   it('lists the family training days (Mon, Tue, Thu, Fri, Sat)', () => {

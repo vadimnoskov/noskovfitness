@@ -79,10 +79,13 @@ export interface LogResultInput {
   notes?: string;
 }
 
+export type FitnessActionResultComparison = { [key: string]: unknown };
+
 export interface FitnessActionResult {
   ok: boolean;
   redirect?: string;
   id?: string;
+  comparison?: FitnessActionResultComparison;
 }
 
 export interface HealthStatus {

@@ -120,3 +120,18 @@ export function deriveTags(w: Workout, opts: { resultSec?: number; amrapRounds?:
   };
   return { ...computed, ...w.tags };
 }
+
+/** Total reps for a for-time workout when every movement is counted in reps ("Time capped: ___ / 180 reps"). */
+export function prescribedReps(w: Workout): number | undefined {
+  if (w.structure.kind !== 'for-time') return undefined;
+  const s = w.structure;
+  const scheme = s.scheme ? s.scheme.reduce((a, b) => a + b, 0) : undefined;
+  let total = 0;
+  for (const m of w.movements) {
+    if (m.distanceM || m.calories || m.seconds) return undefined;
+    if (m.reps) total += m.reps;
+    else if (scheme) total += scheme;
+    else return undefined;
+  }
+  return total * (s.rounds ?? 1);
+}

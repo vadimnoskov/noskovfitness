@@ -3,7 +3,7 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { sql } from '@workspace/fitness-db';
-import { deriveTags, personalize, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
+import { deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
 import { GROUP_ID } from './data';
 
@@ -29,7 +29,7 @@ async function personFor(athleteId: string) {
 /** The person's own version (their Rx) of a program day's workout: profile + location + the coach's override for that day. */
 export async function versionFor(dayId: string, athleteId: string) {
   const [d] = await sql`
-    SELECT d.id, d.status, d.equipment_profile_id, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags,
+    SELECT d.id, d.status, d.equipment_profile_id, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
            e.id AS eid, e.name AS ename, e.items, v.changes AS override
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
@@ -37,7 +37,7 @@ export async function versionFor(dayId: string, athleteId: string) {
     WHERE d.id = ${dayId} AND d.group_id = ${GROUP_ID}`;
   if (!d) throw new InputError('Program day not found.');
   const person = await personFor(athleteId);
-  const standard = workoutOf({ id: d.wid, name: d.name, structure: d.structure, movements: d.movements, score_type: d.score_type, benchmark: d.benchmark });
+  const standard = workoutOf({ id: d.wid, name: d.name, structure: withCap(d.structure, d.original_text), movements: d.movements, score_type: d.score_type, benchmark: d.benchmark });
   const location: EquipmentProfile | undefined = d.eid ? { id: d.eid, name: d.ename, items: d.items } : undefined;
   const override = Array.isArray(d.override) && d.override.length
     ? Object.fromEntries((d.override as { index: number; to: number }[]).map((o) => [o.index, o.to])) : undefined;
@@ -53,10 +53,22 @@ export async function getToday(date: string, athleteId: string) {
   const planned = [];
   for (const d of days) {
     const v = await versionFor(d.id, athleteId);
-    planned.push({ dayId: d.id, status: v.day.status, workout: v.version, standard: v.standard, changes: v.changes, override: v.override, location: v.location, tags: v.day.tags });
+    const history = await previousOn(v.standard.id, athleteId, date);
+    planned.push({
+      dayId: d.id, status: v.day.status, workout: v.version, standard: v.standard, changes: v.changes, override: v.override, location: v.location, tags: v.day.tags,
+      totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
+      best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
+    });
   }
   const results = await myResults(athleteId, sql`r.date = ${date}`);
   return { date, planned, results };
+}
+
+/** This person's earlier results on a workout (before a date), newest first, in the shape coaching and comparison use. */
+async function previousOn(workoutId: string, athleteId: string, before: string): Promise<(PastResult & { id: string; notes: string | null })[]> {
+  const rows = await sql`SELECT id, date::text AS date, score, as_prescribed, completed, notes FROM results
+    WHERE workout_id = ${workoutId} AND athlete_id = ${athleteId} AND date < ${before} ORDER BY date DESC, created_at DESC LIMIT 50`;
+  return rows.map((r) => ({ id: r.id, date: r.date, score: r.score, rx: r.as_prescribed, completed: r.completed, notes: r.notes }));
 }
 
 /** Coach sets (or resets) one person's weights for one program day. */
@@ -100,7 +112,7 @@ export async function getWorkoutDetail(workoutId: string, athleteId: string) {
   const [w] = await sql`SELECT id, name, structure, movements, score_type, benchmark, tags, original_text FROM workouts WHERE id = ${workoutId}`;
   if (!w) throw new InputError('Workout not found.', 404);
   const results = await myResults(athleteId, sql`r.workout_id = ${workoutId}`);
-  return { workout: workoutOf(w), tags: w.tags, originalText: w.original_text, results };
+  return { workout: workoutOf({ ...w, structure: withCap(w.structure, w.original_text) }), tags: w.tags, originalText: w.original_text, results };
 }
 
 export async function searchWorkouts(q: string) {
@@ -195,7 +207,9 @@ export async function logResult(user: User, input: LogInput) {
     VALUES (${input.athleteId}, ${input.date}, ${input.dayId ?? null}, ${input.workoutId}, ${sql.json(performed as never)}, ${input.asPrescribed},
             ${input.completed}, ${sql.json(score as never)}, ${sql.json(tags as never)}, ${notes}, 'app', ${user.id})
     RETURNING id`;
-  return { ok: true, id: row!.id as string };
+  const earlier = await previousOn(input.workoutId, input.athleteId, input.date);
+  const comparison = compareResult(workout.scoreType, { date: input.date, score, rx: input.asPrescribed, completed: input.completed }, earlier);
+  return { ok: true, id: row!.id as string, comparison };
 }
 
 /** Only results entered in the app can be deleted (imported history is never rewritten). */

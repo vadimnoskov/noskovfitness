@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FitnessActionResultComparison } from './fitnessActionResultComparison';
 
 export interface FitnessActionResult {
   ok: boolean;
   redirect?: string;
   id?: string;
+  comparison?: FitnessActionResultComparison;
 }

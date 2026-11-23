@@ -21,7 +21,9 @@ export function rxFor(m: MovementPrescription, sex: 'male' | 'female'): { value:
 
 const n = (v: FormDataEntryValue | null) => (v === null || String(v).trim() === '' ? undefined : Number(v));
 
-export function LogForm({ workout, dayId, athlete, date, onSaved }: { workout: Workout; dayId?: string; athlete: Person; date: string; onSaved?: () => void }) {
+export type Comparison = { vsLast?: string; vsBest?: string; isBest: boolean; count: number };
+
+export function LogForm({ workout, dayId, athlete, date, totalReps, onSaved }: { workout: Workout; dayId?: string; athlete: Person; date: string; totalReps?: number; onSaved?: (c?: Comparison) => void }) {
   const qc = useQueryClient();
   const m = useLogResult();
   const [rx, setRx] = useState(true);
@@ -38,12 +40,14 @@ export function LogForm({ workout, dayId, athlete, date, onSaved }: { workout: W
     if (same) same.all.push(i); else weighted.push({ mv, i, rx: r, all: [i] });
   });
   const canCap = type === 'time';
+  const cap = workout.structure.kind === 'for-time' ? workout.structure.capMin : undefined;
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const f = new FormData(e.currentTarget);
     const min = n(f.get('min')) ?? 0, sec = n(f.get('sec')) ?? 0;
+    if (!capped && cap && min * 60 + sec > cap * 60) { setError(`That's over the ${cap}:00 time cap. If you didn't finish, tick "Hit the time cap" and enter your reps.`); return; }
     const score = {
       timeSec: min * 60 + sec || undefined,
       rounds: n(f.get('rounds')), reps: n(f.get('reps')),
@@ -56,7 +60,7 @@ export function LogForm({ workout, dayId, athlete, date, onSaved }: { workout: W
       asPrescribed: rx, completed: !capped, score, loads,
       scaling: rx ? undefined : String(f.get('scaling') ?? ''), notes: String(f.get('notes') ?? ''),
     } }, {
-      onSuccess: () => { qc.invalidateQueries(); onSaved?.(); },
+      onSuccess: (r) => { qc.invalidateQueries(); onSaved?.((r as { comparison?: Comparison }).comparison); },
       onError: (err) => setError((err as { data?: { error?: string } }).data?.error ?? 'Could not save. Check your connection and try again.'),
     });
   };
@@ -76,9 +80,9 @@ export function LogForm({ workout, dayId, athlete, date, onSaved }: { workout: W
               <label>Seconds<input name="sec" inputMode="numeric" pattern="[0-9]*" placeholder="34" /></label>
             </div>
           ) : (
-            <label>Reps completed at the cap<input name="reps" inputMode="numeric" pattern="[0-9]*" required /></label>
+            <label>Reps completed at the cap{totalReps ? ` (of ${totalReps})` : ''}<input name="reps" inputMode="numeric" pattern="[0-9]*" max={totalReps} required /></label>
           )}
-          {canCap ? <label className="check"><input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} /> Hit the time cap (didn't finish)</label> : null}
+          {canCap ? <label className="check"><input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} /> Hit the time cap{cap ? ` (${cap}:00)` : ''}, didn't finish</label> : null}
         </>
       ) : null}
       {type === 'rounds-reps' ? (

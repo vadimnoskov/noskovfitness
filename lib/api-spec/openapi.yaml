@@ -46,7 +46,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction]
+            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction, move, setCap, setRepeat]
       requestBody:
         required: true
         content:
@@ -367,6 +367,9 @@ components:
         ok: { type: boolean }
         redirect: { type: string }
         id: { type: string }
+        comparison:
+          type: object
+          additionalProperties: true
     HealthStatus:
       type: object
       properties:

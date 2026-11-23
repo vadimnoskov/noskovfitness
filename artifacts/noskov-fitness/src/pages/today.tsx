@@ -2,16 +2,18 @@ import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
 import { useGetToday, getGetTodayQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
-import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, type Workout, type WorkoutTags } from '@workspace/fitness-core';
+import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
-import { LogForm, rxFor } from '@/components/LogForm';
+import { LogForm, rxFor, type Comparison } from '@/components/LogForm';
 import { ResultItem, type ResultRow } from '@/components/ResultItem';
 import { PageStatus } from '@/lib/api';
 
 type Change = { index: number; from?: number; to: number; unit: string };
-type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags };
+type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
+type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
+  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[] };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -30,7 +32,7 @@ export function WorkoutCard({ workout, tags, sex, children }: { workout: Workout
     <article className="wcard">
       {tags ? <Chips mods={tags.modalityPattern} load={tags.load} volume={tags.volume} priority={tags.priority} /> : null}
       <h2>{bm ? <span className="bm">★ </span> : null}<Link href={`/workout/${workout.id}`}>{workoutTitle(workout)}</Link></h2>
-      <div className="small">{structureLabel(workout.structure)}</div>
+      <div className="small">{structureLabel(workout.structure)}{workout.structure.kind === 'for-time' && workout.structure.capMin ? <b className="cap"> · Time cap {workout.structure.capMin}:00</b> : null}</div>
       <ul className="mv">{workout.movements.map((m, i) => {
         // Show this person's Rx; where only the other sex's Rx is written, show an estimate and say so.
         const r = rxFor(m, sex);
@@ -50,6 +52,32 @@ function PersonalNote({ p, name }: { p: Planned; name: string }) {
     return `${nameOf(p.workout.movements[c.index]!.movement)} ${c.to} ${c.unit}${c.from !== undefined ? ` (standard Rx ${c.from} ${c.unit})` : ''}`;
   });
   return <p className="mine">{name === 'Your' ? 'Your' : `${name}'s`} Rx{p.override ? ' for today' : ''}: {lines.join(' · ')}</p>;
+}
+
+/** "Plan for today" (coaching notes) and this person's recent results on the same workout. */
+function PlanAndHistory({ p, self, name }: { p: Planned; self: boolean; name: string }) {
+  return (
+    <>
+      {p.coaching.length ? (
+        <div className="plan"><b>Plan for today</b><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+      ) : null}
+      {p.previousCount ? (
+        <div className="prev">
+          <b>{self ? 'Your' : `${name}'s`} results on this workout ({p.previousCount})</b>
+          <ul>{p.previous.map((r) => (
+            <li key={r.id}><span className="rdate">{r.date}</span> <b>{scoreText(r as never)}</b> <span className={`tag ${r.rx ? 'rx' : 'sc'}`}>{r.rx ? 'Rx' : 'Scaled'}</span>{!r.completed ? <span className="tag">Capped</span> : null}{p.best?.id === r.id && p.previousCount > 1 ? <span className="tag best">Best</span> : null}</li>
+          ))}</ul>
+          {p.best && !p.previous.some((r) => r.id === p.best!.id) ? <div className="small">Best: {scoreText(p.best as never)} ({p.best.date})</div> : null}
+          {p.previousCount > p.previous.length ? <Link className="small" href={`/workout/${p.workout.id}`}>See all {p.previousCount}</Link> : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function SavedBanner({ c }: { c: Comparison }) {
+  const parts = [c.isBest ? (c.count ? 'New personal best' : 'First result recorded') : null, c.vsLast ? `vs last time${c.vsBest === c.vsLast && !c.isBest ? ' and your best' : ''}: ${c.vsLast}` : null, !c.isBest && c.vsBest && c.vsBest !== c.vsLast ? `vs your best: ${c.vsBest}` : null].filter(Boolean);
+  return <p className={`saved${c.isBest ? ' pr' : ''}`} role="status">Saved{parts.length ? `: ${parts.join(' · ')}` : '.'}</p>;
 }
 
 /** Coach: change one person's weights for this day only (their standing setting stays as is). */
@@ -97,6 +125,7 @@ export default function Today() {
   const params = { date, ...(athleteId && athleteId !== me?.user.id ? { athleteId } : {}) };
   const q = useGetToday(params, { query: { enabled: !!me, queryKey: getGetTodayQueryKey(params), retry: false } });
   const [logging, setLogging] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Record<string, Comparison>>({});
   const [other, setOther] = useState('');
   const search = useSearchWorkouts({ q: other }, { query: { enabled: other.trim().length >= 2, queryKey: getSearchWorkoutsQueryKey({ q: other }) } });
   const [picked, setPicked] = useState<Workout | null>(null);
@@ -120,8 +149,10 @@ export default function Today() {
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
               {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
+              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} />
+              {saved[p.dayId] ? <SavedBanner c={saved[p.dayId]!} /> : null}
               {logging === p.dayId
-                ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} onSaved={() => setLogging(null)} />
+                ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} totalReps={p.totalReps} onSaved={(c) => { setLogging(null); if (c) setSaved((x) => ({ ...x, [p.dayId]: c })); }} />
                 : <button className="btn primary big" type="button" onClick={() => setLogging(p.dayId)}>Log {athlete.id === me.user.id ? 'my' : `${athlete.name}'s`} result</button>}
             </WorkoutCard>
           ))}

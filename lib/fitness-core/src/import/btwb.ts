@@ -29,7 +29,26 @@ export function parseTimeSec(s: string): number | undefined {
   return (Number(m[1] ?? 0) * 3600) + (Number(m[2] ?? 0) * 60) + Number(m[3] ?? 0);
 }
 
+/** "Time cap: 15 mins", "(15 Min Cap)", "15 minute time cap" → 15. */
+export function capFromText(text: string | undefined | null): number | undefined {
+  if (!text) return undefined;
+  const m = text.match(/time cap[:\s-]*(\d+)\s*min/i) ?? text.match(/(\d+)[\s-]*min(?:ute)?s?\.?\s*(?:time\s*)?cap/i);
+  const n = m ? Number(m[1]) : NaN;
+  return n > 0 && n <= 120 ? n : undefined;
+}
+
+/** A for-time structure with the time cap from the workout's text, when one is written and none is set. */
+export function withCap<S extends Structure>(s: S, text: string | undefined | null): S {
+  if (s.kind !== 'for-time' || s.capMin) return s;
+  const cap = capFromText(text);
+  return cap ? { ...s, capMin: cap } : s;
+}
+
 export function parseStructure(name: string, desc: string, scoreType: ScoreType): Structure {
+  return withCap(parseStructureBase(name, desc, scoreType), `${name}\n${desc}`);
+}
+
+function parseStructureBase(name: string, desc: string, scoreType: ScoreType): Structure {
   const n = name.trim();
   const d = desc.toLowerCase();
   let m: RegExpMatchArray | null;

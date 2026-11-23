@@ -139,3 +139,42 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .loads label{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:14px}
 .loads label .small{grid-column:1/-1}
 .loads input{width:90px;min-height:44px;font-size:17px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);text-align:right}
+.cap{color:var(--ink);font-weight:700}
+.plan{border:1px solid var(--line);border-left:4px solid #1d7a3a;border-radius:0 10px 10px 0;padding:8px 12px;font-size:14px}
+.plan ul{margin:4px 0 0;padding-left:18px}.plan li{margin:3px 0}
+.prev{font-size:14px;display:grid;gap:4px}.prev ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.prev li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:4px 0}
+.saved{margin:0;padding:10px 12px;border-radius:10px;background:var(--panel);font-weight:600}
+.saved.pr{background:#1d7a3a;color:#fff}
+
+/* ---------- Program: week rows with zoom ---------- */
+.zoom{display:inline-flex;align-items:center;gap:6px}
+.pweeks{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.pw-head,.pw-row{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));min-width:900px}
+.pw-head{position:sticky;top:0;background:var(--bg);font-size:12px;font-weight:700;color:var(--mute);border-bottom:1px solid var(--line)}
+.pw-head span{padding:6px}
+.pw-row{border-bottom:1px solid var(--line)}
+.pw-label{font-size:11px;color:var(--mute);padding:8px 4px}
+.pw-cell{border-left:1px solid var(--line);padding:6px;display:grid;gap:6px;align-content:start;min-height:90px}
+.pw-cell.today{background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.pw-cell.droppable{outline:2px dashed color-mix(in srgb,var(--ink) 25%,transparent);outline-offset:-4px}
+.pw-date{font-size:11px;color:var(--mute);font-weight:600}
+.pw-rest{display:grid;gap:4px;justify-items:start}
+.pday{border:1px solid var(--line);border-radius:8px;padding:6px;display:grid;gap:4px;background:var(--bg);cursor:grab}
+.pday.proposed{border-style:dashed}.pday.approved{border-color:var(--ink);border-width:2px}
+.pday h3{font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+.pday-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pday .mv{font-size:12px;padding-left:14px;margin:0}
+.pday .hdr .chip{font-size:10px;padding:2px 3px}
+.pday .actions{margin:0}
+.pday .more summary{cursor:pointer;font-size:12px;color:var(--mute);min-height:28px;display:flex;align-items:center}
+.pday .more{display:grid;gap:6px;font-size:12px}
+.pday .more .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pday .more label{font-size:12px;display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
+.pday .more input,.pday .more select{min-height:32px;font-size:13px;padding:0 6px;max-width:150px}
+.pday .more input[type=number]{width:64px}
+.pick{display:grid;gap:4px}.pick ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.pick button{width:100%;text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);padding:6px;display:grid;cursor:pointer;font:inherit;font-size:12px}
+/* Zoom levels: compact fits a whole week at a glance; detailed shows everything. */
+.pweeks.z0 .pday{padding:4px}.pweeks.z0 .pday h3{font-size:12px}.pweeks.z0 .pw-cell{min-height:70px}
+.pweeks.z2 .pw-head,.pweeks.z2 .pw-row{min-width:1400px}.pweeks.z2 .pday h3{font-size:14px}.pweeks.z2 .pday .mv{font-size:13px}

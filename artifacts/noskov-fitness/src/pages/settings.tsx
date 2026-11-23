@@ -43,6 +43,7 @@ export default function Settings() {
         </fieldset>
         <fieldset><legend>Rules</legend>
           <label>Don't repeat a workout within (days) <input type="number" name="rules.noRepeatWorkoutDays" min={0} max={730} defaultValue={policy.rules.noRepeatWorkoutDays} /></label>
+          <p className="small">Stops the engine proposing the exact same workout again too soon, so variety comes from new workouts rather than favorites. With about 5 workouts a week, 180 days means roughly 130 other workouts before a repeat. 90–180 is a sensible range: lower means familiar workouts come back more often, higher means more novelty. It never blocks you: benchmarks follow their own retest intervals, you can pick any workout for a day yourself, and a workout can be set to repeat on its own schedule (Program → More… → Repeat).</p>
           <label>Max benchmarks per week <input type="number" name="rules.maxBenchmarksPerWeek" min={0} max={7} defaultValue={policy.rules.maxBenchmarksPerWeek} /></label>
           <label>Longest workout (minutes) <input type="number" name="rules.maxMinutes" min={5} max={120} defaultValue={policy.rules.maxMinutes} /></label>
           <label>People training together <input type="number" name="rules.groupSize" min={1} max={30} defaultValue={policy.rules.groupSize} /></label>

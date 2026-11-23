@@ -10,6 +10,7 @@ export * from './athleteVersionInput';
 export * from './athleteVersionInputLoadsItem';
 export * from './familyCredentials';
 export * from './fitnessActionResult';
+export * from './fitnessActionResultComparison';
 export * from './fitnessForm';
 export * from './fitnessPage';
 export * from './getFitnessPageParams';

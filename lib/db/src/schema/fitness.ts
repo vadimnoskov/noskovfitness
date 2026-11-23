@@ -37,6 +37,8 @@ export const workouts = pgTable('workouts', {
   tagsOverride: jsonb('tags_override'), tags: jsonb('tags').notNull(), source: text('source'), originalText: text('original_text'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   programmable: boolean('programmable').notNull().default(true), programmableReason: text('programmable_reason'),
+  /** Coach exception to the no-repeat rule: propose again every N days, until repeat_until (null = no end). */
+  repeatEveryDays: integer('repeat_every_days'), repeatUntil: date('repeat_until', { mode: 'string' }),
 });
 export const workoutMovements = pgTable('workout_movements', {
   workoutId: uuid('workout_id').notNull().references(() => workouts.id, { onDelete: 'cascade' }),
