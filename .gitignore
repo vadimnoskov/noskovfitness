@@ -56,3 +56,9 @@ Thumbs.db
 /generated-artifacts/
 /data/private/
 /*.sql
+
+# Noskov Fitness: personal data and local artifacts never go to GitHub
+/*.sql.gz
+*.dump
+planning/screens/
+planning/*.bundle
