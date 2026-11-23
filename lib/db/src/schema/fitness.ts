@@ -19,8 +19,8 @@ export const groups = pgTable('groups', {
   defaultEquipmentId: text('default_equipment_id'),
 });
 export const groupMembers = pgTable('group_members', {
-  groupId: text('group_id').references(() => groups.id, { onDelete: 'cascade' }),
-  athleteId: text('athlete_id').references(() => athletes.id, { onDelete: 'cascade' }),
+  groupId: text('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' }),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
 }, t => [primaryKey({ columns: [t.groupId, t.athleteId] })]);
 export const equipmentProfiles = pgTable('equipment_profiles', {
   id: text('id').primaryKey(), groupId: text('group_id').references(() => groups.id, { onDelete: 'cascade' }),
@@ -35,7 +35,7 @@ export const workouts = pgTable('workouts', {
   programmable: boolean('programmable').notNull().default(true), programmableReason: text('programmable_reason'),
 });
 export const workoutMovements = pgTable('workout_movements', {
-  workoutId: uuid('workout_id').references(() => workouts.id, { onDelete: 'cascade' }),
+  workoutId: uuid('workout_id').notNull().references(() => workouts.id, { onDelete: 'cascade' }),
   position: integer('position').notNull(), movementKey: text('movement_key').notNull().references(() => movements.key),
 }, t => [primaryKey({ columns: [t.workoutId, t.position] }), index('workout_movements_movement_key_idx').on(t.movementKey)]);
 export const programDays = pgTable('program_days', {
@@ -50,8 +50,8 @@ export const programDays = pgTable('program_days', {
 }, t => [unique('program_days_group_id_date_seq_key').on(t.groupId, t.date, t.seq),
   check('program_days_status_check', sql`${t.status} IN ('proposed','approved','done','skipped')`)]);
 export const athleteVersions = pgTable('athlete_versions', {
-  dayId: uuid('day_id').references(() => programDays.id, { onDelete: 'cascade' }),
-  athleteId: text('athlete_id').references(() => athletes.id, { onDelete: 'cascade' }),
+  dayId: uuid('day_id').notNull().references(() => programDays.id, { onDelete: 'cascade' }),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
   workout: jsonb('workout').notNull(), changes: jsonb('changes').notNull().default([]), coachingNote: jsonb('coaching_note'),
 }, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);
 export const results = pgTable('results', {
@@ -63,7 +63,7 @@ export const results = pgTable('results', {
   uncertain: boolean('uncertain').notNull().default(false), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [index('results_athlete_id_date_idx').on(t.athleteId, t.date), index('results_workout_id_idx').on(t.workoutId)]);
 export const measurements = pgTable('measurements', {
-  athleteId: text('athlete_id').references(() => athletes.id, { onDelete: 'cascade' }), date: date('date', { mode: 'string' }).notNull(),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }), date: date('date', { mode: 'string' }).notNull(),
   kind: text('kind').notNull(), value: numeric('value').notNull(), unit: text('unit').notNull(),
 }, t => [primaryKey({ columns: [t.athleteId, t.date, t.kind] })]);
 export const programmingPolicy = pgTable('programming_policy', {
