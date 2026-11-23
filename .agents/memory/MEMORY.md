@@ -1,0 +1,2 @@
+- [API code generation](api-code-generation.md) — combining path parameters and query parameters can produce colliding exports in the generated Zod package.
+- [PostgreSQL transport](postgres-tls.md) — respect connection-string TLS settings; the development database proxy does not support forced TLS.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Noskov Fitness"
+description = "The existing family CrossFit programming and tracking app, with a workout program, history calendar, programming analysis, benchmarks, and coaching settings."
+version = "1.0.0"
+id = "artifacts/noskov-fitness"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23741
+
+[services.development]
+run = "pnpm --filter @workspace/noskov-fitness run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/noskov-fitness", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/noskov-fitness/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23741"
+BASE_PATH = "/"

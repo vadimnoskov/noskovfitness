@@ -11,6 +11,72 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /fitness/pages:
+    get:
+      operationId: getFitnessPage
+      summary: Read data for an original fitness screen
+      parameters:
+        - in: query
+          name: screen
+          required: true
+          schema:
+            type: string
+            enum: [calendar, program, analysis, benchmarks, settings]
+        - in: query
+          name: from
+          schema: { type: string }
+        - in: query
+          name: to
+          schema: { type: string }
+      responses:
+        "200":
+          description: Original screen data, with calendar days serialized as entries
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+        "401": { description: Family sign-in required }
+        "503": { description: Database or password configuration missing }
+  /fitness/actions/{action}:
+    post:
+      operationId: fitnessAction
+      summary: Perform an existing coach action
+      parameters:
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FitnessForm" }
+      responses:
+        "200":
+          description: Saved; reload the current screen or follow redirect
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "400": { description: Invalid form input }
+        "401": { description: Family sign-in required }
+  /fitness/login:
+    post:
+      operationId: familyLogin
+      summary: Sign in with the existing family password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FamilyCredentials" }
+      responses:
+        "200":
+          description: Signed in with an HTTP-only cookie
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "401": { description: Incorrect password }
+        "503": { description: APP_PASSWORD missing }
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +92,28 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    FitnessPage:
+      type: object
+      additionalProperties: true
+    FitnessForm:
+      type: object
+      additionalProperties:
+        oneOf:
+          - { type: string }
+          - type: array
+            items: { type: string }
+    FamilyCredentials:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string }
+        next: { type: string }
+    FitnessActionResult:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+        redirect: { type: string }
     HealthStatus:
       type: object
       properties:
