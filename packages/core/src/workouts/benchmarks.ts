@@ -6,7 +6,7 @@
  */
 export type BenchmarkCategory = 'girl' | 'hero' | 'open' | 'test' | 'lift';
 
-export const RETEST_DAYS: Record<BenchmarkCategory, number> = { girl: 150, hero: 240, open: 365, test: 120, lift: 90 };
+export const RETEST_DAYS: Record<BenchmarkCategory, number> = { girl: 150, hero: 240, open: 730, test: 120, lift: 90 };
 
 export const BENCHMARK_NAMES: Record<Exclude<BenchmarkCategory, 'open' | 'lift'>, string[]> = {
   girl: ['Angie', 'Barbara', 'Chelsea', 'Cindy', 'Diane', 'Elizabeth', 'Fran', 'Grace', 'Helen', 'Isabel', 'Jackie', 'Karen', 'Linda',

@@ -15,7 +15,9 @@ export type Modality = 'G' | 'W' | 'M';
 export type Implement =
   | 'bodyweight' | 'barbell' | 'dumbbell' | 'kettlebell' | 'medball' | 'sandbag' | 'plate'
   | 'rings' | 'bar' | 'parallettes' | 'box' | 'rope' | 'ghd' | 'wall' | 'sled'
-  | 'rower' | 'air-bike' | 'bike-erg' | 'ski-erg' | 'jump-rope' | 'none';
+  | 'rower' | 'air-bike' | 'bike-erg' | 'ski-erg' | 'jump-rope' | 'none'
+  /** Equipment that is not an implement of a movement but is required by some (checked by the engine). */
+  | 'rack' | 'bench' | 'p-bars';
 
 export type Count = 'single' | 'double' | 'alternating';
 export type Start = 'floor' | 'hang' | 'high-hang' | 'block';

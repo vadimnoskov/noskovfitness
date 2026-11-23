@@ -96,13 +96,18 @@ function manualToRow(r: any): BtwbRow | undefined {
 }
 
 // ---------- run ----------
-await sql`TRUNCATE results, athlete_versions, program_days, workout_movements, workouts, measurements, equipment_profiles, group_members, groups, athletes, movements CASCADE`;
+const [{ n: kept } = { n: 0 }] = await sql`SELECT count(*)::int AS n FROM program_days WHERE status IN ('approved','done')`;
+if (kept > 0 && process.env.FORCE !== '1') {
+  console.error(`Refusing to re-import: ${kept} approved/done program days would be deleted. Set FORCE=1 to override.`);
+  process.exit(1);
+}
+await sql`TRUNCATE programming_policy, results, athlete_versions, program_days, workout_movements, workouts, measurements, equipment_profiles, group_members, groups, athletes, movements CASCADE`;
 
 for (const a of family.athletes) {
   await sql`INSERT INTO athletes (id, name, birth_year, sex, units, is_coach, can_log_for_others)
             VALUES (${a.id}, ${a.name}, ${a.birthYear}, ${a.sex}, ${a.units}, ${a.isCoach}, ${a.canLogForOthers})`;
 }
-await sql`INSERT INTO groups (id, name, training_days) VALUES (${family.group.id}, ${family.group.name}, ${family.group.trainingDays})`;
+await sql`INSERT INTO groups (id, name, training_days, default_equipment_id) VALUES (${family.group.id}, ${family.group.name}, ${family.group.trainingDays}, ${family.group.defaultEquipmentId ?? 'gym'})`;
 for (const a of family.athletes) await sql`INSERT INTO group_members VALUES (${family.group.id}, ${a.id})`;
 for (const e of family.equipment) await sql`INSERT INTO equipment_profiles VALUES (${e.id}, ${family.group.id}, ${e.name}, ${sql.json(e.items)})`;
 
@@ -161,6 +166,12 @@ if (existsSync(manualPath)) {
   report.push(`Manual notes: ${n} results imported; skipped ${skipped.length}: ${skipped.join('; ')}`);
   for (const m of manual.measurements) await sql`INSERT INTO measurements VALUES (${m.a}, ${m.date}, ${m.kind}, ${m.value}, ${m.unit}) ON CONFLICT DO NOTHING`;
 }
+
+// Library curation: races, partner/team events, warm-ups and tiny one-off tests are not proposed by the engine (coach can re-enable).
+await sql`UPDATE workouts SET programmable = false, programmable_reason = 'race, partner/team event or warm-up'
+  WHERE benchmark IS NULL AND (name ~* '(obstacle|trail|partner|team|synchroni[sz]ed|warm-?up|mobility|stretch|buddy|relay)' OR original_text ~* '(obstacle course|partner|synchroni[sz]ed)')`;
+await sql`UPDATE workouts SET programmable = false, programmable_reason = 'very short single-movement test'
+  WHERE benchmark IS NULL AND programmable AND jsonb_array_length(movements) = 1 AND structure->>'kind' IN ('amrap','for-time','max') AND coalesce((structure->>'minutes')::int, 99) < 3`;
 
 // Workout-level tags use the typical (median) Rx time so for-time workouts get a time domain.
 const timed = await sql`SELECT w.id, w.name, w.structure, w.movements, w.score_type, percentile_cont(0.5) WITHIN GROUP (ORDER BY (r.score->>'timeSec')::numeric) AS med

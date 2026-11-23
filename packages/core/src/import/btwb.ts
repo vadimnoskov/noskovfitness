@@ -81,7 +81,10 @@ export function parseLine(line: string, sex: 'male' | 'female'): MovementPrescri
   const lead = text.match(/^(\d+(?:\.\d+)?)\s+(?!m\b|km\b|mi\b)/);
   if (lead) { out.reps = Number(lead[1]); text = text.slice(lead[0].length); }
   const parts = text.split(',').map((p) => p.trim());
-  const name = parts.shift() ?? '';
+  let name = parts.shift() ?? '';
+  // Load written without a comma: "21 Thrusters 95 lbs"
+  const inlineLoad = name.match(/\s+([\d.]+)\s*(lbs?|kg|pood)\s*$/i);
+  if (inlineLoad) { parts.unshift(inlineLoad[0].trim()); name = name.slice(0, inlineLoad.index); }
   for (const p of parts) {
     let m: RegExpMatchArray | null;
     if ((m = p.match(/^([\d.]+)\s*(lbs?|kg|pood)\b/i))) {

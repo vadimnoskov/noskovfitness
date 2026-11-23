@@ -5,3 +5,7 @@ export * from './workouts/tags';
 export * from './import/btwb';
 export * from './workouts/benchmarks';
 export * from './workouts/format';
+export * from './engine/policy';
+export * from './engine/equipment';
+export * from './engine/planner';
+export * from './engine/schedule';
