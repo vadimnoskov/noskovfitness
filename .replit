@@ -1,0 +1,12 @@
+# Replit configuration for Noskov Fitness (Next.js web app + PostgreSQL).
+modules = ["nodejs-22", "postgresql-16"]
+run = "npm run dev"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["sh", "-c", "npm ci --include=dev && npm run db:migrate && npm run build"]
+run = ["sh", "-c", "npm run start"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80

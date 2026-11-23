@@ -8,3 +8,5 @@ planning/screens/
 apps/web/.next/
 apps/web/next-env.d.ts
 *.tsbuildinfo
+*.sql
+*.sql.gz
