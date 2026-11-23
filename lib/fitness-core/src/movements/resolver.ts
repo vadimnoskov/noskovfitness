@@ -76,25 +76,29 @@ const VARIANT_RX: Record<string, [string, RegExp][]> = {
   deadlift: [['sumo', /sumo/], ['romanian', /romanian|\brdl\b/], ['single-leg', /single[- ]leg/], ['snatch-grip', /snatch grip/], ['suitcase', /suitcase/], ['clean-grip', /clean deadlift/]],
   'front-squat': [['box', /box/]], 'back-squat': [['box', /box/]],
   'kb-swing': [['russian', /russian/], ['american', /american/]],
-  lunge: [['jumping', /jumping/], ['walking', /walking/], ['reverse', /reverse/], ['lateral', /side|lateral/], ['stationary', /stationary/]],
+  lunge: [['lateral', /cossack/], ['jumping', /jumping/], ['walking', /walking/], ['reverse', /reverse/], ['lateral', /side|lateral/], ['stationary', /stationary/]],
   'split-squat': [['bulgarian', /bulgarian/], ['cyclist', /cyclist/]],
   'step-up': [['step-over', /step[- ]?overs?/], ['russian', /russian/]],
   'bent-row': [['renegade', /renegade/], ['plank', /plank/], ['chest-supported', /chest supported/], ['push-up', /push-up/]],
   sled: [['push-high', /push(es)? high|high handle/], ['push-low', /push(es)? low|low handle/], ['drag', /drag/], ['pull', /pull/]],
   'medball-throw': [['slam', /slam/], ['sit-up-throw', /sit[- ]?up/], ['side-toss', /side/]],
-  accessory: [['curl', /curl/], ['rear-delt-fly', /fl(y|ies)/], ['skull-crusher', /skull/], ['kickback', /kick ?back/], ['arm-lift', /arm lift/]],
+  accessory: [['curl', /curl/], ['rear-delt-fly', /fl(y|ies)/], ['skull-crusher', /skull/], ['kickback', /kick ?back/], ['arm-lift', /arm lift/],
+    ['triceps-extension', /tricep extension/], ['cable-row', /pulley row/], ['windmill', /windmill/]],
   hspu: [['pike', /pike/]],
-  'handstand-hold': [['freestanding', /freestanding/]],
+  'handstand-hold': [['freestanding', /freestanding/], ['shoulder-taps', /shoulder|hip (touch|tap)/]],
   'pull-up': [['chest-to-bar', /chest[- ]to[- ]bar/], ['chin-up', /chin[- ]?up|supinated/]],
   'push-up': [['hand-release', /hand[- ]release/], ['feet-elevated', /feet elevated/], ['clapping', /clapping/], ['deficit', /deficit/], ['inchworm', /inchworm/]],
   'sit-up': [['ghd', /ghd/], ['abmat', /abmat/], ['anchored', /anchored/], ['overhead', /overhead/]],
-  hollow: [['hollow', /hollow/], ['superman', /superman/]],
-  plank: [['side', /side|left|right/], ['shoulder-taps', /taps?/]],
+  hollow: [['hollow', /hollow/], ['superman', /superm[ae]n/]],
+  plank: [['side', /side|left|right/], ['shoulder-taps', /taps?$/]],
   'hip-extension': [['hip-and-back', /hip & back|hip and back/], ['back', /back/], ['hip', /hip/]],
   'air-squat': [['jumping', /jump/], ['hold', /hold/]],
+  'broad-jump': [['vertical', /vertical/]],
+  'v-up': [['tuck-up', /tuck|knees[- ]to[- ]chest/], ['leg-raise', /leg raise/]],
   'box-jump': [['over', /over/], ['lateral', /lateral/], ['seated', /seated/]],
   'skill-drill': [['pass-through', /pass[- ]?through/], ['toe-taps', /toe taps/], ['skin-the-cat', /skin/], ['shoot-through', /shoot/],
-    ['forward-roll', /roll/], ['ring-out', /ring out/], ['candlestick', /candlestick/], ['leg-throws', /leg throw/]],
+    ['forward-roll', /roll/], ['ring-out', /ring out/], ['candlestick', /candle ?stick/], ['leg-throws', /leg throw/],
+    ['hands-to-feet', /hands[- ]to[- ]feet/], ['support-hold', /support hold/], ['iron-cross', /iron cross/]],
   'jump-rope': [['double-under', /double[- ]?under|\bdus?\b/], ['triple-under', /triple/], ['crossover', /cross ?over|over[- ]?under/], ['single-under', /single[- ]?under|singles|jump rope/]],
   run: [['shuttle', /shuttle/], ['sprint', /sprint|fast feet/], ['trail', /trail/], ['backward', /backward/], ['lateral-shuffle', /lateral shuffle/]],
 };
@@ -124,7 +128,7 @@ function matchesFamily(s: string): Family[] {
 }
 
 /** Retired or non-movement phrases (decided by the coach, Nov 23 2026): never become movements. */
-const IGNORED: RegExp[] = [/virtual shovel/, /obstacle course/, /^death by$/, /^ascending( reps)?$/, /^unbroken$/, /^with$/, /warm-?up$/, /^curtis ps$/];
+const IGNORED: RegExp[] = [/^nft$/, /virtual shovel/, /obstacle course/, /^death by$/, /^ascending( reps)?$/, /^unbroken$/, /^with$/, /warm-?up$/, /^curtis ps$/];
 /** Names of workouts that appear inside descriptions; they belong in the workout library, not the movement catalog. */
 const WORKOUT_NAMES: RegExp[] = [/bear complex/];
 
@@ -223,7 +227,8 @@ const VARIANT_BASE: Record<string, string> = {
   'hollow:hollow': 'Hollow Hold', 'hollow:superman': 'Superman Hold', 'plank:side': 'Side Plank', 'plank:shoulder-taps': 'Plank Shoulder Taps',
   'sled:push-high': 'Sled Push (high handle)', 'sled:push-low': 'Sled Push (low handle)', 'sled:drag': 'Sled Drag', 'sled:pull': 'Sled Pull',
   'medball-throw:slam': 'Med Ball Slam', 'medball-throw:sit-up-throw': 'Med Ball Sit-up Throw', 'medball-throw:side-toss': 'Med Ball Side Toss',
-  'accessory:curl': 'Curl', 'accessory:rear-delt-fly': 'Rear Delt Fly', 'accessory:skull-crusher': 'Skull Crusher', 'accessory:kickback': 'Triceps Kickback', 'accessory:arm-lift': 'Arm Lift',
+  'accessory:curl': 'Curl', 'accessory:triceps-extension': 'Triceps Extension', 'accessory:cable-row': 'Seated Cable Row', 'accessory:windmill': 'Windmill',
+  'handstand-hold:shoulder-taps': 'Handstand Shoulder Taps', 'broad-jump:vertical': 'Vertical Jump', 'v-up:tuck-up': 'Tuck-up', 'v-up:leg-raise': 'Lying Leg Raise', 'accessory:rear-delt-fly': 'Rear Delt Fly', 'accessory:skull-crusher': 'Skull Crusher', 'accessory:kickback': 'Triceps Kickback', 'accessory:arm-lift': 'Arm Lift',
   'bent-row:renegade': 'Renegade Row', 'bent-row:plank': 'Plank Row', 'bent-row:chest-supported': 'Chest-supported Row', 'bent-row:push-up': 'Push-up Row',
   'handstand-hold:freestanding': 'Freestanding Handstand Hold', 'hspu:pike': 'Pike Push-up',
   'deadlift:romanian': 'Romanian Deadlift', 'deadlift:single-leg': 'Single-leg Deadlift', 'deadlift:snatch-grip': 'Snatch-grip Deadlift', 'deadlift:clean-grip': 'Clean Deadlift',

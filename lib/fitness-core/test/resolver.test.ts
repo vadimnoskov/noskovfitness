@@ -70,6 +70,16 @@ describe('movement resolver', () => {
     expect(names('Back Squats')).toEqual(['Back Squat']);
   });
 
+  it('recognizes the gymnastics drills and accessories from Olga\'s history', () => {
+    const cases: [string, string][] = [
+      ['candle sticks', 'Candlestick'], ['wall facing shoulder taps', 'Handstand Shoulder Taps'], ['shoulder taps', 'Plank Shoulder Taps'],
+      ['tuck-ups', 'Tuck-up'], ['cossack squats', 'Lateral Lunge'], ['supermen', 'Superman Hold'], ['kettlebell windmills', 'Windmill'],
+      ['double kettlebell front rack squats', 'Double Kettlebell Front Squat'], ['lateral hurdle jumps', 'Lateral Jump Over'],
+    ];
+    for (const [phrase, expected] of cases) expect(name(phrase)).toBe(expected);
+    expect(resolve('nft').review).toBe('ignored');
+  });
+
   it('every family has a unique id and at least one matcher', () => {
     const ids = FAMILIES.map((f) => f.id);
     expect(new Set(ids).size).toBe(ids.length);
