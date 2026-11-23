@@ -3,7 +3,7 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { sql } from '@workspace/fitness-db';
-import { deriveTags, type Workout, type Result, type MovementPrescription, type ScoreType } from '@workspace/fitness-core';
+import { deriveTags, personalize, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
 import { GROUP_ID } from './data';
 
@@ -19,22 +19,58 @@ export function canActFor(user: User, athleteId: string) {
   return user.id === athleteId || user.canLogForOthers || user.isCoach;
 }
 
-/** The planned workout(s) for a date plus what this athlete already logged that day. */
-export async function getToday(date: string, athleteId: string) {
-  const days = await sql`
-    SELECT d.id AS day_id, d.status, d.seq, w.id, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags
-    FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
-    WHERE d.group_id = ${GROUP_ID} AND d.date = ${date} AND d.status IN ('proposed','approved','done')
-    ORDER BY d.seq`;
-  const results = await myResults(athleteId, sql`r.date = ${date}`);
-  return {
-    date,
-    planned: days.map((d) => ({ dayId: d.day_id, status: d.status, workout: workoutOf(d), tags: d.tags })),
-    results,
-  };
+/** A person, their standing load setting, and the equipment at a program day's location. */
+async function personFor(athleteId: string) {
+  const [a] = await sql`SELECT id, name, sex, units, load_profile FROM athletes WHERE id = ${athleteId}`;
+  if (!a) throw new InputError('Unknown athlete.');
+  return { id: a.id as string, name: a.name as string, sex: a.sex as 'male' | 'female', units: a.units as 'lb' | 'kg', loadProfile: (a.load_profile as LoadProfile | null) ?? null };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** The person's own version (their Rx) of a program day's workout: profile + location + the coach's override for that day. */
+export async function versionFor(dayId: string, athleteId: string) {
+  const [d] = await sql`
+    SELECT d.id, d.status, d.equipment_profile_id, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags,
+           e.id AS eid, e.name AS ename, e.items, v.changes AS override
+    FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
+    LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
+    LEFT JOIN athlete_versions v ON v.day_id = d.id AND v.athlete_id = ${athleteId}
+    WHERE d.id = ${dayId} AND d.group_id = ${GROUP_ID}`;
+  if (!d) throw new InputError('Program day not found.');
+  const person = await personFor(athleteId);
+  const standard = workoutOf({ id: d.wid, name: d.name, structure: d.structure, movements: d.movements, score_type: d.score_type, benchmark: d.benchmark });
+  const location: EquipmentProfile | undefined = d.eid ? { id: d.eid, name: d.ename, items: d.items } : undefined;
+  const override = Array.isArray(d.override) && d.override.length
+    ? Object.fromEntries((d.override as { index: number; to: number }[]).map((o) => [o.index, o.to])) : undefined;
+  const v = personalize(standard, person, location, override);
+  return { day: d, person, standard, version: v.workout, changes: v.changes, override: !!override, location: location?.name };
+}
+
+/** The planned workout(s) for a date, as this person's own version, plus what they already logged that day. */
+export async function getToday(date: string, athleteId: string) {
+  const days = await sql`
+    SELECT d.id FROM program_days d
+    WHERE d.group_id = ${GROUP_ID} AND d.date = ${date} AND d.status IN ('proposed','approved','done') ORDER BY d.seq`;
+  const planned = [];
+  for (const d of days) {
+    const v = await versionFor(d.id, athleteId);
+    planned.push({ dayId: d.id, status: v.day.status, workout: v.version, standard: v.standard, changes: v.changes, override: v.override, location: v.location, tags: v.day.tags });
+  }
+  const results = await myResults(athleteId, sql`r.date = ${date}`);
+  return { date, planned, results };
+}
+
+/** Coach sets (or resets) one person's weights for one program day. */
+export async function setAthleteVersion(user: User, input: { dayId: string; athleteId: string; reset?: boolean; loads?: { index: number; value: number }[] }) {
+  if (!user.isCoach) throw new InputError('Only the coach can change a version.', 403);
+  if (input.reset) { await sql`DELETE FROM athlete_versions WHERE day_id = ${input.dayId} AND athlete_id = ${input.athleteId}`; return { ok: true }; }
+  const base = await versionFor(input.dayId, input.athleteId);
+  const override = (input.loads ?? []).map((l) => ({ index: Math.floor(l.index), to: num(l.value, 2000) })).filter((o): o is { index: number; to: number } => o.to !== undefined && o.index >= 0 && o.index < base.standard.movements.length);
+  const v = personalize(base.standard, base.person, undefined, Object.fromEntries(override.map((o) => [o.index, o.to])));
+  await sql`INSERT INTO athlete_versions (day_id, athlete_id, workout, changes) VALUES (${input.dayId}, ${input.athleteId}, ${sql.json(v.workout as never)}, ${sql.json(override as never)})
+    ON CONFLICT (day_id, athlete_id) DO UPDATE SET workout = EXCLUDED.workout, changes = EXCLUDED.changes`;
+  return { ok: true };
+}
+
 async function myResults(athleteId: string, where: any, limit = 200, offset = 0) {
   const rows = await sql`
     SELECT r.id, r.date::text AS date, r.score, r.as_prescribed, r.completed, r.notes, r.source, r.performed, r.day_id,
@@ -148,7 +184,9 @@ export async function logResult(user: User, input: LogInput) {
     }
     return m;
   });
-  const performed: Workout = { ...workout, movements };
+  // Which version was done: their own (personal) Rx when logged "as prescribed" against a program day, else the standard.
+  const mine = input.dayId && input.asPrescribed ? (await versionFor(input.dayId, input.athleteId)).version.version : undefined;
+  const performed: Workout = { ...workout, movements, ...(mine ? { version: mine } : {}) };
   const score = cleanScore(workout.scoreType, input.score, input.completed);
   const tags = deriveTags(performed, { resultSec: score.timeSec, amrapRounds: score.rounds, sex });
   const notes = [input.scaling?.trim() ? `Scaled: ${input.scaling.trim()}` : '', input.notes?.trim() ?? ''].filter(Boolean).join('\n').slice(0, 2000) || null;

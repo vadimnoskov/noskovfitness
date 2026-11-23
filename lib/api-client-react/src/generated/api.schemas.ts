@@ -24,6 +24,25 @@ export interface PasswordSet {
   newPassword: string;
 }
 
+export interface LoadProfileInput {
+  barbell?: number;
+  dumbbell?: number;
+  kettlebell?: number;
+  medball?: number;
+}
+
+export type AthleteVersionInputLoadsItem = {
+  index: number;
+  value: number;
+};
+
+export interface AthleteVersionInput {
+  dayId: string;
+  athleteId: string;
+  reset?: boolean;
+  loads?: AthleteVersionInputLoadsItem[];
+}
+
 export type LogResultInputScore = {
   timeSec?: number;
   rounds?: number;

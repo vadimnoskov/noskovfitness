@@ -13,6 +13,8 @@ export const athletes = pgTable('athletes', {
   canLogForOthers: boolean('can_log_for_others').notNull().default(false),
   /** scrypt hash of the athlete's own password; null until the coach sets one. */
   passwordHash: text('password_hash'),
+  /** Standing load setting: fraction of the standard Rx per kind of equipment, e.g. {"dumbbell":0.6}. Null = full Rx. */
+  loadProfile: jsonb('load_profile'),
 }, t => [check('athletes_sex_check', sql`${t.sex} IN ('male','female')`), check('athletes_units_check', sql`${t.units} IN ('lb','kg')`)]);
 
 export const groups = pgTable('groups', {

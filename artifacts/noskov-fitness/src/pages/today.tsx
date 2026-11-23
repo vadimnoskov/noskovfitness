@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
-import { useGetToday, getGetTodayQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey } from '@workspace/api-client-react';
-import { structureLabel, movementLine, workoutTitle, type Workout, type WorkoutTags } from '@workspace/fitness-core';
+import { useGetToday, getGetTodayQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
+import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, type Workout, type WorkoutTags } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
@@ -9,7 +10,8 @@ import { LogForm, rxFor } from '@/components/LogForm';
 import { ResultItem, type ResultRow } from '@/components/ResultItem';
 import { PageStatus } from '@/lib/api';
 
-type Planned = { dayId: string; status: string; workout: Workout; tags: WorkoutTags };
+type Change = { index: number; from?: number; to: number; unit: string };
+type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -37,6 +39,50 @@ export function WorkoutCard({ workout, tags, sex, children }: { workout: Workout
       })}</ul>
       {children}
     </article>
+  );
+}
+
+/** One line per distinct movement whose weight differs from the standard Rx, e.g. "Dumbbell Snatch 20 lb (standard 50/35)". */
+function PersonalNote({ p, name }: { p: Planned; name: string }) {
+  if (p.workout.version?.kind !== 'personal' || !p.changes.length) return null;
+  const seen = new Set<string>();
+  const lines = p.changes.filter((c) => { const k = keyOf(p.workout.movements[c.index]!.movement) + c.to; return seen.has(k) ? false : (seen.add(k), true); }).map((c) => {
+    return `${nameOf(p.workout.movements[c.index]!.movement)} ${c.to} ${c.unit}${c.from !== undefined ? ` (standard Rx ${c.from} ${c.unit})` : ''}`;
+  });
+  return <p className="mine">{name === 'Your' ? 'Your' : `${name}'s`} Rx{p.override ? ' for today' : ''}: {lines.join(' · ')}</p>;
+}
+
+/** Coach: change one person's weights for this day only (their standing setting stays as is). */
+function VersionEditor({ p, athlete }: { p: Planned; athlete: Person }) {
+  const qc = useQueryClient();
+  const m = useSetAthleteVersion({ mutation: { onSuccess: () => qc.invalidateQueries() } });
+  const groups: { key: string; name: string; indices: number[]; value: number; unit: string }[] = [];
+  p.workout.movements.forEach((mv, i) => {
+    const v = mv.load?.[athlete.sex];
+    if (v === undefined || mv.load?.percentOf) return;
+    const key = keyOf(mv.movement);
+    const g = groups.find((x) => x.key === key);
+    if (g) g.indices.push(i); else groups.push({ key, name: nameOf(mv.movement), indices: [i], value: v, unit: mv.load!.unit });
+  });
+  if (!groups.length) return null;
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const loads = groups.flatMap((g) => g.indices.map((index) => ({ index, value: Number(f.get(g.key)) })));
+    m.mutate({ data: { dayId: p.dayId, athleteId: athlete.id, loads } });
+  };
+  return (
+    <details className="ver">
+      <summary>Adjust {athlete.name}'s weights for this day</summary>
+      <form className="log" onSubmit={onSubmit}>
+        {groups.map((g) => (
+          <label key={g.key}>{g.name}<span className="unit"><input name={g.key} inputMode="decimal" defaultValue={g.value} required />{g.unit}</span></label>
+        ))}
+        <button className="btn primary" type="submit" disabled={m.isPending}>Save for this day</button>
+        {p.override ? <button className="btn ghost" type="button" disabled={m.isPending} onClick={() => m.mutate({ data: { dayId: p.dayId, athleteId: athlete.id, reset: true } })}>Back to {athlete.name}'s usual setting</button> : null}
+        <p className="small">Their usual setting is on Account → Family.</p>
+      </form>
+    </details>
   );
 }
 
@@ -71,7 +117,9 @@ export default function Today() {
           {data.planned.length === 0 ? <p className="empty">No workout planned for this day.</p> : null}
           {data.planned.map((p) => (
             <WorkoutCard key={p.dayId} workout={p.workout} tags={p.tags} sex={athlete.sex}>
+              <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
+              {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
               {logging === p.dayId
                 ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} onSaved={() => setLogging(null)} />
                 : <button className="btn primary big" type="button" onClick={() => setLogging(p.dayId)}>Log {athlete.id === me.user.id ? 'my' : `${athlete.name}'s`} result</button>}

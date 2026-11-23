@@ -1,17 +1,56 @@
 import { useState, type FormEvent } from 'react';
 import { useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useChangeMyPassword, useLogout, useListFamily, getListFamilyQueryKey, useSetAthletePassword } from '@workspace/api-client-react';
+import { useChangeMyPassword, useLogout, useListFamily, getListFamilyQueryKey, useSetAthletePassword, useSetLoadProfile } from '@workspace/api-client-react';
 import { useMe } from '@/lib/session';
 
 const errOf = (e: unknown) => (e as { data?: { error?: string } } | null)?.data?.error ?? 'Something went wrong. Try again.';
+
+type Member = { id: string; name: string; sex: 'male' | 'female'; isCoach: boolean; hasPassword: boolean; loadProfile: Record<string, number> | null };
+const KINDS = [['dumbbell', 'Dumbbell'], ['kettlebell', 'Kettlebell'], ['barbell', 'Barbell'], ['medball', 'Med ball / wall ball']] as const;
+const EXAMPLE: Record<string, [number, number]> = { dumbbell: [50, 35], kettlebell: [53, 35], barbell: [135, 95], medball: [20, 14] };
+
+/** Coach: each person's usual weights as a percent of the standard Rx for their sex. */
+function LoadSettings({ people }: { people: Member[] }) {
+  const qc = useQueryClient();
+  const m = useSetLoadProfile({ mutation: { onSuccess: () => qc.invalidateQueries() } });
+  const [saved, setSaved] = useState<string | null>(null);
+  const onSubmit = (p: Member) => (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    setSaved(null);
+    m.mutate({ athleteId: p.id, data: Object.fromEntries(KINDS.map(([k]) => [k, Number(f.get(k)) || 100])) }, { onSuccess: () => setSaved(p.id) });
+  };
+  return (
+    <section className="panel">
+      <h2>Usual weights</h2>
+      <p className="small">Each person's own Rx, as a percent of the standard Rx for their sex. 100% = full Rx. The app rounds to weights that exist where you train that day, shows it to them as their Rx, and you can still change any single day on Today.</p>
+      {people.map((p) => (
+        <form key={`${p.id}|${JSON.stringify(p.loadProfile)}`} className="loads" onSubmit={onSubmit(p)}>
+          <b>{p.name}</b>
+          {KINDS.map(([k, label]) => {
+            const pct = Math.round((p.loadProfile?.[k] ?? 1) * 100);
+            const std = EXAMPLE[k]![p.sex === 'female' ? 1 : 0];
+            return (
+              <label key={k}>{label}<span className="unit"><input name={k} type="number" inputMode="numeric" min={10} max={150} step={5} defaultValue={pct} />%</span>
+                <span className="small">e.g. standard {std} lb → about {Math.max(5, Math.round((std * pct) / 100 / 5) * 5)} lb (rounded to a real weight)</span></label>
+            );
+          })}
+          <button className="btn" type="submit" disabled={m.isPending}>Save {p.name}'s weights</button>
+          {saved === p.id ? <span className="ok">Saved</span> : null}
+        </form>
+      ))}
+      {m.isError ? <p className="warn">{errOf(m.error)}</p> : null}
+    </section>
+  );
+}
 
 function FamilyPasswords() {
   const qc = useQueryClient();
   const fam = useListFamily({ query: { queryKey: getListFamilyQueryKey() } });
   const set = useSetAthletePassword({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListFamilyQueryKey() }) } });
   const [done, setDone] = useState<string | null>(null);
-  const people = (fam.data as { athletes?: { id: string; name: string; isCoach: boolean; hasPassword: boolean }[] } | undefined)?.athletes ?? [];
+  const people = (fam.data as { athletes?: Member[] } | undefined)?.athletes ?? [];
   const onSubmit = (id: string) => (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -20,6 +59,7 @@ function FamilyPasswords() {
     set.mutate({ athleteId: id, data: { newPassword: pw } }, { onSuccess: () => { form.reset(); setDone(id); } });
   };
   return (
+    <>
     <section className="panel">
       <h2>Family</h2>
       <p className="small">Set each person's password, then tell them in person. They sign in with their first name. Setting a new password signs that person out on their other devices.</p>
@@ -33,6 +73,8 @@ function FamilyPasswords() {
       ))}
       {set.isError ? <p className="warn">{errOf(set.error)}</p> : null}
     </section>
+    {people.length ? <LoadSettings people={people} /> : null}
+    </>
   );
 }
 

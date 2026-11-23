@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './athleteVersionInput';
+export * from './athleteVersionInputLoadsItem';
 export * from './familyCredentials';
 export * from './fitnessActionResult';
 export * from './fitnessForm';
@@ -16,6 +18,7 @@ export * from './getHistoryParams';
 export * from './getTodayParams';
 export * from './getWorkoutDetailParams';
 export * from './healthStatus';
+export * from './loadProfileInput';
 export * from './logResultInput';
 export * from './logResultInputLoadsItem';
 export * from './logResultInputLoadsItemUnit';

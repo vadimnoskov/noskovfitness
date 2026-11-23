@@ -108,6 +108,47 @@ export const SetAthletePasswordResponse = zod.object({
 
 
 /**
+ * @summary Set a person's standing load setting as a percent of the standard Rx per kind of equipment (coach only)
+ */
+export const SetLoadProfileParams = zod.object({
+  "athleteId": zod.coerce.string()
+})
+
+export const SetLoadProfileBody = zod.object({
+  "barbell": zod.number().optional(),
+  "dumbbell": zod.number().optional(),
+  "kettlebell": zod.number().optional(),
+  "medball": zod.number().optional()
+})
+
+export const SetLoadProfileResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary Set (or reset) one person's weights for one program day (coach only)
+ */
+export const SetAthleteVersionBody = zod.object({
+  "dayId": zod.string(),
+  "athleteId": zod.string(),
+  "reset": zod.boolean().optional(),
+  "loads": zod.array(zod.object({
+  "index": zod.int(),
+  "value": zod.number()
+})).optional()
+})
+
+export const SetAthleteVersionResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
  * @summary The planned workout for a date and what the athlete logged that day
  */
 export const GetTodayQueryParams = zod.object({

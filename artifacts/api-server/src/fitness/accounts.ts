@@ -8,13 +8,14 @@
 import { randomBytes, scrypt as scryptCb, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { sql } from '@workspace/fitness-db';
+import type { LoadProfile } from '@workspace/fitness-core';
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, opts: { N: number; r: number; p: number }) => Promise<Buffer>;
 const PARAMS = { N: 16384, r: 8, p: 1 };
 export const SESSION_COOKIE = 'nf_sid';
 export const SESSION_DAYS = 90;
 
-export interface User { id: string; name: string; sex: 'male' | 'female'; units: 'lb' | 'kg'; isCoach: boolean; canLogForOthers: boolean; hasPassword: boolean }
+export interface User { id: string; name: string; sex: 'male' | 'female'; units: 'lb' | 'kg'; isCoach: boolean; canLogForOthers: boolean; hasPassword: boolean; loadProfile: LoadProfile | null }
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -41,25 +42,26 @@ const tokenHash = (token: string) => createHash('sha256').update(token).digest('
 const toUser = (r: Record<string, unknown>): User => ({
   id: r.id as string, name: r.name as string, sex: r.sex as User['sex'], units: r.units as User['units'],
   isCoach: !!r.is_coach, canLogForOthers: !!r.can_log_for_others, hasPassword: !!r.password_hash,
+  loadProfile: (r.a_load as LoadProfile | null) ?? null,
 });
 
 export async function findAthleteByName(name: string) {
-  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash FROM athletes WHERE lower(name) = lower(${name.trim()})`;
+  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash, load_profile AS a_load FROM athletes WHERE lower(name) = lower(${name.trim()})`;
   return r ? { user: toUser(r), passwordHash: (r.password_hash as string | null) ?? null } : undefined;
 }
 
 export async function getAthlete(id: string): Promise<User | undefined> {
-  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash FROM athletes WHERE id = ${id}`;
+  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash, load_profile AS a_load FROM athletes WHERE id = ${id}`;
   return r ? toUser(r) : undefined;
 }
 
 export async function getCoach(): Promise<User | undefined> {
-  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash FROM athletes WHERE is_coach ORDER BY id LIMIT 1`;
+  const [r] = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash, load_profile AS a_load FROM athletes WHERE is_coach ORDER BY id LIMIT 1`;
   return r ? toUser(r) : undefined;
 }
 
 export async function listAthletes(): Promise<User[]> {
-  const rows = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash FROM athletes
+  const rows = await sql`SELECT id, name, sex, units, is_coach, can_log_for_others, password_hash, load_profile AS a_load FROM athletes
     ORDER BY is_coach DESC, CASE sex WHEN 'female' THEN 0 ELSE 1 END, birth_year NULLS FIRST, name`;
   return rows.map(toUser);
 }
@@ -74,7 +76,7 @@ export async function createSession(athleteId: string): Promise<string> {
 
 export async function userForSession(token: string | undefined): Promise<User | undefined> {
   if (!token) return undefined;
-  const [r] = await sql`SELECT a.id, a.name, a.sex, a.units, a.is_coach, a.can_log_for_others, a.password_hash
+  const [r] = await sql`SELECT a.id, a.name, a.sex, a.units, a.is_coach, a.can_log_for_others, a.password_hash, a.load_profile AS a_load
     FROM sessions s JOIN athletes a ON a.id = s.athlete_id WHERE s.token_hash = ${tokenHash(token)} AND s.expires_at > now()`;
   return r ? toUser(r) : undefined;
 }
@@ -87,4 +89,10 @@ export async function endSession(token: string | undefined) {
 export async function setPassword(athleteId: string, password: string, keepToken?: string) {
   await sql`UPDATE athletes SET password_hash = ${await hashPassword(password)} WHERE id = ${athleteId}`;
   await sql`DELETE FROM sessions WHERE athlete_id = ${athleteId} ${keepToken ? sql`AND token_hash <> ${tokenHash(keepToken)}` : sql``}`;
+}
+
+/** Save a person's standing load setting (fractions of the standard Rx; 1 = full Rx entries are dropped). */
+export async function setLoadProfile(athleteId: string, profile: LoadProfile) {
+  const clean = Object.fromEntries(Object.entries(profile).filter(([, v]) => typeof v === 'number' && v !== 1));
+  await sql`UPDATE athletes SET load_profile = ${Object.keys(clean).length ? sql.json(clean) : null} WHERE id = ${athleteId}`;
 }

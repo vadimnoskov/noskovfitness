@@ -147,6 +147,40 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessActionResult" }
         "403": { description: Coach only }
+  /fitness/athletes/{athleteId}/profile:
+    post:
+      operationId: setLoadProfile
+      summary: Set a person's standing load setting as a percent of the standard Rx per kind of equipment (coach only)
+      parameters:
+        - { in: path, name: athleteId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoadProfileInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "403": { description: Coach only }
+  /fitness/versions:
+    post:
+      operationId: setAthleteVersion
+      summary: Set (or reset) one person's weights for one program day (coach only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AthleteVersionInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "403": { description: Coach only }
   /fitness/today:
     get:
       operationId: getToday
@@ -274,6 +308,28 @@ components:
       required: [newPassword]
       properties:
         newPassword: { type: string }
+    LoadProfileInput:
+      type: object
+      properties:
+        barbell: { type: number }
+        dumbbell: { type: number }
+        kettlebell: { type: number }
+        medball: { type: number }
+    AthleteVersionInput:
+      type: object
+      required: [dayId, athleteId]
+      properties:
+        dayId: { type: string }
+        athleteId: { type: string }
+        reset: { type: boolean }
+        loads:
+          type: array
+          items:
+            type: object
+            required: [index, value]
+            properties:
+              index: { type: integer }
+              value: { type: number }
     LogResultInput:
       type: object
       required: [athleteId, date, workoutId, asPrescribed, completed, score]

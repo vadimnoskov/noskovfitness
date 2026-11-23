@@ -93,7 +93,13 @@ export interface Workout {
   originalText?: string;
   /** Tags derived from structure + movements; a coach override wins. */
   tags?: Partial<WorkoutTags>;
+  /** Set on a person's own version of a workout (their Rx), and on results logged against it. */
+  version?: { kind: 'standard' | 'personal'; athleteId?: string; source?: 'profile' | 'coach' };
 }
+
+/** A person's standing load setting: fraction of the standard Rx for their sex, per kind of equipment (1 = full Rx). */
+export type LoadKind = 'barbell' | 'dumbbell' | 'kettlebell' | 'medball' | 'other';
+export type LoadProfile = Partial<Record<LoadKind, number>>;
 
 export type TimeDomain = 'short' | 'medium' | 'long' | 'endurance';
 export interface WorkoutTags {

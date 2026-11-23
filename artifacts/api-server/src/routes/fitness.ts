@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -182,7 +182,22 @@ router.post('/fitness/account/password', async (req, res) => {
 
 router.get('/fitness/athletes', async (_req, res) => {
   if (!userOf(res)!.isCoach) { res.status(403).json({ error: 'Coach only.' }); return; }
-  res.json({ athletes: (await accounts.listAthletes()).map(({ id, name, isCoach, hasPassword }) => ({ id, name, isCoach, hasPassword })) });
+  res.json({ athletes: (await accounts.listAthletes()).map(({ id, name, sex, isCoach, hasPassword, loadProfile }) => ({ id, name, sex, isCoach, hasPassword, loadProfile })) });
+});
+
+router.post('/fitness/athletes/:athleteId/profile', async (req, res) => {
+  if (!userOf(res)!.isCoach) { res.status(403).json({ error: 'Only the coach can change load settings.' }); return; }
+  const params = SetLoadProfileParams.safeParse(req.params), body = SetLoadProfileBody.safeParse(req.body);
+  if (!params.success || !body.success) { res.status(400).json({ error: 'Enter percentages.' }); return; }
+  if (!(await accounts.getAthlete(params.data.athleteId))) { res.status(404).json({ error: 'Unknown family member.' }); return; }
+  const profile: Record<string, number> = {};
+  for (const [k, v] of Object.entries(body.data)) {
+    if (v === undefined || v === null) continue;
+    if (!Number.isFinite(v) || v < 10 || v > 150) { res.status(400).json({ error: 'Use percentages between 10 and 150.' }); return; }
+    profile[k] = Math.round(v) / 100;
+  }
+  await accounts.setLoadProfile(params.data.athleteId, profile);
+  res.json({ ok: true });
 });
 
 router.post('/fitness/athletes/:athleteId/password', async (req, res) => {
@@ -235,6 +250,12 @@ router.post('/fitness/results', wrap(async (req, res) => {
   if (d.date > new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)) throw new logging.InputError("You can't log a result in the future.");
   if (!UUID.test(d.workoutId) || (d.dayId && !UUID.test(d.dayId))) throw new logging.InputError('Invalid workout.');
   return logging.logResult(userOf(res)!, { ...d, scaling: d.scaling?.slice(0, 500), notes: d.notes?.slice(0, 1500) } as logging.LogInput);
+}));
+
+router.post('/fitness/versions', wrap(async (req, res) => {
+  const p = SetAthleteVersionBody.safeParse(req.body);
+  if (!p.success || !UUID.test(p.data.dayId)) throw new logging.InputError('Choose a program day and a person.');
+  return logging.setAthleteVersion(userOf(res)!, p.data);
 }));
 
 router.delete('/fitness/results/:resultId', wrap(async (req, res) => {
