@@ -31,21 +31,172 @@ export const FitnessActionBody = zod.record(zod.string(), zod.union([zod.string(
 
 export const FitnessActionResponse = zod.object({
   "ok": zod.boolean(),
-  "redirect": zod.string().optional()
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
 })
 
 
 /**
- * @summary Sign in with the existing family password
+ * @summary Sign in with your name and password (the coach may use the family password until they set their own)
  */
 export const FamilyLoginBody = zod.object({
+  "name": zod.string(),
   "password": zod.string(),
   "next": zod.string().optional()
 })
 
 export const FamilyLoginResponse = zod.object({
   "ok": zod.boolean(),
-  "redirect": zod.string().optional()
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary Sign out on this device
+ */
+export const LogoutResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary The signed-in person and who they may log results for
+ */
+export const GetMeResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Change your own password
+ */
+export const ChangeMyPasswordBody = zod.object({
+  "currentPassword": zod.string(),
+  "newPassword": zod.string()
+})
+
+export const ChangeMyPasswordResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary Family members and whether each has a password (coach only)
+ */
+export const ListFamilyResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Set a family member's password (coach only)
+ */
+export const SetAthletePasswordParams = zod.object({
+  "athleteId": zod.coerce.string()
+})
+
+export const SetAthletePasswordBody = zod.object({
+  "newPassword": zod.string()
+})
+
+export const SetAthletePasswordResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary The planned workout for a date and what the athlete logged that day
+ */
+export const GetTodayQueryParams = zod.object({
+  "date": zod.coerce.string(),
+  "athleteId": zod.coerce.string().optional()
+})
+
+export const GetTodayResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary An athlete's results, newest first
+ */
+export const GetHistoryQueryParams = zod.object({
+  "athleteId": zod.coerce.string().optional(),
+  "q": zod.coerce.string().optional(),
+  "offset": zod.coerce.number().int().optional(),
+  "limit": zod.coerce.number().int().optional()
+})
+
+export const GetHistoryResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary A workout and the athlete's results on it
+ */
+export const GetWorkoutDetailQueryParams = zod.object({
+  "workoutId": zod.coerce.string(),
+  "athleteId": zod.coerce.string().optional()
+})
+
+export const GetWorkoutDetailResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Find a library workout to log (when not doing the planned one)
+ */
+export const SearchWorkoutsQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchWorkoutsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Log a result
+ */
+export const LogResultBody = zod.object({
+  "athleteId": zod.string(),
+  "date": zod.string(),
+  "workoutId": zod.string(),
+  "dayId": zod.string().optional(),
+  "asPrescribed": zod.boolean(),
+  "completed": zod.boolean(),
+  "score": zod.object({
+  "timeSec": zod.number().optional(),
+  "rounds": zod.number().optional(),
+  "reps": zod.number().optional(),
+  "loads": zod.array(zod.number()).optional(),
+  "distanceM": zod.number().optional(),
+  "calories": zod.number().optional()
+}),
+  "loads": zod.array(zod.object({
+  "index": zod.int(),
+  "value": zod.number(),
+  "unit": zod.enum(['lb', 'kg']).optional()
+})).optional(),
+  "scaling": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const LogResultResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a result entered in the app
+ */
+export const DeleteResultParams = zod.object({
+  "resultId": zod.coerce.string()
+})
+
+export const DeleteResultResponse = zod.object({
+  "ok": zod.boolean(),
+  "redirect": zod.string().optional(),
+  "id": zod.string().optional()
 })
 
 

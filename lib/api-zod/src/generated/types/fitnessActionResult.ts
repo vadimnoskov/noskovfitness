@@ -9,4 +9,5 @@
 export interface FitnessActionResult {
   ok: boolean;
   redirect?: string;
+  id?: string;
 }

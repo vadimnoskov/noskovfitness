@@ -85,3 +85,51 @@ button{font:inherit;cursor:pointer;color:inherit}
 .check{justify-content:flex-start!important}
 .yr .d.prop,.ttl.prop{opacity:.5}
 form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
+
+/* ---------- Phone-first pages: Today, History, Workout, Account, Login ---------- */
+.phone-page{max-width:640px;margin:0 auto;display:grid;gap:14px}
+.phone-page h1{font-size:26px}
+.sec{font-size:17px;margin:6px 0 0}
+.datebar{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:8px;align-items:center;text-align:center}
+.datebar .btn{min-height:48px;justify-content:center;font-size:18px}
+.linkish{background:none;border:0;padding:4px;color:var(--acc);text-decoration:underline;font-size:13px;cursor:pointer}
+.seg{display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;min-height:46px;border:0;background:var(--bg);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.seg.people{overflow-x:auto}.seg.people button{min-width:72px}
+.wcard{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px}
+.wcard h2{font-size:19px}.wcard h2 a{text-decoration:none}
+.wcard .mv{font-size:15px;padding-left:20px}
+.btn.big{min-height:50px;justify-content:center;font-size:16px;font-weight:600;width:100%}
+.log{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:12px}
+.log label,.stack-form label,.login label,.searchbox,.otherlog label{display:grid;gap:4px;font-size:14px;font-weight:600}
+.log input,.log textarea,.stack-form input,.login input,.searchbox input,.otherlog input,.famrow input{font:inherit;font-size:17px;min-height:48px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);width:100%}
+.log textarea{padding:10px 12px;min-height:64px;font-size:16px}
+.log .check{display:flex;gap:10px;align-items:center;font-weight:500}.log .check input{width:22px;height:22px;min-height:0}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.unit{display:flex;align-items:center;gap:6px;font-weight:500;color:var(--mute)}
+.weights{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:grid;gap:10px}
+.weights legend{font-weight:700;font-size:14px;padding:0 4px}
+.weights input{max-width:120px}
+.results{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.result{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px}
+.rtop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rdate{font-size:13px;color:var(--mute)}
+.tag{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--panel)}
+.tag.rx{background:var(--ink);color:var(--bg)}.tag.best{background:#1d7a3a;color:#fff}
+.rwork{font-weight:600;text-decoration:none}
+.rscore{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.rnotes{font-size:14px;white-space:pre-wrap;color:var(--mute)}
+.result .btn.ghost{justify-self:start;padding:0;min-height:32px}
+.otherlog{border:1px dashed var(--line);border-radius:12px;padding:10px 14px}
+.otherlog summary{cursor:pointer;font-weight:600;min-height:40px;display:flex;align-items:center}
+.picks{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.picks button{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:10px 12px;display:grid;gap:2px;cursor:pointer;font:inherit}
+.login{max-width:380px;margin:8vh auto;display:grid;gap:14px}
+.stack-form{display:grid;gap:12px}
+.famrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-top:1px solid var(--line);padding:10px 0}
+.famrow>div{grid-column:1/-1}
+.ok{color:#1d7a3a;font-weight:600}
+@media(max-width:600px){.top{gap:6px 10px;padding:8px 12px}.top nav a{padding:10px 8px}main{padding:14px 12px 40px}}

@@ -63,7 +63,7 @@ paths:
   /fitness/login:
     post:
       operationId: familyLogin
-      summary: Sign in with the existing family password
+      summary: Sign in with your name and password (the coach may use the family password until they set their own)
       requestBody:
         required: true
         content:
@@ -71,12 +71,166 @@ paths:
             schema: { $ref: "#/components/schemas/FamilyCredentials" }
       responses:
         "200":
-          description: Signed in with an HTTP-only cookie
+          description: Signed in with an HTTP-only session cookie
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessActionResult" }
-        "401": { description: Incorrect password }
-        "503": { description: APP_PASSWORD missing }
+        "401": { description: Name or password did not match }
+        "429": { description: Too many attempts }
+  /fitness/logout:
+    post:
+      operationId: logout
+      summary: Sign out on this device
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+  /fitness/me:
+    get:
+      operationId: getMe
+      summary: The signed-in person and who they may log results for
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+        "401": { description: Sign-in required }
+  /fitness/account/password:
+    post:
+      operationId: changeMyPassword
+      summary: Change your own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordChange" }
+      responses:
+        "200":
+          description: Password changed; other devices are signed out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "400": { description: Invalid password }
+        "401": { description: Current password did not match }
+  /fitness/athletes:
+    get:
+      operationId: listFamily
+      summary: Family members and whether each has a password (coach only)
+      responses:
+        "200":
+          description: Family members
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+        "403": { description: Coach only }
+  /fitness/athletes/{athleteId}/password:
+    post:
+      operationId: setAthletePassword
+      summary: Set a family member's password (coach only)
+      parameters:
+        - in: path
+          name: athleteId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordSet" }
+      responses:
+        "200":
+          description: Password set; that person's other devices are signed out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "403": { description: Coach only }
+  /fitness/today:
+    get:
+      operationId: getToday
+      summary: The planned workout for a date and what the athlete logged that day
+      parameters:
+        - { in: query, name: date, required: true, schema: { type: string } }
+        - { in: query, name: athleteId, schema: { type: string } }
+      responses:
+        "200":
+          description: Today
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/history:
+    get:
+      operationId: getHistory
+      summary: An athlete's results, newest first
+      parameters:
+        - { in: query, name: athleteId, schema: { type: string } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: offset, schema: { type: integer } }
+        - { in: query, name: limit, schema: { type: integer } }
+      responses:
+        "200":
+          description: Results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/workout:
+    get:
+      operationId: getWorkoutDetail
+      summary: A workout and the athlete's results on it
+      parameters:
+        - { in: query, name: workoutId, required: true, schema: { type: string } }
+        - { in: query, name: athleteId, schema: { type: string } }
+      responses:
+        "200":
+          description: Workout detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+        "404": { description: Not found }
+  /fitness/workout-search:
+    get:
+      operationId: searchWorkouts
+      summary: Find a library workout to log (when not doing the planned one)
+      parameters:
+        - { in: query, name: q, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Matching workouts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/results:
+    post:
+      operationId: logResult
+      summary: Log a result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LogResultInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "400": { description: Invalid score }
+        "403": { description: Not allowed for this athlete }
+  /fitness/results/{resultId}:
+    delete:
+      operationId: deleteResult
+      summary: Delete a result entered in the app
+      parameters:
+        - { in: path, name: resultId, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessActionResult" }
+        "403": { description: Not allowed }
   /healthz:
     get:
       operationId: healthCheck
@@ -104,16 +258,59 @@ components:
             items: { type: string }
     FamilyCredentials:
       type: object
-      required: [password]
+      required: [name, password]
       properties:
+        name: { type: string }
         password: { type: string }
         next: { type: string }
+    PasswordChange:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+    PasswordSet:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword: { type: string }
+    LogResultInput:
+      type: object
+      required: [athleteId, date, workoutId, asPrescribed, completed, score]
+      properties:
+        athleteId: { type: string }
+        date: { type: string }
+        workoutId: { type: string }
+        dayId: { type: string }
+        asPrescribed: { type: boolean }
+        completed: { type: boolean }
+        score:
+          type: object
+          properties:
+            timeSec: { type: number }
+            rounds: { type: number }
+            reps: { type: number }
+            loads: { type: array, items: { type: number } }
+            distanceM: { type: number }
+            calories: { type: number }
+        loads:
+          type: array
+          items:
+            type: object
+            required: [index, value]
+            properties:
+              index: { type: integer }
+              value: { type: number }
+              unit: { type: string, enum: [lb, kg] }
+        scaling: { type: string }
+        notes: { type: string }
     FitnessActionResult:
       type: object
       required: [ok]
       properties:
         ok: { type: boolean }
         redirect: { type: string }
+        id: { type: string }
     HealthStatus:
       type: object
       properties:

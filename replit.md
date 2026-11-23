@@ -35,13 +35,15 @@ CrossFit workout programming and tracking for the family. This is a faithful por
 
 ## Architecture decisions
 
-- Preserve the original family-password gate: local development may run without a password; production data APIs refuse access until `APP_PASSWORD` is set in Secrets.
+- Per-person accounts: everyone signs in with their first name and own password (scrypt hashes in `athletes.password_hash`; server-side sessions in `sessions`, cookie `nf_sid`, 90 days). `APP_PASSWORD` is only the coach's first-sign-in password until the coach sets their own; the coach then sets family passwords on Account → Family. Local development without `APP_PASSWORD` runs as the coach.
+- Roles: the coach (`is_coach`) sees everything and can log for anyone (`can_log_for_others`). Athletes see Today, History, their own Benchmarks column and Account; Program, Calendar, Analysis, Settings and all coach actions are coach-only (enforced in the API, not just hidden).
+- Results logged in the app have `source = 'app'` and `entered_by`; only these can be deleted. Imported history (btwb-import, manual-notes) is never edited or deleted.
 - Keep PostgreSQL records and original domain logic unchanged; do not replace training history with sample workouts.
 - Use Replit's Publish flow for production schema changes, never custom startup or deployment DDL. Original migration tools are retained for legacy compatibility, not production hooks.
 
 ## Product
 
-Program proposals, approval, alternatives, location changes, pushing/skipping workouts, history calendar (year/8 weeks/week), programming analysis, benchmark history, and policy/schedule settings.
+Today (planned workout + phone-first result logging: time/capped, rounds+reps, per-set loads, reps, distance, Rx/scaled with weights used), personal History with search, workout pages with all of a person's results and their best, Account (password, sign out; coach: Family passwords). Coach: program proposals, approval, alternatives, location changes, pushing/skipping workouts, history calendar (year/8 weeks/week), programming analysis, benchmark history, and policy/schedule settings.
 
 ## User preferences
 

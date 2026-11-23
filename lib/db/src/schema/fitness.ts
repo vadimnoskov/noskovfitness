@@ -11,6 +11,8 @@ export const athletes = pgTable('athletes', {
   id: text('id').primaryKey(), name: text('name').notNull(), birthYear: integer('birth_year'), sex: text('sex').notNull(),
   units: text('units').notNull().default('lb'), isCoach: boolean('is_coach').notNull().default(false),
   canLogForOthers: boolean('can_log_for_others').notNull().default(false),
+  /** scrypt hash of the athlete's own password; null until the coach sets one. */
+  passwordHash: text('password_hash'),
 }, t => [check('athletes_sex_check', sql`${t.sex} IN ('male','female')`), check('athletes_units_check', sql`${t.units} IN ('lb','kg')`)]);
 
 export const groups = pgTable('groups', {
@@ -73,3 +75,11 @@ export const programmingPolicy = pgTable('programming_policy', {
 export const schemaMigrations = pgTable('schema_migrations', {
   name: text('name').primaryKey(), appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Signed-in devices. The cookie holds a random token; only its SHA-256 hash is stored. */
+export const sessions = pgTable('sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, t => [index('sessions_athlete_id_idx').on(t.athleteId)]);

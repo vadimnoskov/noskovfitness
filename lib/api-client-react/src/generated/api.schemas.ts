@@ -10,13 +10,60 @@ export interface FitnessPage { [key: string]: unknown }
 export interface FitnessForm {[key: string]: string | string[]}
 
 export interface FamilyCredentials {
+  name: string;
   password: string;
   next?: string;
+}
+
+export interface PasswordChange {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface PasswordSet {
+  newPassword: string;
+}
+
+export type LogResultInputScore = {
+  timeSec?: number;
+  rounds?: number;
+  reps?: number;
+  loads?: number[];
+  distanceM?: number;
+  calories?: number;
+};
+
+export type LogResultInputLoadsItemUnit = typeof LogResultInputLoadsItemUnit[keyof typeof LogResultInputLoadsItemUnit];
+
+
+export const LogResultInputLoadsItemUnit = {
+  lb: 'lb',
+  kg: 'kg',
+} as const;
+
+export type LogResultInputLoadsItem = {
+  index: number;
+  value: number;
+  unit?: LogResultInputLoadsItemUnit;
+};
+
+export interface LogResultInput {
+  athleteId: string;
+  date: string;
+  workoutId: string;
+  dayId?: string;
+  asPrescribed: boolean;
+  completed: boolean;
+  score: LogResultInputScore;
+  loads?: LogResultInputLoadsItem[];
+  scaling?: string;
+  notes?: string;
 }
 
 export interface FitnessActionResult {
   ok: boolean;
   redirect?: string;
+  id?: string;
 }
 
 export interface HealthStatus {
@@ -39,4 +86,25 @@ export const GetFitnessPageScreen = {
   benchmarks: 'benchmarks',
   settings: 'settings',
 } as const;
+
+export type GetTodayParams = {
+date: string;
+athleteId?: string;
+};
+
+export type GetHistoryParams = {
+athleteId?: string;
+q?: string;
+offset?: number;
+limit?: number;
+};
+
+export type GetWorkoutDetailParams = {
+workoutId: string;
+athleteId?: string;
+};
+
+export type SearchWorkoutsParams = {
+q: string;
+};
 

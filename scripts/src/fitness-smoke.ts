@@ -52,6 +52,10 @@ try {
     await page.screenshot({ path: new URL('settings.jpg', out).pathname });
   }
   await page.goto(`${base}/`);
+  await page.locator('.datebar').waitFor(); // home is Today
+  await page.getByRole('link', { name: 'History', exact: true }).click();
+  await page.getByRole('heading', { name: 'My history', exact: true }).waitFor();
+  await page.goto(`${base}/calendar`);
   await page.getByRole('heading', { name: 'Program calendar', exact: true }).waitFor();
   await page.locator('.yr').waitFor();
   await page.getByRole('link', { name: '8 weeks', exact: true }).click();
@@ -67,9 +71,10 @@ try {
   await page.getByRole('link', { name: 'Benchmarks', exact: true }).click();
   await page.getByRole('heading', { name: 'The Girls', exact: false }).waitFor();
   await page.goto(`${base}/login`);
-  await page.getByLabel('Family password').fill('not-a-real-password');
+  await page.getByLabel('Your name').fill('nobody');
+  await page.getByLabel('Password').fill('not-a-real-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.getByText('APP_PASSWORD is not set.', { exact: false }).waitFor();
+  await page.getByText("Name or password didn't match.", { exact: false }).waitFor();
   await page.screenshot({ path: new URL('login.jpg', out).pathname });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${base}/calendar?view=week&d=2099-01-05`);
@@ -77,7 +82,7 @@ try {
   assert.equal(await page.evaluate('document.documentElement.scrollWidth > window.innerWidth'), false, 'Page overflow outside scrollable calendar');
   await page.screenshot({ path: new URL('mobile-calendar.jpg', out).pathname });
   assert.deepEqual(errors, []);
-  console.log('Browser checks passed: navigation, calendar views, analysis filters, benchmarks, missing-password handling, and mobile layout.');
+  console.log('Browser checks passed: Today, History, navigation, calendar views, analysis filters, benchmarks, sign-in rejection, and mobile layout.');
   if (fixtures) console.log('Fixture checks passed: propose, approve, preserve approval during re-plan, swap, save settings, and reset input values.');
 } finally {
   await browser.close();

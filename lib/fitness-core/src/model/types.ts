@@ -87,7 +87,7 @@ export interface Workout {
   /** Coach's intent in plain words; feeds scaling and AI coaching notes. */
   stimulus?: string;
   targetMinutes?: [number, number];
-  benchmark?: { category: 'girl' | 'hero' | 'open' | 'test' | 'own'; retestEveryDays?: number };
+  benchmark?: { category: 'girl' | 'hero' | 'open' | 'test' | 'lift' | 'own'; retestEveryDays?: number; label?: string };
   source?: string; // "CrossFit.com", "BTWB import", "NF-WODs 2017"
   /** Imported text is kept verbatim so nothing is lost while parsing improves. */
   originalText?: string;

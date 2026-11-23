@@ -2,8 +2,11 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse } from '@workspace/api-zod';
-import { COOKIE, tokenFor } from '../fitness/auth';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams } from '@workspace/api-zod';
+import { COOKIE } from '../fitness/auth';
+import * as accounts from '../fitness/accounts';
+import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
+import * as logging from '../fitness/logging';
 import * as data from '../fitness/data';
 import { getPlannedDays } from '../fitness/program';
 import * as program from '../fitness/program-actions';
@@ -18,36 +21,61 @@ const same = (a: string, b: string) => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 const failures = new Map<string, { count: number; until: number }>();
+const cookieParserToken = (req: { cookies?: Record<string, string> }) => req.cookies?.[SESSION_COOKIE];
+
+const isProd = () => process.env.NODE_ENV === 'production';
+const cookieOpts = () => ({ httpOnly: true, sameSite: 'lax' as const, secure: isProd(), maxAge: SESSION_DAYS * 86400000, path: '/' });
+const tooMany = (key: string) => { const a = failures.get(key); return !!a && a.until > Date.now() && a.count >= 10; };
+const fail = (key: string) => {
+  const a = failures.get(key);
+  if (failures.size > 1000) for (const [k, v] of failures) if (v.until < Date.now()) failures.delete(k);
+  failures.set(key, { count: a && a.until > Date.now() ? a.count + 1 : 1, until: Date.now() + 900000 });
+};
 
 router.post('/fitness/login', async (req, res) => {
   const parsed = FamilyLoginBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: 'Enter the family password.' }); return; }
-  const password = process.env.APP_PASSWORD;
-  if (!password) { res.status(503).json({ error: 'APP_PASSWORD is not set. Add the family password in Secrets, then restart.' }); return; }
+  if (!parsed.success || !parsed.data.name.trim()) { res.status(400).json({ error: 'Enter your name and password.' }); return; }
   const key = req.ip ?? 'unknown';
-  const attempt = failures.get(key);
-  if (attempt && attempt.until > Date.now() && attempt.count >= 10) { res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' }); return; }
-  if (!same(parsed.data.password, password)) {
-    if (failures.size > 1000) for (const [ip, v] of failures) if (v.until < Date.now()) failures.delete(ip);
-    failures.set(key, { count: attempt && attempt.until > Date.now() ? attempt.count + 1 : 1, until: Date.now() + 900000 });
-    res.status(401).json({ error: "That password didn't match." }); return;
+  if (tooMany(key)) { res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' }); return; }
+  const found = await accounts.findAthleteByName(parsed.data.name);
+  let ok = false;
+  if (found?.passwordHash) ok = await accounts.verifyPassword(parsed.data.password, found.passwordHash);
+  else if (found?.user.isCoach && process.env.APP_PASSWORD) ok = same(parsed.data.password, process.env.APP_PASSWORD);
+  if (!ok) {
+    fail(key);
+    const noPassword = found && !found.passwordHash && !found.user.isCoach;
+    res.status(401).json({ error: noPassword ? `${found!.user.name} doesn't have a password yet. Ask the coach to set one on the Family page.` : "Name or password didn't match." });
+    return;
   }
   failures.delete(key);
-  res.cookie(COOKIE, await tokenFor(password), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 60 * 1000, path: '/' });
-  res.json({ ok: true, redirect: safeNext(parsed.data.next) });
+  res.cookie(SESSION_COOKIE, await accounts.createSession(found!.user.id), cookieOpts());
+  res.clearCookie(COOKIE, { path: '/' });
+  res.json({ ok: true, redirect: !found!.passwordHash ? '/account?setup=1' : safeNext(parsed.data.next) });
 });
 
-router.use('/fitness', async (req, res, next) => {
-  const password = process.env.APP_PASSWORD;
-  if (!password) {
-    if (process.env.NODE_ENV === 'production') { res.status(503).json({ error: 'APP_PASSWORD is not set. Add it as a secret, then restart.' }); return; }
-    next(); return;
-  }
-  if (!same(String(req.cookies?.[COOKIE] ?? ''), await tokenFor(password))) {
-    res.status(401).json({ error: 'Family sign-in required.' }); return;
-  }
-  next();
+router.post('/fitness/logout', async (req, res) => {
+  await accounts.endSession(cookieParserToken(req));
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.json({ ok: true, redirect: '/login' });
 });
+
+// Every other /fitness route needs a signed-in person. Local development without APP_PASSWORD runs as the coach.
+router.use('/fitness', async (req, res, next) => {
+  const user = await accounts.userForSession(cookieParserToken(req));
+  if (user) { res.locals.user = user; next(); return; }
+  if (!isProd() && !process.env.APP_PASSWORD) {
+    const coach = await accounts.getCoach().catch(() => undefined);
+    if (coach) { res.locals.user = coach; next(); return; }
+    if (req.path === '/pages') { next(); return; } // empty development database: let screens show their own message
+  }
+  if (isProd() && !process.env.APP_PASSWORD) {
+    const anyPassword = await accounts.listAthletes().then((a) => a.some((x) => x.hasPassword)).catch(() => false);
+    if (!anyPassword) { res.status(503).json({ error: 'APP_PASSWORD is not set. Add it as a secret, then restart.' }); return; }
+  }
+  res.status(401).json({ error: 'Sign-in required.' });
+});
+const userOf = (res: { locals: Record<string, unknown> }) => res.locals.user as accounts.User | undefined;
+const COACH_SCREENS = new Set(['calendar', 'program', 'analysis', 'settings']);
 router.use('/fitness', (req, res, next) => {
   if (req.method !== 'GET') {
     const origin = req.get('origin');
@@ -62,6 +90,8 @@ router.get('/fitness/pages', async (req, res) => {
   const parsed = GetFitnessPageQueryParams.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: 'Unknown fitness screen.' }); return; }
   const { screen, from, to } = parsed.data;
+  const user = userOf(res);
+  if (user && !user.isCoach && COACH_SCREENS.has(screen)) { res.status(403).json({ error: 'This page is for the coach.' }); return; }
   if ((from && !date(from)) || (to && !date(to))) { res.status(400).json({ error: 'Use a valid YYYY-MM-DD date.' }); return; }
   const latestDate = await data.getLatestDate();
   const start = from ?? `${latestDate.slice(0, 4)}-01-01`, end = to ?? `${latestDate.slice(0, 4)}-12-31`;
@@ -70,7 +100,16 @@ router.get('/fitness/pages', async (req, res) => {
   switch (screen) {
     case 'calendar': payload = { latestDate, days: [...(await data.getDays(start, end)).entries()] }; break;
     case 'analysis': payload = { latestDate, use: await data.getMovementUse(start, end), mix: await data.getMix(start, end) }; break;
-    case 'benchmarks': payload = { rows: await data.getBenchmarks(), athletes: await data.getAthletes(), today: latestDate }; break;
+    case 'benchmarks': {
+      const all = await data.getAthletes();
+      const mineOnly = user && !user.isCoach;
+      const rows = await data.getBenchmarks();
+      payload = {
+        rows: mineOnly ? rows.map((r) => ({ ...r, results: (r.results as { athleteId: string }[]).filter((x) => x.athleteId === user.id) })) : rows,
+        athletes: mineOnly ? all.filter((a) => a.id === user.id) : all, today: latestDate,
+      };
+      break;
+    }
     case 'program':
     case 'settings': {
       const group = await getGroup(data.GROUP_ID);
@@ -87,6 +126,7 @@ router.get('/fitness/pages', async (req, res) => {
 
 const actions = { ...program, ...settings };
 router.post('/fitness/actions/:action', async (req, res) => {
+  if (!userOf(res)?.isCoach) { res.status(403).json({ error: 'Only the coach can change the program and settings.' }); return; }
   const params = FitnessActionParams.safeParse(req.params), body = FitnessActionBody.safeParse(req.body);
   if (!params.success || !body.success) { res.status(400).json({ error: 'Invalid coach action or form.' }); return; }
   const action = params.data.action;
@@ -108,6 +148,100 @@ router.post('/fitness/actions/:action', async (req, res) => {
   await actions[action](f);
   res.json({ ok: true, ...(['savePolicyAction', 'resetPolicyAction'].includes(action) ? { redirect: '/settings?saved=1' } : {}) });
 });
+
+
+// ---------- people ----------
+const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+/** The athlete a request is about: yourself, or someone you may log for. */
+const subject = (res: { locals: Record<string, unknown> }, requested?: string) => {
+  const user = userOf(res)!;
+  const id = requested || user.id;
+  if (!logging.canActFor(user, id)) throw new logging.InputError('You can only see your own results.', 403);
+  return id;
+};
+
+router.get('/fitness/me', async (_req, res) => {
+  const user = userOf(res)!;
+  const family = (user.canLogForOthers || user.isCoach ? await accounts.listAthletes() : [user]).map((a) => ({ id: a.id, name: a.name, sex: a.sex, units: a.units }));
+  res.json({ user, logFor: family, today: new Date().toISOString().slice(0, 10) });
+});
+
+router.post('/fitness/account/password', async (req, res) => {
+  const user = userOf(res)!;
+  const p = ChangeMyPasswordBody.safeParse(req.body);
+  if (!p.success) { res.status(400).json({ error: 'Enter your current and new password.' }); return; }
+  const problem = accounts.passwordProblem(p.data.newPassword);
+  if (problem) { res.status(400).json({ error: problem }); return; }
+  const found = await accounts.findAthleteByName(user.name);
+  const current = found?.passwordHash ? await accounts.verifyPassword(p.data.currentPassword, found.passwordHash)
+    : user.isCoach && !!process.env.APP_PASSWORD && same(p.data.currentPassword, process.env.APP_PASSWORD);
+  if (!current) { res.status(401).json({ error: "Your current password didn't match." }); return; }
+  await accounts.setPassword(user.id, p.data.newPassword, cookieParserToken(req));
+  res.json({ ok: true });
+});
+
+router.get('/fitness/athletes', async (_req, res) => {
+  if (!userOf(res)!.isCoach) { res.status(403).json({ error: 'Coach only.' }); return; }
+  res.json({ athletes: (await accounts.listAthletes()).map(({ id, name, isCoach, hasPassword }) => ({ id, name, isCoach, hasPassword })) });
+});
+
+router.post('/fitness/athletes/:athleteId/password', async (req, res) => {
+  const user = userOf(res)!;
+  if (!user.isCoach) { res.status(403).json({ error: 'Only the coach can set passwords.' }); return; }
+  const params = SetAthletePasswordParams.safeParse(req.params), body = SetAthletePasswordBody.safeParse(req.body);
+  if (!params.success || !body.success) { res.status(400).json({ error: 'Enter a new password.' }); return; }
+  const problem = accounts.passwordProblem(body.data.newPassword);
+  if (problem) { res.status(400).json({ error: problem }); return; }
+  if (!(await accounts.getAthlete(params.data.athleteId))) { res.status(404).json({ error: 'Unknown family member.' }); return; }
+  await accounts.setPassword(params.data.athleteId, body.data.newPassword, params.data.athleteId === user.id ? cookieParserToken(req) : undefined);
+  res.json({ ok: true });
+});
+
+// ---------- logging and history ----------
+const wrap = (fn: (req: any, res: any) => Promise<unknown>) => async (req: any, res: any, next: any) => {
+  try { const out = await fn(req, res); if (out !== undefined) res.json(out); }
+  catch (e) { if (e instanceof logging.InputError) res.status(e.status).json({ error: e.message }); else next(e); }
+};
+
+router.get('/fitness/today', wrap(async (req, res) => {
+  const p = GetTodayQueryParams.safeParse(req.query);
+  if (!p.success || !date(p.data.date)) throw new logging.InputError('Choose a valid date.');
+  return logging.getToday(p.data.date, subject(res, p.data.athleteId));
+}));
+
+router.get('/fitness/history', wrap(async (req, res) => {
+  const p = GetHistoryQueryParams.safeParse(req.query);
+  if (!p.success) throw new logging.InputError('Invalid history filter.');
+  return logging.getHistory(subject(res, p.data.athleteId), { q: p.data.q?.slice(0, 80), offset: p.data.offset, limit: p.data.limit });
+}));
+
+router.get('/fitness/workout', wrap(async (req, res) => {
+  const p = GetWorkoutDetailQueryParams.safeParse(req.query);
+  if (!p.success || !UUID.test(p.data.workoutId)) throw new logging.InputError('Invalid workout.');
+  return logging.getWorkoutDetail(p.data.workoutId, subject(res, p.data.athleteId));
+}));
+
+router.get('/fitness/workout-search', wrap(async (req) => {
+  const p = SearchWorkoutsQueryParams.safeParse(req.query);
+  if (!p.success) throw new logging.InputError('Type a workout name.');
+  return logging.searchWorkouts(p.data.q.slice(0, 80));
+}));
+
+router.post('/fitness/results', wrap(async (req, res) => {
+  const p = LogResultBody.safeParse(req.body);
+  if (!p.success) throw new logging.InputError('Check the result form.');
+  const d = p.data;
+  if (!date(d.date)) throw new logging.InputError('Choose a valid date.');
+  if (d.date > new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)) throw new logging.InputError("You can't log a result in the future.");
+  if (!UUID.test(d.workoutId) || (d.dayId && !UUID.test(d.dayId))) throw new logging.InputError('Invalid workout.');
+  return logging.logResult(userOf(res)!, { ...d, scaling: d.scaling?.slice(0, 500), notes: d.notes?.slice(0, 1500) } as logging.LogInput);
+}));
+
+router.delete('/fitness/results/:resultId', wrap(async (req, res) => {
+  const p = DeleteResultParams.safeParse(req.params);
+  if (!p.success || !UUID.test(p.data.resultId)) throw new logging.InputError('Invalid result.');
+  return logging.deleteResult(userOf(res)!, p.data.resultId);
+}));
 
 router.use((err: any, req: any, res: any, _next: any) => {
   req.log.error({ code: err.code }, 'Fitness request failed');

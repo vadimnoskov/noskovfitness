@@ -7,6 +7,7 @@
  */
 
 export interface FamilyCredentials {
+  name: string;
   password: string;
   next?: string;
 }

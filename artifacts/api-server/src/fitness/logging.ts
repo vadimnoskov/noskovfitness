@@ -1,0 +1,171 @@
+/**
+ * Result logging and personal history. Prescription and performance stay separate: the workout is never edited;
+ * a result stores exactly what this person did (including scaled loads) in `performed`.
+ */
+import { sql } from '@workspace/fitness-db';
+import { deriveTags, type Workout, type Result, type MovementPrescription, type ScoreType } from '@workspace/fitness-core';
+import type { User } from './accounts';
+import { GROUP_ID } from './data';
+
+export class InputError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
+
+const workoutOf = (r: Record<string, any>): Workout => ({
+  id: r.id, name: r.name ?? undefined, structure: r.structure, movements: r.movements, scoreType: r.score_type,
+  ...(r.benchmark ? { benchmark: r.benchmark } : {}),
+});
+
+/** Who may this user log or view results for? */
+export function canActFor(user: User, athleteId: string) {
+  return user.id === athleteId || user.canLogForOthers || user.isCoach;
+}
+
+/** The planned workout(s) for a date plus what this athlete already logged that day. */
+export async function getToday(date: string, athleteId: string) {
+  const days = await sql`
+    SELECT d.id AS day_id, d.status, d.seq, w.id, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags
+    FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
+    WHERE d.group_id = ${GROUP_ID} AND d.date = ${date} AND d.status IN ('proposed','approved','done')
+    ORDER BY d.seq`;
+  const results = await myResults(athleteId, sql`r.date = ${date}`);
+  return {
+    date,
+    planned: days.map((d) => ({ dayId: d.day_id, status: d.status, workout: workoutOf(d), tags: d.tags })),
+    results,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function myResults(athleteId: string, where: any, limit = 200, offset = 0) {
+  const rows = await sql`
+    SELECT r.id, r.date::text AS date, r.score, r.as_prescribed, r.completed, r.notes, r.source, r.performed, r.day_id,
+           r.entered_by, w.id AS workout_id, w.name, w.structure, w.movements, w.score_type, w.benchmark
+    FROM results r JOIN workouts w ON w.id = r.workout_id
+    WHERE r.athlete_id = ${athleteId} AND ${where}
+    ORDER BY r.date DESC, r.created_at DESC, r.id LIMIT ${limit} OFFSET ${offset}`;
+  return rows.map((r) => ({
+    id: r.id, date: r.date, score: r.score as Result['score'], rx: r.as_prescribed, completed: r.completed, notes: r.notes,
+    source: r.source, editable: r.source === 'app', dayId: r.day_id, performed: r.performed as Workout,
+    workout: workoutOf({ id: r.workout_id, name: r.name, structure: r.structure, movements: r.movements, score_type: r.score_type, benchmark: r.benchmark }),
+  }));
+}
+
+export async function getHistory(athleteId: string, opts: { q?: string; offset?: number; limit?: number }) {
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 40));
+  const offset = Math.max(0, Math.floor(opts.offset ?? 0));
+  const q = opts.q?.trim();
+  const where = sql`TRUE
+    ${q ? sql`AND (w.name ILIKE ${'%' + q + '%'} OR w.original_text ILIKE ${'%' + q + '%'} OR w.movements::text ILIKE ${'%' + q.toLowerCase().replace(/\s+/g, '-') + '%'})` : sql``}`;
+  const results = await myResults(athleteId, where, limit + 1, offset);
+  const [{ total } = { total: 0 }] = await sql`SELECT count(*)::int AS total FROM results WHERE athlete_id = ${athleteId}`;
+  return { results: results.slice(0, limit), more: results.length > limit, total };
+}
+
+export async function getWorkoutDetail(workoutId: string, athleteId: string) {
+  const [w] = await sql`SELECT id, name, structure, movements, score_type, benchmark, tags, original_text FROM workouts WHERE id = ${workoutId}`;
+  if (!w) throw new InputError('Workout not found.', 404);
+  const results = await myResults(athleteId, sql`r.workout_id = ${workoutId}`);
+  return { workout: workoutOf(w), tags: w.tags, originalText: w.original_text, results };
+}
+
+export async function searchWorkouts(q: string) {
+  const term = q.trim();
+  if (term.length < 2) return { workouts: [] };
+  const rows = await sql`
+    SELECT w.id, w.name, w.structure, w.movements, w.score_type, w.benchmark, count(r.id)::int AS times
+    FROM workouts w LEFT JOIN results r ON r.workout_id = w.id
+    WHERE w.name ILIKE ${'%' + term + '%'} OR w.original_text ILIKE ${'%' + term + '%'}
+    GROUP BY w.id ORDER BY (w.benchmark IS NOT NULL) DESC, count(r.id) DESC, w.name LIMIT 20`;
+  return { workouts: rows.map((r) => ({ workout: workoutOf(r), times: r.times })) };
+}
+
+// ---------- logging ----------
+
+export interface LogInput {
+  athleteId: string; date: string; workoutId: string; dayId?: string;
+  asPrescribed: boolean; completed: boolean;
+  score: { timeSec?: number; rounds?: number; reps?: number; loads?: number[]; distanceM?: number; calories?: number };
+  /** Weights actually used, per movement index, in the athlete's units. */
+  loads?: { index: number; value: number; unit?: 'lb' | 'kg' }[];
+  /** What was changed when not Rx (e.g. "jumping pull-ups, 35 lb"). */
+  scaling?: string;
+  notes?: string;
+}
+
+const num = (v: unknown, max: number) => {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > max) throw new InputError('Check the numbers in your score.');
+  return n;
+};
+
+/** Keep only the score fields that make sense for this workout's score type. */
+export function cleanScore(type: ScoreType, s: LogInput['score'], completed: boolean): Result['score'] {
+  const out: Result['score'] = {};
+  const timeSec = num(s.timeSec, 6 * 3600), rounds = num(s.rounds, 1000), reps = num(s.reps, 100000);
+  const distanceM = num(s.distanceM, 500000), calories = num(s.calories, 10000);
+  const loads = (s.loads ?? []).map((l) => num(l, 2000)).filter((l): l is number => l !== undefined);
+  switch (type) {
+    case 'time':
+      if (completed) { if (!timeSec) throw new InputError('Enter your time.'); out.timeSec = timeSec; }
+      else { if (reps === undefined) throw new InputError('Enter the reps you completed before the time cap.'); out.reps = reps; if (timeSec) out.timeSec = timeSec; }
+      break;
+    case 'rounds-reps':
+      if (rounds === undefined) throw new InputError('Enter the rounds you completed.');
+      out.rounds = Math.floor(rounds); out.reps = Math.floor(reps ?? 0);
+      break;
+    case 'load':
+      if (!loads.length) throw new InputError('Enter at least one weight.');
+      out.loads = loads;
+      break;
+    case 'reps': if (reps === undefined) throw new InputError('Enter your reps.'); out.reps = reps; break;
+    case 'distance': if (!distanceM) throw new InputError('Enter the distance.'); out.distanceM = distanceM; break;
+    case 'calories': if (!calories) throw new InputError('Enter the calories.'); out.calories = calories; break;
+    case 'none': break;
+  }
+  return out;
+}
+
+export async function logResult(user: User, input: LogInput) {
+  if (!canActFor(user, input.athleteId)) throw new InputError('You can only log your own results.', 403);
+  const [athlete] = await sql`SELECT id, sex, units FROM athletes WHERE id = ${input.athleteId}`;
+  if (!athlete) throw new InputError('Unknown athlete.');
+  const [w] = await sql`SELECT id, name, structure, movements, score_type, benchmark FROM workouts WHERE id = ${input.workoutId}`;
+  if (!w) throw new InputError('Workout not found.', 404);
+  if (input.dayId) {
+    const [d] = await sql`SELECT id FROM program_days WHERE id = ${input.dayId} AND group_id = ${GROUP_ID}`;
+    if (!d) throw new InputError('Program day not found.');
+  }
+  const workout = workoutOf(w);
+  const sex = athlete.sex as 'male' | 'female';
+  // What was actually done: the prescription with this athlete's loads (Rx for their sex, or the scaled loads entered).
+  const movements: MovementPrescription[] = workout.movements.map((m, i) => {
+    // The weights actually used (the form pre-fills the Rx for this person's sex; scaled weights replace it).
+    const scaled = input.loads?.find((l) => l.index === i);
+    if (scaled) {
+      const value = num(scaled.value, 2000);
+      if (value === undefined) return m;
+      return { ...m, load: { ...(m.load ?? {}), unit: scaled.unit ?? (athlete.units as 'lb' | 'kg'), [sex]: value } };
+    }
+    return m;
+  });
+  const performed: Workout = { ...workout, movements };
+  const score = cleanScore(workout.scoreType, input.score, input.completed);
+  const tags = deriveTags(performed, { resultSec: score.timeSec, amrapRounds: score.rounds, sex });
+  const notes = [input.scaling?.trim() ? `Scaled: ${input.scaling.trim()}` : '', input.notes?.trim() ?? ''].filter(Boolean).join('\n').slice(0, 2000) || null;
+  const [row] = await sql`
+    INSERT INTO results (athlete_id, date, day_id, workout_id, performed, as_prescribed, completed, score, tags, notes, source, entered_by)
+    VALUES (${input.athleteId}, ${input.date}, ${input.dayId ?? null}, ${input.workoutId}, ${sql.json(performed as never)}, ${input.asPrescribed},
+            ${input.completed}, ${sql.json(score as never)}, ${sql.json(tags as never)}, ${notes}, 'app', ${user.id})
+    RETURNING id`;
+  return { ok: true, id: row!.id as string };
+}
+
+/** Only results entered in the app can be deleted (imported history is never rewritten). */
+export async function deleteResult(user: User, id: string) {
+  const [r] = await sql`SELECT athlete_id, source FROM results WHERE id = ${id}`;
+  if (!r) throw new InputError('Result not found.', 404);
+  if (r.source !== 'app') throw new InputError('Imported history cannot be deleted here.', 403);
+  if (!canActFor(user, r.athlete_id)) throw new InputError('You can only delete your own results.', 403);
+  await sql`DELETE FROM results WHERE id = ${id}`;
+  return { ok: true };
+}

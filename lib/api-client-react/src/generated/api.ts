@@ -30,7 +30,14 @@ import type {
   FitnessForm,
   FitnessPage,
   GetFitnessPageParams,
-  HealthStatus
+  GetHistoryParams,
+  GetTodayParams,
+  GetWorkoutDetailParams,
+  HealthStatus,
+  LogResultInput,
+  PasswordChange,
+  PasswordSet,
+  SearchWorkoutsParams
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -266,7 +273,7 @@ export const getFamilyLoginUrl = () => {
 }
 
 /**
- * @summary Sign in with the existing family password
+ * @summary Sign in with your name and password (the coach may use the family password until they set their own)
  */
 export const familyLogin = async (familyCredentials: FamilyCredentials, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
 
@@ -332,7 +339,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type FamilyLoginMutationVariables = {data: BodyType<FamilyCredentials>}
 
     /**
- * @summary Sign in with the existing family password
+ * @summary Sign in with your name and password (the coach may use the family password until they set their own)
  */
 export const useFamilyLogin = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof familyLogin>>, TError,FamilyLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -343,6 +350,1053 @@ export const useFamilyLogin = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getFamilyLoginMutationOptions(options), queryClient);
+    }
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/fitness/logout`
+}
+
+/**
+ * @summary Sign out on this device
+ */
+export const logout = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
+
+  return customFetch<FitnessActionResult>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMutationKey = () => ['logout'] as const;
+
+export const getLogoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Sign out on this device
+ */
+export const useLogout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options), queryClient);
+    }
+
+export const getGetMeUrl = () => {
+
+
+
+
+  return `/api/fitness/me`
+}
+
+/**
+ * @summary The signed-in person and who they may log results for
+ */
+export const getMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeQueryKey = () => {
+    return [
+    `/api/fitness/me`
+    ] as const;
+    }
+
+
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
+export type GetMeQueryError = ErrorType<void>
+
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMe>>,
+          TError,
+          Awaited<ReturnType<typeof getMe>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMe>>,
+          TError,
+          Awaited<ReturnType<typeof getMe>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The signed-in person and who they may log results for
+ */
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeMyPasswordUrl = () => {
+
+
+
+
+  return `/api/fitness/account/password`
+}
+
+/**
+ * @summary Change your own password
+ */
+export const changeMyPassword = async (passwordChange: PasswordChange, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessActionResult>(getChangeMyPasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(passwordChange)
+  }
+);}
+
+
+
+
+
+export const getChangeMyPasswordMutationKey = () => ['changeMyPassword'] as const;
+
+export const getChangeMyPasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeMyPassword>>, TError,ChangeMyPasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeMyPassword>>, TError,ChangeMyPasswordMutationVariables, TContext> => {
+
+const mutationKey = getChangeMyPasswordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeMyPassword>>, ChangeMyPasswordMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  changeMyPassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeMyPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changeMyPassword>>>
+    export type ChangeMyPasswordMutationBody = BodyType<PasswordChange>
+    export type ChangeMyPasswordMutationError = ErrorType<void>
+    export type ChangeMyPasswordMutationVariables = {data: BodyType<PasswordChange>}
+
+    /**
+ * @summary Change your own password
+ */
+export const useChangeMyPassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeMyPassword>>, TError,ChangeMyPasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeMyPassword>>,
+        TError,
+        ChangeMyPasswordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeMyPasswordMutationOptions(options), queryClient);
+    }
+
+export const getListFamilyUrl = () => {
+
+
+
+
+  return `/api/fitness/athletes`
+}
+
+/**
+ * @summary Family members and whether each has a password (coach only)
+ */
+export const listFamily = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getListFamilyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFamilyQueryKey = () => {
+    return [
+    `/api/fitness/athletes`
+    ] as const;
+    }
+
+
+export const getListFamilyQueryOptions = <TData = Awaited<ReturnType<typeof listFamily>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFamilyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFamily>>> = ({ signal }) => listFamily({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFamilyQueryResult = NonNullable<Awaited<ReturnType<typeof listFamily>>>
+export type ListFamilyQueryError = ErrorType<void>
+
+
+export function useListFamily<TData = Awaited<ReturnType<typeof listFamily>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFamily>>,
+          TError,
+          Awaited<ReturnType<typeof listFamily>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFamily<TData = Awaited<ReturnType<typeof listFamily>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFamily>>,
+          TError,
+          Awaited<ReturnType<typeof listFamily>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFamily<TData = Awaited<ReturnType<typeof listFamily>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Family members and whether each has a password (coach only)
+ */
+
+export function useListFamily<TData = Awaited<ReturnType<typeof listFamily>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFamily>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFamilyQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetAthletePasswordUrl = (athleteId: string,) => {
+
+
+
+
+  return `/api/fitness/athletes/${athleteId}/password`
+}
+
+/**
+ * @summary Set a family member's password (coach only)
+ */
+export const setAthletePassword = async (athleteId: string,
+    passwordSet: PasswordSet, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessActionResult>(getSetAthletePasswordUrl(athleteId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(passwordSet)
+  }
+);}
+
+
+
+
+
+export const getSetAthletePasswordMutationKey = () => ['setAthletePassword'] as const;
+
+export const getSetAthletePasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAthletePassword>>, TError,SetAthletePasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setAthletePassword>>, TError,SetAthletePasswordMutationVariables, TContext> => {
+
+const mutationKey = getSetAthletePasswordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setAthletePassword>>, SetAthletePasswordMutationVariables> = (props) => {
+          const {athleteId,data} = props ?? {};
+
+          return  setAthletePassword(athleteId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetAthletePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof setAthletePassword>>>
+    export type SetAthletePasswordMutationBody = BodyType<PasswordSet>
+    export type SetAthletePasswordMutationError = ErrorType<void>
+    export type SetAthletePasswordMutationVariables = {athleteId: string;data: BodyType<PasswordSet>}
+
+    /**
+ * @summary Set a family member's password (coach only)
+ */
+export const useSetAthletePassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAthletePassword>>, TError,SetAthletePasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setAthletePassword>>,
+        TError,
+        SetAthletePasswordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetAthletePasswordMutationOptions(options), queryClient);
+    }
+
+export const getGetTodayUrl = (params: GetTodayParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/today?${stringifiedParams}` : `/api/fitness/today`
+}
+
+/**
+ * @summary The planned workout for a date and what the athlete logged that day
+ */
+export const getToday = async (params: GetTodayParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetTodayUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTodayQueryKey = (params?: GetTodayParams,) => {
+    return [
+    `/api/fitness/today`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTodayQueryOptions = <TData = Awaited<ReturnType<typeof getToday>>, TError = ErrorType<unknown>>(params: GetTodayParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTodayQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getToday>>> = ({ signal }) => getToday(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTodayQueryResult = NonNullable<Awaited<ReturnType<typeof getToday>>>
+export type GetTodayQueryError = ErrorType<unknown>
+
+
+export function useGetToday<TData = Awaited<ReturnType<typeof getToday>>, TError = ErrorType<unknown>>(
+ params: GetTodayParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getToday>>,
+          TError,
+          Awaited<ReturnType<typeof getToday>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetToday<TData = Awaited<ReturnType<typeof getToday>>, TError = ErrorType<unknown>>(
+ params: GetTodayParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getToday>>,
+          TError,
+          Awaited<ReturnType<typeof getToday>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetToday<TData = Awaited<ReturnType<typeof getToday>>, TError = ErrorType<unknown>>(
+ params: GetTodayParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The planned workout for a date and what the athlete logged that day
+ */
+
+export function useGetToday<TData = Awaited<ReturnType<typeof getToday>>, TError = ErrorType<unknown>>(
+ params: GetTodayParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getToday>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTodayQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHistoryUrl = (params?: GetHistoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/history?${stringifiedParams}` : `/api/fitness/history`
+}
+
+/**
+ * @summary An athlete's results, newest first
+ */
+export const getHistory = async (params?: GetHistoryParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetHistoryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHistoryQueryKey = (params?: GetHistoryParams,) => {
+    return [
+    `/api/fitness/history`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getHistory>>, TError = ErrorType<unknown>>(params?: GetHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHistoryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHistory>>> = ({ signal }) => getHistory(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getHistory>>>
+export type GetHistoryQueryError = ErrorType<unknown>
+
+
+export function useGetHistory<TData = Awaited<ReturnType<typeof getHistory>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetHistoryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getHistory>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHistory<TData = Awaited<ReturnType<typeof getHistory>>, TError = ErrorType<unknown>>(
+ params?: GetHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getHistory>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHistory<TData = Awaited<ReturnType<typeof getHistory>>, TError = ErrorType<unknown>>(
+ params?: GetHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary An athlete's results, newest first
+ */
+
+export function useGetHistory<TData = Awaited<ReturnType<typeof getHistory>>, TError = ErrorType<unknown>>(
+ params?: GetHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistory>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetHistoryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWorkoutDetailUrl = (params: GetWorkoutDetailParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/workout?${stringifiedParams}` : `/api/fitness/workout`
+}
+
+/**
+ * @summary A workout and the athlete's results on it
+ */
+export const getWorkoutDetail = async (params: GetWorkoutDetailParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetWorkoutDetailUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkoutDetailQueryKey = (params?: GetWorkoutDetailParams,) => {
+    return [
+    `/api/fitness/workout`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWorkoutDetailQueryOptions = <TData = Awaited<ReturnType<typeof getWorkoutDetail>>, TError = ErrorType<void>>(params: GetWorkoutDetailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkoutDetailQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkoutDetail>>> = ({ signal }) => getWorkoutDetail(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWorkoutDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkoutDetail>>>
+export type GetWorkoutDetailQueryError = ErrorType<void>
+
+
+export function useGetWorkoutDetail<TData = Awaited<ReturnType<typeof getWorkoutDetail>>, TError = ErrorType<void>>(
+ params: GetWorkoutDetailParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkoutDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkoutDetail>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkoutDetail<TData = Awaited<ReturnType<typeof getWorkoutDetail>>, TError = ErrorType<void>>(
+ params: GetWorkoutDetailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkoutDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkoutDetail>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkoutDetail<TData = Awaited<ReturnType<typeof getWorkoutDetail>>, TError = ErrorType<void>>(
+ params: GetWorkoutDetailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A workout and the athlete's results on it
+ */
+
+export function useGetWorkoutDetail<TData = Awaited<ReturnType<typeof getWorkoutDetail>>, TError = ErrorType<void>>(
+ params: GetWorkoutDetailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkoutDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWorkoutDetailQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchWorkoutsUrl = (params: SearchWorkoutsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/workout-search?${stringifiedParams}` : `/api/fitness/workout-search`
+}
+
+/**
+ * @summary Find a library workout to log (when not doing the planned one)
+ */
+export const searchWorkouts = async (params: SearchWorkoutsParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getSearchWorkoutsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchWorkoutsQueryKey = (params?: SearchWorkoutsParams,) => {
+    return [
+    `/api/fitness/workout-search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchWorkoutsQueryOptions = <TData = Awaited<ReturnType<typeof searchWorkouts>>, TError = ErrorType<unknown>>(params: SearchWorkoutsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchWorkoutsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchWorkouts>>> = ({ signal }) => searchWorkouts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SearchWorkoutsQueryResult = NonNullable<Awaited<ReturnType<typeof searchWorkouts>>>
+export type SearchWorkoutsQueryError = ErrorType<unknown>
+
+
+export function useSearchWorkouts<TData = Awaited<ReturnType<typeof searchWorkouts>>, TError = ErrorType<unknown>>(
+ params: SearchWorkoutsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchWorkouts>>,
+          TError,
+          Awaited<ReturnType<typeof searchWorkouts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSearchWorkouts<TData = Awaited<ReturnType<typeof searchWorkouts>>, TError = ErrorType<unknown>>(
+ params: SearchWorkoutsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchWorkouts>>,
+          TError,
+          Awaited<ReturnType<typeof searchWorkouts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSearchWorkouts<TData = Awaited<ReturnType<typeof searchWorkouts>>, TError = ErrorType<unknown>>(
+ params: SearchWorkoutsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Find a library workout to log (when not doing the planned one)
+ */
+
+export function useSearchWorkouts<TData = Awaited<ReturnType<typeof searchWorkouts>>, TError = ErrorType<unknown>>(
+ params: SearchWorkoutsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getSearchWorkoutsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLogResultUrl = () => {
+
+
+
+
+  return `/api/fitness/results`
+}
+
+/**
+ * @summary Log a result
+ */
+export const logResult = async (logResultInput: LogResultInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessActionResult>(getLogResultUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(logResultInput)
+  }
+);}
+
+
+
+
+
+export const getLogResultMutationKey = () => ['logResult'] as const;
+
+export const getLogResultMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logResult>>, TError,LogResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logResult>>, TError,LogResultMutationVariables, TContext> => {
+
+const mutationKey = getLogResultMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logResult>>, LogResultMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  logResult(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogResultMutationResult = NonNullable<Awaited<ReturnType<typeof logResult>>>
+    export type LogResultMutationBody = BodyType<LogResultInput>
+    export type LogResultMutationError = ErrorType<void>
+    export type LogResultMutationVariables = {data: BodyType<LogResultInput>}
+
+    /**
+ * @summary Log a result
+ */
+export const useLogResult = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logResult>>, TError,LogResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof logResult>>,
+        TError,
+        LogResultMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLogResultMutationOptions(options), queryClient);
+    }
+
+export const getDeleteResultUrl = (resultId: string,) => {
+
+
+
+
+  return `/api/fitness/results/${resultId}`
+}
+
+/**
+ * @summary Delete a result entered in the app
+ */
+export const deleteResult = async (resultId: string, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
+
+  return customFetch<FitnessActionResult>(getDeleteResultUrl(resultId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteResultMutationKey = () => ['deleteResult'] as const;
+
+export const getDeleteResultMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResult>>, TError,DeleteResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteResult>>, TError,DeleteResultMutationVariables, TContext> => {
+
+const mutationKey = getDeleteResultMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteResult>>, DeleteResultMutationVariables> = (props) => {
+          const {resultId} = props ?? {};
+
+          return  deleteResult(resultId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteResultMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResult>>>
+
+    export type DeleteResultMutationError = ErrorType<void>
+    export type DeleteResultMutationVariables = {resultId: string}
+
+    /**
+ * @summary Delete a result entered in the app
+ */
+export const useDeleteResult = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteResult>>, TError,DeleteResultMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteResult>>,
+        TError,
+        DeleteResultMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteResultMutationOptions(options), queryClient);
     }
 
 export const getHealthCheckUrl = () => {

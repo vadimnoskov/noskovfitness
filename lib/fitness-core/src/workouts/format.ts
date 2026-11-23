@@ -34,6 +34,8 @@ export function movementLine(m: MovementPrescription, sex: 'male' | 'female' = '
 /** Compact one-line title, e.g. "AMRAP 20 min: Pull-up / Push-up / Air Squat". */
 export function workoutTitle(w: Pick<Workout, 'name' | 'structure' | 'movements' | 'benchmark'>): string {
   if (w.benchmark || (w.name && !/^(AMRAP|AMReps|FT|\d+x? RFT|\d+ RF|Every|Alt EMOM|EMOM|Chipper|Lifting|Complex|\d+-\d+)/i.test(w.name) && !w.name.includes(':'))) return w.name ?? '';
+  // Strength and max tests are already clearly named ("Press : 2 Rep Max", "Back Squat : 5-5-5-5-5").
+  if (w.name && / : (\d+ Rep Max|\d+(-\d+)+|Max Set|\d+ Reps for Time)$/i.test(w.name)) return w.name.replace(' : ', ': ');
   const seen = new Set<string>();
   const names = w.movements.map((m) => nameOf(m.movement)).filter((n) => (seen.has(n) ? false : (seen.add(n), true)));
   if (w.structure.kind === 'sets' || w.structure.kind === 'max') return `${names.join(' + ')} ${structureLabel(w.structure)}`;
