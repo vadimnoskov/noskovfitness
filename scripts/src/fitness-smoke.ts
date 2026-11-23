@@ -61,7 +61,12 @@ try {
     await page.getByLabel('Your name').fill(name);
     await page.getByLabel('Password').fill(password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await page.waitForURL((u) => u.pathname !== '/login');
+    // Fail with the app's own message (e.g. wrong password) instead of a bare timeout.
+    const alert = page.locator('[role=alert], .warn');
+    await Promise.race([page.waitForURL((u) => u.pathname !== '/login'), alert.first().waitFor()]);
+    if (new URL(page.url()).pathname === '/login') {
+      throw new Error(`Sign-in as ${name} failed: "${(await alert.first().innerText()).trim()}". If this person already set their own password, use it as SMOKE_PASSWORD instead of APP_PASSWORD.`);
+    }
     if (new URL(page.url()).pathname === '/account') await page.goto(`${base}/`); // first coach sign-in lands on "set your password"
   }
   await page.locator('.datebar').waitFor(); // home is Today
