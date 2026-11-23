@@ -42,9 +42,12 @@ export interface EquipmentProfile {
 }
 export interface EquipmentItem {
   implement: Implement;
-  quantity: number; // e.g. rower: 1, barbell: 2, rings: 1 set
-  /** Available loads for fixed-weight implements, e.g. dumbbells [15,20,25,35,50] (per hand). */
-  loads?: number[];
+  /** How many of this item exist (for fixed-load implements: see loads). */
+  quantity: number;
+  /** Fixed-weight implements: each available load and how many of it (a pair of 20 lb dumbbells = qty 2). */
+  loads?: { value: number; unit: Units; qty: number }[];
+  /** Not yet confirmed by the coach. */
+  unconfirmed?: boolean;
   note?: string;
 }
 

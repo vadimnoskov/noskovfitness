@@ -89,8 +89,9 @@ export function parseLine(line: string, sex: 'male' | 'female'): MovementPrescri
       const val = /pood/i.test(m[2]!) ? v * 16 : v;
       out.load = { unit, [sex]: val };
     } else if ((m = p.match(/^([\d.]+)%\s*1RM/i))) out.load = { unit: 'lb', percentOf: { movementKey: '', pct: Number(m[1]) } };
-    else if ((m = p.match(/^([\d.]+)\s*(m|km|mi)\b/i))) out.distanceM = Number(m[1]) * (m[2] === 'km' ? 1000 : m[2] === 'mi' ? 1609 : 1);
+    else if ((m = p.match(/^([\d.]+)\s*(m|km|mi|yds?)\b/i))) out.distanceM = Number(m[1]) * ({ km: 1000, mi: 1609, yd: 0.9144, yds: 0.9144 }[m[2]!.toLowerCase()] ?? 1);
     else if ((m = p.match(/^([\d.]+)\s*in\b/i))) out.heightIn = { [sex]: Number(m[1]) };
+    else if ((m = p.match(/^([\d.]+)\s*ft\b/i))) out.heightIn = { [sex]: Number(m[1]) * 12 }; // rope or wall-ball target height
     else if ((m = p.match(/^([\d.]+)\s*(secs?|mins?)/i))) out.seconds = Number(m[1]) * (/min/.test(m[2]!) ? 60 : 1);
   }
   // Performed load recorded after the pipe on set lines, e.g. "1 Overhead Squat | 115 lbs"
