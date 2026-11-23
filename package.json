@@ -1,24 +1,19 @@
 {
-  "name": "noskov-fitness",
-  "private": true,
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
-    "test": "npm test --workspaces --if-present",
-    "movements:report": "tsx tools/movement-report.ts",
-    "check": "npm test -w @nf/core && tsc --noEmit -p . && tsc --noEmit -p apps/web",
-    "dev": "npm run dev -w @nf/web",
-    "build": "npm run build -w @nf/web",
-    "start": "npm run start -w @nf/web",
-    "db:migrate": "tsx packages/db/src/migrate.ts",
-    "db:import": "tsx packages/db/src/import.ts"
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+  },
+  "private": true,
+  "dependencies": {
+    "@replit/connectors-sdk": "^0.7.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
-  },
-  "type": "module"
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3"
+  }
 }

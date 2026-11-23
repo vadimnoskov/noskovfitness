@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env*
+# Personal training data (exports, notes) stays out of git; it lives in Google Drive.
+data/private/
+planning/*.bundle
+planning/screens/
+apps/web/.next/
+apps/web/next-env.d.ts
+*.tsbuildinfo
+*.sql
+*.sql.gz
