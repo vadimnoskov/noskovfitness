@@ -180,3 +180,15 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 /* Zoom levels: compact fits a whole week at a glance; detailed shows everything. */
 .pweeks.z0 .pday{padding:4px}.pweeks.z0 .pday h3{font-size:12px}.pweeks.z0 .pw-cell{min-height:70px}
 .pweeks.z2 .pw-head,.pweeks.z2 .pw-row{min-width:1400px}.pweeks.z2 .pday h3{font-size:14px}.pweeks.z2 .pday .mv{font-size:13px}
+
+/* Warm-ups and editable notes */
+.dayblock{display:grid;gap:10px}
+.warmup{border:1px solid var(--line);border-left:4px solid #c88a1d;border-radius:0 10px 10px 0;padding:8px 12px;font-size:14px}
+.warmup summary{cursor:pointer}
+.nb{margin-top:6px}.nb .nh{font-weight:600;font-size:13px;color:var(--mute)}.nb p{margin:4px 0}.nb ul{margin:2px 0 0;padding-left:18px}.nb li{margin:2px 0}
+.wu-edit{display:grid;gap:8px;margin-top:8px}
+.wu-edit textarea,.plan textarea{width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.row.wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:end}.grow{flex:1 1 180px}
+.plan .btn.ghost,.warmup .btn.ghost{padding:0 4px}
+.pday .more .wu summary{font-size:13px;cursor:pointer}.pday .more .wu .wu-edit textarea{font-size:12px}
+.pday .more .wu .wu-edit .btn{font-size:12px}

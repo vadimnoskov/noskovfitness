@@ -1,5 +1,6 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { Link, useSearch } from 'wouter';
+import { WarmUpEditor, type DayWarmUp } from '@/components/WarmUp';
 import { useFitnessAction, useSearchWorkouts, getSearchWorkoutsQueryKey } from '@workspace/api-client-react';
 import { movementLine, structureLabel, workoutTitle, type ScoreBreakdown, type Workout } from '@workspace/fitness-core';
 import type { PlannedDay as BasePlannedDay } from '@/lib/data';
@@ -7,7 +8,7 @@ import { addDays, weekStart, longDate, short, DOW } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
 import { usePage, PageStatus, ActionForm } from '@/lib/api';
 
-type PlannedDay = BasePlannedDay & { repeat?: { everyDays: number; until: string | null } | null };
+type PlannedDay = BasePlannedDay & { repeat?: { everyDays: number; until: string | null } | null; warmUp: DayWarmUp };
 type ProgramData = { days: PlannedDay[]; profiles: { id: string; name: string }[]; group: { training_days: number[]; default_equipment_id?: string | null } };
 type Profile = { id: string; name: string };
 
@@ -167,6 +168,10 @@ function DayCard({ d, zoom, profiles, run, onDragStart, onDragEnd }: {
       {open ? (
         <details className="more">
           <summary>More…</summary>
+          <details className="wu">
+            <summary>Warm-up{d.warmUp.source !== 'suggested' ? ' (coach\'s)' : ''}</summary>
+            <WarmUpEditor dayId={d.id} warmUp={d.warmUp} reload />
+          </details>
           <ActionForm action="move" className="row">
             <input type="hidden" name="id" value={d.id} />
             <label>Move to <input type="date" name="date" defaultValue={d.date} required /></label>

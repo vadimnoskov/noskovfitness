@@ -24,7 +24,7 @@ export const GetFitnessPageResponse = zod.record(zod.string(), zod.unknown())
  * @summary Perform an existing coach action
  */
 export const FitnessActionParams = zod.object({
-  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'savePolicyAction', 'resetPolicyAction', 'move', 'setCap', 'setRepeat'])
+  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'savePolicyAction', 'resetPolicyAction', 'move', 'setCap', 'setRepeat', 'setWarmUp', 'saveWarmUpTemplate', 'deleteWarmUpTemplate'])
 })
 
 export const FitnessActionBody = zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())]))
@@ -175,6 +175,24 @@ export const GetCoachingNoteQueryParams = zod.object({
 })
 
 export const GetCoachingNoteResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach replaces one person's "Plan for today" on a program day (empty text goes back to the suggested plan)
+ */
+export const SetPlanNoteBody = zod.object({
+  "dayId": zod.string(),
+  "athleteId": zod.string(),
+  "text": zod.string()
+})
+
+export const SetPlanNoteResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary The coach's saved warm-ups
+ */
+export const GetWarmUpTemplatesResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**

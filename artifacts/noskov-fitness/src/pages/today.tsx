@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
-import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
+import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
 import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
@@ -9,11 +9,12 @@ import { Chips } from '@/components/Chips';
 import { LogForm, rxFor, type Comparison } from '@/components/LogForm';
 import { ResultItem, type ResultRow } from '@/components/ResultItem';
 import { PageStatus } from '@/lib/api';
+import { WarmUpBox, NoteText, type DayWarmUp } from '@/components/WarmUp';
 
 type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
-  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[] };
+  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -57,11 +58,47 @@ function PersonalNote({ p, name }: { p: Planned; name: string }) {
 /** "Plan for today" (coaching notes) and this person's recent results on the same workout. */
 type AiNote = { approach: string; tips: string[] };
 
-/** The coach's plan: AI-written when available (loads after the page), otherwise the built-in notes. */
-function Plan({ p, athleteId }: { p: Planned; athleteId: string }) {
+/** The plan for today: the coach's edit if there is one, else AI-written when available, else the built-in notes. */
+function Plan({ p, athleteId, coach }: { p: Planned; athleteId: string; coach: boolean }) {
+  const qc = useQueryClient();
   const params = { dayId: p.dayId, athleteId };
-  const q = useGetCoachingNote(params, { query: { queryKey: getGetCoachingNoteQueryKey(params), staleTime: 30 * 60_000, retry: false } });
-  const ai = (q.data as { note?: AiNote | null } | undefined)?.note;
+  const key = getGetCoachingNoteQueryKey(params);
+  const q = useGetCoachingNote(params, { query: { queryKey: key, staleTime: 30 * 60_000, retry: false } });
+  const save = useSetPlanNote();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const data = q.data as { note?: AiNote | null; edited?: string } | undefined;
+  const ai = data?.note;
+  const edited = data?.edited;
+  // The text the coach starts editing from: whatever is showing now.
+  const current = edited ?? (ai ? [ai.approach, ...ai.tips.map((t) => `- ${t}`)].join('\n') : p.coaching.map((c) => `- ${c}`).join('\n'));
+  const submit = (text: string) => {
+    setError(null);
+    save.mutate({ data: { dayId: p.dayId, athleteId, text } }, {
+      onSuccess: () => { setEditing(null); qc.invalidateQueries({ queryKey: key }); },
+      onError: (e) => setError((e as { data?: { error?: string } }).data?.error ?? 'Could not save.'),
+    });
+  };
+
+  if (editing !== null) {
+    return (
+      <div className="plan">
+        <b>Edit plan for today</b>
+        <p className="small">A first paragraph for the approach, then one tip per line starting with "- ". Only this person sees it.</p>
+        <textarea rows={Math.min(14, Math.max(6, editing.split('\n').length + 2))} value={editing} onChange={(e) => setEditing(e.target.value)} aria-label="Plan text" />
+        <div className="row wrap">
+          <button type="button" className="btn primary sm" disabled={save.isPending} onClick={() => submit(editing)}>Save</button>
+          <button type="button" className="btn ghost sm" onClick={() => setEditing(null)}>Cancel</button>
+          {edited ? <button type="button" className="btn ghost sm" disabled={save.isPending} onClick={() => submit('')}>Back to the suggested plan</button> : null}
+        </div>
+        {error ? <p className="warn" role="alert">{error}</p> : null}
+      </div>
+    );
+  }
+  const editBtn = coach ? <button type="button" className="btn ghost sm" onClick={() => setEditing(current)}>Edit plan</button> : null;
+  if (edited) {
+    return <div className="plan"><b>Plan for today</b> <span className="tag">From the coach</span><NoteText text={edited} />{editBtn}</div>;
+  }
   if (ai) {
     return (
       <div className="plan">
@@ -69,20 +106,22 @@ function Plan({ p, athleteId }: { p: Planned; athleteId: string }) {
         <p>{ai.approach}</p>
         {ai.tips.length ? <ul>{ai.tips.map((t, i) => <li key={i}>{t}</li>)}</ul> : null}
         {p.coaching.length ? <details className="nums"><summary>The numbers</summary><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></details> : null}
+        {editBtn}
       </div>
     );
   }
-  if (!p.coaching.length) return null;
+  if (!p.coaching.length && !coach) return null;
   return (
     <div className="plan"><b>Plan for today</b>{q.isLoading ? <span className="small"> · writing coach notes…</span> : null}
-      <ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+      {p.coaching.length ? <ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul> : <p className="small">No plan yet.</p>}
+      {editBtn}</div>
   );
 }
 
-function PlanAndHistory({ p, self, name, athleteId }: { p: Planned; self: boolean; name: string; athleteId: string }) {
+function PlanAndHistory({ p, self, name, athleteId, coach }: { p: Planned; self: boolean; name: string; athleteId: string; coach: boolean }) {
   return (
     <>
-      <Plan p={p} athleteId={athleteId} />
+      <Plan p={p} athleteId={athleteId} coach={coach} />
       {p.previousCount ? (
         <div className="prev">
           <b>{self ? 'Your' : `${name}'s`} results on this workout ({p.previousCount})</b>
@@ -167,16 +206,19 @@ export default function Today() {
         <>
           {data.planned.length === 0 ? <p className="empty">No workout planned for this day.</p> : null}
           {data.planned.map((p) => (
-            <WorkoutCard key={p.dayId} workout={p.workout} tags={p.tags} sex={athlete.sex}>
+            <div className="dayblock" key={p.dayId}>
+            <WarmUpBox dayId={p.dayId} warmUp={p.warmUp} coach={me.user.isCoach} />
+            <WorkoutCard workout={p.workout} tags={p.tags} sex={athlete.sex}>
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
               {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
-              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} athleteId={athlete.id} />
+              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} athleteId={athlete.id} coach={me.user.isCoach} />
               {saved[p.dayId] ? <SavedBanner c={saved[p.dayId]!} /> : null}
               {logging === p.dayId
                 ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} totalReps={p.totalReps} onSaved={(c) => { setLogging(null); if (c) setSaved((x) => ({ ...x, [p.dayId]: c })); }} />
                 : <button className="btn primary big" type="button" onClick={() => setLogging(p.dayId)}>Log {athlete.id === me.user.id ? 'my' : `${athlete.name}'s`} result</button>}
             </WorkoutCard>
+            </div>
           ))}
           {data.results.length ? (
             <section>

@@ -7,6 +7,12 @@
  */
 export interface FitnessPage { [key: string]: unknown }
 
+export interface PlanNoteInput {
+  dayId: string;
+  athleteId: string;
+  text: string;
+}
+
 export interface FitnessForm {[key: string]: string | string[]}
 
 export interface FamilyCredentials {

@@ -11,3 +11,4 @@ export * from './engine/planner';
 export * from './engine/schedule';
 export * from './workouts/personalize';
 export * from './workouts/coaching';
+export * from './workouts/warmup';

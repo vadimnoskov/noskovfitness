@@ -46,7 +46,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction, move, setCap, setRepeat]
+            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction, move, setCap, setRepeat, setWarmUp, saveWarmUpTemplate, deleteWarmUpTemplate]
       requestBody:
         required: true
         content:
@@ -207,6 +207,31 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/plan-note:
+    post:
+      operationId: setPlanNote
+      summary: Coach replaces one person's "Plan for today" on a program day (empty text goes back to the suggested plan)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlanNoteInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/warm-up-templates:
+    get:
+      operationId: getWarmUpTemplates
+      summary: The coach's saved warm-ups
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory
@@ -296,6 +321,13 @@ components:
     FitnessPage:
       type: object
       additionalProperties: true
+    PlanNoteInput:
+      type: object
+      required: [dayId, athleteId, text]
+      properties:
+        dayId: { type: string }
+        athleteId: { type: string }
+        text: { type: string }
     FitnessForm:
       type: object
       additionalProperties:

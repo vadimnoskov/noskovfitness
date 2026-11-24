@@ -27,4 +27,5 @@ export * from './logResultInputLoadsItemUnit';
 export * from './logResultInputScore';
 export * from './passwordChange';
 export * from './passwordSet';
+export * from './planNoteInput';
 export * from './searchWorkoutsParams';

@@ -7,6 +7,7 @@ import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult,
 import type { User } from './accounts';
 import { GROUP_ID } from './data';
 import { noteFor, type NoteArgs } from './ai-notes';
+import { resolveWarmUp } from './warmups';
 
 export class InputError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
@@ -30,7 +31,7 @@ async function personFor(athleteId: string) {
 /** The person's own version (their Rx) of a program day's workout: profile + location + the coach's override for that day. */
 export async function versionFor(dayId: string, athleteId: string) {
   const [d] = await sql`
-    SELECT d.id, d.status, d.equipment_profile_id, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
+    SELECT d.id, d.status, d.equipment_profile_id, d.warm_up AS day_warm_up, w.warm_up AS workout_warm_up, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
            e.id AS eid, e.name AS ename, e.items, v.changes AS override
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
@@ -59,6 +60,7 @@ export async function getToday(date: string, athleteId: string) {
       dayId: d.id, status: v.day.status, workout: v.version, standard: v.standard, changes: v.changes, override: v.override, location: v.location, tags: v.day.tags,
       totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
+      warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up),
     });
   }
   const results = await myResults(athleteId, sql`r.date = ${date}`);
@@ -66,8 +68,21 @@ export async function getToday(date: string, athleteId: string) {
 }
 
 /** The AI-written plan for one person on one program day (null when AI notes are off or the call failed). */
-export async function getCoachingNote(dayId: string, athleteId: string) {
+export async function getCoachingNote(dayId: string, athleteId: string): Promise<{ note: { approach: string; tips: string[] } | null; model?: string; edited?: string }> {
+  const [e] = await sql`SELECT body FROM plan_edits WHERE day_id = ${dayId} AND athlete_id = ${athleteId}`;
+  if (e) return { note: null, edited: e.body as string };
   return noteFor(await coachingNoteArgs(dayId, athleteId));
+}
+
+/** Coach's own text for one person's plan on a day; empty text removes it (back to the AI or built-in plan). */
+export async function setPlanNote(dayId: string, athleteId: string, text: string) {
+  const body = text.replace(/\r\n/g, '\n').trim();
+  const [d] = await sql`SELECT id FROM program_days WHERE id = ${dayId} AND group_id = ${GROUP_ID}`;
+  if (!d) throw new InputError('Program day not found.');
+  if (!body) await sql`DELETE FROM plan_edits WHERE day_id = ${dayId} AND athlete_id = ${athleteId}`;
+  else await sql`INSERT INTO plan_edits (day_id, athlete_id, body) VALUES (${dayId}, ${athleteId}, ${body})
+    ON CONFLICT (day_id, athlete_id) DO UPDATE SET body = EXCLUDED.body, edited_at = now()`;
+  return { ok: true };
 }
 
 /** The facts an AI note for this person and day is written from. */

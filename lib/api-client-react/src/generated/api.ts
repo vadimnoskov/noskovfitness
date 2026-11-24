@@ -40,6 +40,7 @@ import type {
   LogResultInput,
   PasswordChange,
   PasswordSet,
+  PlanNoteInput,
   SearchWorkoutsParams
 } from './api.schemas';
 
@@ -178,7 +179,7 @@ export function useGetFitnessPage<TData = Awaited<ReturnType<typeof getFitnessPa
 
 
 
-export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat',) => {
+export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',) => {
 
 
 
@@ -189,7 +190,7 @@ export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll'
 /**
  * @summary Perform an existing coach action
  */
-export const fitnessAction = async (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat',
+export const fitnessAction = async (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',
     fitnessForm: FitnessForm, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
@@ -251,7 +252,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type FitnessActionMutationResult = NonNullable<Awaited<ReturnType<typeof fitnessAction>>>
     export type FitnessActionMutationBody = BodyType<FitnessForm>
     export type FitnessActionMutationError = ErrorType<void>
-    export type FitnessActionMutationVariables = {action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat';data: BodyType<FitnessForm>}
+    export type FitnessActionMutationVariables = {action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate';data: BodyType<FitnessForm>}
 
     /**
  * @summary Perform an existing coach action
@@ -1189,6 +1190,195 @@ export function useGetCoachingNote<TData = Awaited<ReturnType<typeof getCoaching
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetCoachingNoteQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetPlanNoteUrl = () => {
+
+
+
+
+  return `/api/fitness/plan-note`
+}
+
+/**
+ * @summary Coach replaces one person's "Plan for today" on a program day (empty text goes back to the suggested plan)
+ */
+export const setPlanNote = async (planNoteInput: PlanNoteInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSetPlanNoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(planNoteInput)
+  }
+);}
+
+
+
+
+
+export const getSetPlanNoteMutationKey = () => ['setPlanNote'] as const;
+
+export const getSetPlanNoteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPlanNote>>, TError,SetPlanNoteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setPlanNote>>, TError,SetPlanNoteMutationVariables, TContext> => {
+
+const mutationKey = getSetPlanNoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPlanNote>>, SetPlanNoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  setPlanNote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetPlanNoteMutationResult = NonNullable<Awaited<ReturnType<typeof setPlanNote>>>
+    export type SetPlanNoteMutationBody = BodyType<PlanNoteInput>
+    export type SetPlanNoteMutationError = ErrorType<unknown>
+    export type SetPlanNoteMutationVariables = {data: BodyType<PlanNoteInput>}
+
+    /**
+ * @summary Coach replaces one person's "Plan for today" on a program day (empty text goes back to the suggested plan)
+ */
+export const useSetPlanNote = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPlanNote>>, TError,SetPlanNoteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setPlanNote>>,
+        TError,
+        SetPlanNoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetPlanNoteMutationOptions(options), queryClient);
+    }
+
+export const getGetWarmUpTemplatesUrl = () => {
+
+
+
+
+  return `/api/fitness/warm-up-templates`
+}
+
+/**
+ * @summary The coach's saved warm-ups
+ */
+export const getWarmUpTemplates = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetWarmUpTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWarmUpTemplatesQueryKey = () => {
+    return [
+    `/api/fitness/warm-up-templates`
+    ] as const;
+    }
+
+
+export const getGetWarmUpTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof getWarmUpTemplates>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWarmUpTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWarmUpTemplates>>> = ({ signal }) => getWarmUpTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWarmUpTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof getWarmUpTemplates>>>
+export type GetWarmUpTemplatesQueryError = ErrorType<unknown>
+
+
+export function useGetWarmUpTemplates<TData = Awaited<ReturnType<typeof getWarmUpTemplates>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWarmUpTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof getWarmUpTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWarmUpTemplates<TData = Awaited<ReturnType<typeof getWarmUpTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWarmUpTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof getWarmUpTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWarmUpTemplates<TData = Awaited<ReturnType<typeof getWarmUpTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The coach's saved warm-ups
+ */
+
+export function useGetWarmUpTemplates<TData = Awaited<ReturnType<typeof getWarmUpTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWarmUpTemplates>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWarmUpTemplatesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

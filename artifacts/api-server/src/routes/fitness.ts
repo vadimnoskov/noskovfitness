@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -11,6 +11,7 @@ import * as data from '../fitness/data';
 import { getPlannedDays } from '../fitness/program';
 import * as program from '../fitness/program-actions';
 import * as settings from '../fitness/settings-actions';
+import * as warmups from '../fitness/warmups';
 
 const router: IRouter = Router();
 router.use(cookieParser());
@@ -124,7 +125,7 @@ router.get('/fitness/pages', async (req, res) => {
   res.json(GetFitnessPageResponse.parse(payload!));
 });
 
-const actions = { ...program, ...settings };
+const actions = { ...program, ...settings, setWarmUp: warmups.setWarmUp, saveWarmUpTemplate: warmups.saveWarmUpTemplate, deleteWarmUpTemplate: warmups.deleteWarmUpTemplate };
 router.post('/fitness/actions/:action', async (req, res) => {
   if (!userOf(res)?.isCoach) { res.status(403).json({ error: 'Only the coach can change the program and settings.' }); return; }
   const params = FitnessActionParams.safeParse(req.params), body = FitnessActionBody.safeParse(req.body);
@@ -135,6 +136,9 @@ router.post('/fitness/actions/:action', async (req, res) => {
   for (const key of ['date', 'from', 'to']) if (f.has(key) && !date(f.get(key))) { res.status(400).json({ error: 'Choose a valid date.' }); return; }
   for (const key of ['id', 'workoutId']) if (f.has(key) && !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(String(f.get(key)))) { res.status(400).json({ error: 'Invalid workout or day identifier.' }); return; }
   if (['approve', 'unapprove', 'swap', 'setLocation', 'skip', 'neverPropose', 'move'].includes(action) && !f.get('id')) { res.status(400).json({ error: 'Select a program day.' }); return; }
+  if (action === 'setWarmUp' && (!f.get('id') || String(f.get('text') ?? '').length > warmups.MAX_WARM_UP)) { res.status(400).json({ error: 'Select a day and keep the warm-up under 4000 characters.' }); return; }
+  if (action === 'saveWarmUpTemplate' && (!String(f.get('name') ?? '').trim() || !String(f.get('text') ?? '').trim())) { res.status(400).json({ error: 'Give the warm-up a name and some text.' }); return; }
+  if (action === 'deleteWarmUpTemplate' && !/^[\da-f-]{36}$/i.test(String(f.get('templateId') ?? ''))) { res.status(400).json({ error: 'Select a saved warm-up.' }); return; }
   if (action === 'move' && !date(f.get('date'))) { res.status(400).json({ error: 'Choose the new date.' }); return; }
   if (['setCap', 'setRepeat'].includes(action) && !f.get('workoutId')) { res.status(400).json({ error: 'Select a workout.' }); return; }
   if (action === 'setCap' && !(Number(f.get('capMin')) >= 0 && Number(f.get('capMin')) <= 120)) { res.status(400).json({ error: 'Use a time cap between 0 and 120 minutes.' }); return; }
@@ -232,6 +236,19 @@ router.get('/fitness/coaching-note', wrap(async (req, res) => {
   const p = GetCoachingNoteQueryParams.safeParse(req.query);
   if (!p.success || !UUID.test(p.data.dayId)) throw new logging.InputError('Select a program day.');
   return logging.getCoachingNote(p.data.dayId, subject(res, p.data.athleteId));
+}));
+
+router.post('/fitness/plan-note', wrap(async (req, res) => {
+  const user = userOf(res)!;
+  if (!user.isCoach) throw new logging.InputError('Only the coach can edit the plan.', 403);
+  const p = SetPlanNoteBody.safeParse(req.body);
+  if (!p.success || !UUID.test(p.data.dayId) || p.data.text.length > 4000) throw new logging.InputError('Select a day and keep the plan under 4000 characters.');
+  return logging.setPlanNote(p.data.dayId, p.data.athleteId, p.data.text);
+}));
+
+router.get('/fitness/warm-up-templates', wrap(async (_req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can see saved warm-ups.', 403);
+  return { templates: await warmups.listWarmUpTemplates() };
 }));
 
 router.get('/fitness/history', wrap(async (req, res) => {

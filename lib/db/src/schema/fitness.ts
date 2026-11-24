@@ -39,6 +39,8 @@ export const workouts = pgTable('workouts', {
   programmable: boolean('programmable').notNull().default(true), programmableReason: text('programmable_reason'),
   /** Coach exception to the no-repeat rule: propose again every N days, until repeat_until (null = no end). */
   repeatEveryDays: integer('repeat_every_days'), repeatUntil: date('repeat_until', { mode: 'string' }),
+  /** Coach's saved warm-up for this workout (used whenever it is programmed, unless the day has its own). */
+  warmUp: text('warm_up'),
 });
 export const workoutMovements = pgTable('workout_movements', {
   workoutId: uuid('workout_id').notNull().references(() => workouts.id, { onDelete: 'cascade' }),
@@ -51,6 +53,8 @@ export const programDays = pgTable('program_days', {
   practiceWorkoutId: uuid('practice_workout_id').references(() => workouts.id),
   mainWorkoutId: uuid('main_workout_id').notNull().references(() => workouts.id),
   origin: jsonb('origin').notNull().default({ by: 'coach' }), coachNote: text('coach_note'),
+  /** Coach's warm-up for this day only; null = the workout's saved warm-up or the suggested one. */
+  warmUp: text('warm_up'),
   alternatives: jsonb('alternatives').notNull().default([]), warnings: jsonb('warnings').notNull().default([]),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [unique('program_days_group_id_date_seq_key').on(t.groupId, t.date, t.seq),
@@ -94,4 +98,18 @@ export const coachingNotes = pgTable('coaching_notes', {
   athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
   inputHash: text('input_hash').notNull(), note: jsonb('note').notNull(), model: text('model').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);
+
+/** Coach's own warm-ups, to pick for any day (e.g. "Burgener + bar complex"). */
+export const warmUpTemplates = pgTable('warm_up_templates', {
+  id: uuid('id').primaryKey().defaultRandom(), name: text('name').notNull().unique(), body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Coach's edit of one person's "Plan for today" on a program day; replaces the AI or built-in plan for that day. */
+export const planEdits = pgTable('plan_edits', {
+  dayId: uuid('day_id').notNull().references(() => programDays.id, { onDelete: 'cascade' }),
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  editedAt: timestamp('edited_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);
