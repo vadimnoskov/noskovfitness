@@ -1,5 +1,5 @@
-import { sql, proposeRange, getGroup } from '@workspace/fitness-db';
-import { pushForward, type SlotDay } from '@workspace/fitness-core';
+import { sql, proposeRange, getGroup, getEquipmentProfiles, getPolicy, refreshAlternatives } from '@workspace/fitness-db';
+import { pushForward, checkEquipment, withCap, type SlotDay, type Workout } from '@workspace/fitness-core';
 import { GROUP_ID } from './data';
 
 const done = () => {};
@@ -35,11 +35,30 @@ export async function swap(f: FormData) {
   done();
 }
 
+/**
+ * Change where a day is trained. The workout stays if it can be done there; a proposed day whose workout needs
+ * equipment the new location lacks is re-planned for that location. An approved day always keeps the coach's choice.
+ */
 export async function setLocation(f: FormData) {
   const id = str(f, 'id'), loc = str(f, 'equipmentId');
-  const [d] = await sql`UPDATE program_days SET equipment_profile_id = ${loc}, updated_at = now() WHERE id = ${id} RETURNING date::text AS date, status`;
-  // A proposed day is re-planned for the new location; an approved one keeps the coach's choice.
-  if (d && d.status === 'proposed') await proposeRange(GROUP_ID, d.date, d.date);
+  const [d] = await sql`UPDATE program_days SET equipment_profile_id = ${loc}, updated_at = now() WHERE id = ${id} AND group_id = ${GROUP_ID}
+    RETURNING date::text AS date, status, main_workout_id`;
+  if (!d || d.status !== 'proposed') return done();
+  const [[w], profiles, policy] = await Promise.all([
+    sql`SELECT id, name, structure, movements, score_type, original_text FROM workouts WHERE id = ${d.main_workout_id}`,
+    getEquipmentProfiles(GROUP_ID), getPolicy(GROUP_ID),
+  ]);
+  const profile = profiles.find((p) => p.id === loc);
+  if (w && profile) {
+    const workout: Workout = { id: w.id, name: w.name ?? undefined, structure: withCap(w.structure, w.original_text), movements: w.movements, scoreType: w.score_type };
+    const check = checkEquipment(workout, profile, policy.rules.groupSize);
+    if (check.ok) {
+      await sql`UPDATE program_days SET warnings = ${sql.json(check.warnings)} WHERE id = ${id}`;
+      await refreshAlternatives(GROUP_ID, id); // alternatives under More… now fit the new location
+      return done();
+    }
+  }
+  await proposeRange(GROUP_ID, d.date, d.date);
   done();
 }
 

@@ -82,7 +82,10 @@ export async function proposeRange(groupId: string, from: string, to: string, op
   const existing = await sql`SELECT date::text AS date, status, equipment_profile_id FROM program_days WHERE group_id = ${groupId} AND date BETWEEN ${from} AND ${to}`;
   const fixed = new Set(existing.filter((d) => d.status !== 'proposed').map((d) => d.date));
   const locByDate = new Map(existing.map((d) => [d.date, d.equipment_profile_id as string | null]));
-  const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
+  // Re-plan every training day plus any date that already has a proposed workout (the coach moved or added one there,
+  // e.g. a Wednesday that is not a usual training day): re-planning must never silently drop a day.
+  const proposedDates = existing.filter((d) => d.status === 'proposed').map((d) => d.date as string);
+  const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...proposedDates, ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
   const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 4 });
@@ -95,6 +98,22 @@ export async function proposeRange(groupId: string, from: string, to: string, op
     }
   });
   return { planned: proposals.length, skippedDates: dates.length - proposals.length };
+}
+
+/**
+ * Fresh engine alternatives for one program day (e.g. after its location changed), keeping its workout.
+ * The engine's own top pick for the date becomes the first alternative when it differs from the current workout.
+ */
+export async function refreshAlternatives(groupId: string, dayId: string) {
+  const [day] = await sql`SELECT date::text AS date, equipment_profile_id, main_workout_id FROM program_days WHERE id = ${dayId} AND group_id = ${groupId}`;
+  if (!day) return;
+  const [policy, profiles, candidates] = await Promise.all([getPolicy(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
+  const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(day.date, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from: day.date, to: day.date });
+  const profile = profiles.find((p) => p.id === day.equipment_profile_id) ?? profiles[0]!;
+  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 5 });
+  if (!p) return;
+  const options = [{ candidateId: p.candidateId, score: p.score }, ...p.alternatives].filter((a) => a.candidateId !== day.main_workout_id).slice(0, 4);
+  await sql`UPDATE program_days SET alternatives = ${sql.json(options as never)}, updated_at = now() WHERE id = ${dayId}`;
 }
 
 export { keyOf };
