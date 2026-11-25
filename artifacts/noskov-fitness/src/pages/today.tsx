@@ -96,25 +96,21 @@ function Plan({ p, athleteId, coach }: { p: Planned; athleteId: string; coach: b
     );
   }
   const editBtn = coach ? <button type="button" className="btn ghost sm" onClick={() => setEditing(current)}>Edit plan</button> : null;
-  if (edited) {
-    return <div className="plan"><b>Plan for today</b> <span className="tag">From the coach</span><NoteText text={edited} />{editBtn}</div>;
-  }
-  if (ai) {
-    return (
-      <div className="plan">
-        <b>Plan for today</b>
-        <p>{ai.approach}</p>
-        {ai.tips.length ? <ul>{ai.tips.map((t, i) => <li key={i}>{t}</li>)}</ul> : null}
-        {p.coaching.length ? <details className="nums"><summary>The numbers</summary><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></details> : null}
-        {editBtn}
-      </div>
-    );
-  }
-  if (!p.coaching.length && !coach) return null;
+  // Collapsed by default; the header carries the one thing worth seeing at a glance (the target).
+  const target = p.coaching.find((c) => /^Target|^Aim/i.test(c))?.replace(/\.$/, '');
+  const pacing = p.coaching.length ? <div className="nb"><div className="nh">Pacing</div><ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul></div> : null;
+  const body = edited ? <NoteText text={edited} />
+    : ai ? <><p>{ai.approach}</p>{ai.tips.length ? <ul>{ai.tips.map((t, i) => <li key={i}>{t}</li>)}</ul> : null}</>
+    : q.isLoading ? <p className="small">Writing coach notes…</p> : null;
+  if (!body && !pacing && !coach) return null;
   return (
-    <div className="plan"><b>Plan for today</b>{q.isLoading ? <span className="small"> · writing coach notes…</span> : null}
-      {p.coaching.length ? <ul>{p.coaching.map((c, i) => <li key={i}>{c}</li>)}</ul> : <p className="small">No plan yet.</p>}
-      {editBtn}</div>
+    <details className="plan">
+      <summary><b>Plan for today</b>{edited ? <span className="tag">From the coach</span> : null}{target ? <span className="small"> · {target}</span> : null}</summary>
+      {body}
+      {pacing}
+      {!body && !pacing ? <p className="small">No plan yet.</p> : null}
+      {editBtn}
+    </details>
   );
 }
 

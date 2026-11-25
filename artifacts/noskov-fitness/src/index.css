@@ -192,3 +192,4 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .plan .btn.ghost,.warmup .btn.ghost{padding:0 4px}
 .pday .more .wu summary{font-size:13px;cursor:pointer}.pday .more .wu .wu-edit textarea{font-size:12px}
 .pday .more .wu .wu-edit .btn{font-size:12px}
+.plan>summary{cursor:pointer}.plan[open]>summary{margin-bottom:4px}

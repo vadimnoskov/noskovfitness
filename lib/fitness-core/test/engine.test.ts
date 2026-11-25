@@ -47,7 +47,36 @@ describe('equipment', () => {
     expect(checkEquipment(C.find((c) => c.id === 'heavyclean')!.workout, garage, 4).problems[0]).toMatch(/heaviest available/);
     const row = checkEquipment(C.find((c) => c.id === 'row')!.workout, garage, 4);
     expect(row.ok).toBe(true);
-    expect(row.warnings[0]).toMatch(/1 rower for 4 people/);
+    expect(row.crowded[0]).toMatch(/1 rower for 4 people/);
+  });
+  it('counts boxes and rings per person: half the group can stagger, fewer is crowded', () => {
+    const bj = mk('bj', 'BJ', '5 rounds of:\n15 Box Jumps, 24 in\n10 Ring Rows', '10 mins').workout;
+    const one = checkEquipment(bj, { ...garage, items: [...garage.items, { implement: 'box', quantity: 1 }, { implement: 'rings', quantity: 1 }] }, 4);
+    expect(one.ok).toBe(true);
+    expect(one.crowded.join(' ')).toMatch(/1 box for 4.*|1 rings for 4/);
+    const two = checkEquipment(bj, { ...garage, items: [...garage.items, { implement: 'box', quantity: 2 }, { implement: 'rings', quantity: 2 }] }, 4);
+    expect(two.crowded).toEqual([]);
+    expect(two.warnings.join(' ')).toMatch(/2 box for 4 people \(stagger/);
+  });
+  it('prescribes only fixed weights that exist at the location', () => {
+    const db = { ...garage, items: [...garage.items, { implement: 'dumbbell' as const, quantity: 4, loads: [{ value: 40, unit: 'lb' as const, qty: 2 }, { value: 50, unit: 'lb' as const, qty: 2 }, { value: 15, unit: 'lb' as const, qty: 2 }] }] };
+    const w45 = mk('d45', 'DB', '6 rounds of:\n5 Dumbbell Power Clean & Jerks, 45 lbs\n5 Burpees', '10 mins').workout;
+    const c = checkEquipment(w45, db, 4);
+    expect(c.ok).toBe(true);
+    expect(c.warnings.join(' ')).toMatch(/45 lb → 40 lb or 50 lb/);
+    const w30 = mk('d30', 'DB', '6 rounds of:\n5 Dumbbell Power Clean & Jerks, 30 lbs\n5 Burpees', '10 mins').workout;
+    expect(checkEquipment(w30, db, 4).problems.join(' ')).toMatch(/no dumbbell near that weight/);
+  });
+});
+
+describe('movement roles', () => {
+  it('strongly avoids Turkish get-ups in a metcon', () => {
+    const tgu = mk('tgu', 'FT: TGU', '5 rounds of:\n4 Turkish Get-ups, 24 kg\n20 Air Squats', '12 mins');
+    const p = plan(input({ dates: ['2026-12-07'], candidates: [tgu, C.find((c) => c.id === 'kbdu')!] }));
+    expect(p[0]!.candidateId).toBe('kbdu');
+    const only = plan(input({ dates: ['2026-12-07'], candidates: [tgu] }));
+    expect(only[0]!.candidateId).toBe('tgu'); // still possible as a last resort
+    expect(only[0]!.score.notes.join(' ')).toMatch(/warm-ups or practice/);
   });
 });
 

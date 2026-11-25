@@ -114,6 +114,10 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   }
   const eq = checkEquipment(c.workout, input.equipmentFor(date), input.policy.rules.groupSize);
   penalty += Math.min(0.15, eq.warnings.length * 0.04);
+  // One box or one set of rings for the whole group: possible, but the stimulus is lost. Strongly avoided.
+  if (eq.crowded.length) { penalty += Math.min(0.5, 0.25 * eq.crowded.length); notes.push(...eq.crowded); }
+  // Controlled, skill-heavy movements (Turkish get-up) belong in warm-ups and practice, not metcons: last resort only.
+  if (inMetcon(c.workout) && c.workout.movements.some((m) => WARM_UP_ONLY.has(m.movement.family))) { penalty += 0.35; notes.push('Turkish get-ups belong in warm-ups or practice, not a metcon'); }
 
   const w = policy.weights;
   const wsum = w.variety + w.freshness + w.weakness + w.benchmark || 1;
@@ -123,6 +127,10 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return { variety: r(variety), freshness: r(freshness), weakness: r(weakness), benchmark: r(benchmark), penalty: r(penalty), total: r(total), notes };
 }
+
+/** Movements done slowly and controlled: warm-up and practice material, not metcon material. */
+const WARM_UP_ONLY = new Set(['tgu']);
+const inMetcon = (w: Candidate['workout']) => w.scoreType !== 'load' && w.scoreType !== 'none' && w.structure.kind !== 'sets' && w.structure.kind !== 'skill-practice';
 
 /** Hard rules. Returns the reason a candidate is not allowed on this date, or undefined. */
 export function blocked(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay, tomorrow?: PastDay): string | undefined {
@@ -180,7 +188,7 @@ export function plan(input: PlanInput): Proposal[] {
     const best = ranked[0];
     if (!best) continue;
     const eq = checkEquipment(best.c.workout, input.equipmentFor(date), input.policy.rules.groupSize);
-    out.push({ date, candidateId: best.c.id, score: best.s, warnings: eq.warnings,
+    out.push({ date, candidateId: best.c.id, score: best.s, warnings: [...eq.crowded, ...eq.warnings],
       alternatives: ranked.slice(1, 1 + (input.alternatives ?? 4)).map((r) => ({ candidateId: r.c.id, score: r.s })) });
     timeline.push(toPastDay(date, [best.c]));
     lastW.set(best.c.id, date);
