@@ -194,3 +194,4 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .pday .more .wu .wu-edit .btn{font-size:12px}
 .plan>summary{cursor:pointer}.plan[open]>summary{margin-bottom:4px}
 .library{margin-top:28px;display:grid;gap:10px}.flagged summary{cursor:pointer}.flagged ul{list-style:none;padding:0;display:grid;gap:8px}.flagged pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,monospace;background:var(--panel);padding:8px;border-radius:8px;margin:4px 0 0}
+.profile-note{display:grid;gap:8px;margin:10px 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.pub{color:var(--mute)}

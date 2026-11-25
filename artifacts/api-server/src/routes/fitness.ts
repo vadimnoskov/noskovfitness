@@ -12,9 +12,7 @@ import { getPlannedDays } from '../fitness/program';
 import * as program from '../fitness/program-actions';
 import * as settings from '../fitness/settings-actions';
 import * as warmups from '../fitness/warmups';
-import libraryGzBase64 from '@workspace/fitness-db/data/published-library.json.gz';
-
-const libraryGz = Buffer.from(libraryGzBase64, 'base64');
+import { libraryGz, getPublishedProfile } from '../fitness/library-data';
 
 const router: IRouter = Router();
 router.use(cookieParser());
@@ -121,7 +119,7 @@ router.get('/fitness/pages', async (req, res) => {
       const profiles = await getEquipmentProfiles(data.GROUP_ID);
       payload = screen === 'program'
         ? { days: await getPlannedDays(data.GROUP_ID, start, end), profiles, group }
-        : { policy: await getPolicy(data.GROUP_ID), profiles, group };
+        : { policy: await getPolicy(data.GROUP_ID), profiles, group, published: getPublishedProfile() };
       break;
     }
   }
@@ -157,7 +155,7 @@ router.post('/fitness/actions/:action', async (req, res) => {
   if (['propose', 'approveAll', 'replan'].includes(action) && !date(f.get('from'))) { res.status(400).json({ error: 'Choose a start date.' }); return; }
   if (['approveAll', 'replan'].includes(action) && (!date(f.get('to')) || String(f.get('from')) > String(f.get('to')))) { res.status(400).json({ error: 'Choose a valid end date.' }); return; }
   await actions[action](f);
-  res.json({ ok: true, ...(['savePolicyAction', 'resetPolicyAction'].includes(action) ? { redirect: '/settings?saved=1' } : {}) });
+  res.json({ ok: true, ...(['savePolicyAction', 'resetPolicyAction', 'usePublishedProfileAction'].includes(action) ? { redirect: '/settings?saved=1' } : {}) });
 });
 
 

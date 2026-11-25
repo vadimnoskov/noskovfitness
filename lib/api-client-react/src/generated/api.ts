@@ -180,7 +180,7 @@ export function useGetFitnessPage<TData = Awaited<ReturnType<typeof getFitnessPa
 
 
 
-export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',) => {
+export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'usePublishedProfileAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',) => {
 
 
 
@@ -191,7 +191,7 @@ export const getFitnessActionUrl = (action: 'propose' | 'approve' | 'approveAll'
 /**
  * @summary Perform an existing coach action
  */
-export const fitnessAction = async (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',
+export const fitnessAction = async (action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'usePublishedProfileAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate',
     fitnessForm: FitnessForm, options?: Parameters<typeof customFetch>[1]): Promise<FitnessActionResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
@@ -253,7 +253,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type FitnessActionMutationResult = NonNullable<Awaited<ReturnType<typeof fitnessAction>>>
     export type FitnessActionMutationBody = BodyType<FitnessForm>
     export type FitnessActionMutationError = ErrorType<void>
-    export type FitnessActionMutationVariables = {action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate';data: BodyType<FitnessForm>}
+    export type FitnessActionMutationVariables = {action: 'propose' | 'approve' | 'approveAll' | 'unapprove' | 'swap' | 'setLocation' | 'skip' | 'insert' | 'neverPropose' | 'replan' | 'savePolicyAction' | 'resetPolicyAction' | 'usePublishedProfileAction' | 'move' | 'setCap' | 'setRepeat' | 'setWarmUp' | 'saveWarmUpTemplate' | 'deleteWarmUpTemplate';data: BodyType<FitnessForm>}
 
     /**
  * @summary Perform an existing coach action

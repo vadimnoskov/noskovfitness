@@ -12,18 +12,31 @@ const LABELS: Record<string, string> = {
   G: 'Gymnastics', W: 'Weightlifting', M: 'Monostructural', variety: 'Variety gap', freshness: 'Movement freshness', weakness: 'Weakness focus', benchmark: 'Benchmark due',
 };
 
-type SettingsData = { policy: ProgrammingPolicy; group: { training_days: number[]; default_equipment_id?: string | null }; profiles: { id: string; name: string }[] };
+type Profile = ProgrammingPolicy['targets'] & { workouts: number };
+type SettingsData = { policy: ProgrammingPolicy; group: { training_days: number[]; default_equipment_id?: string | null }; profiles: { id: string; name: string }[];
+  published?: { all: Profile; era: Profile; blend: Profile; eraLabel: string } };
 
 export default function Settings() {
   const sp = Object.fromEntries(new URLSearchParams(useSearch())) as { saved?: string };
   const q = usePage<SettingsData>({ screen: 'settings' });
   if (!q.data) return <><h1>Programming settings</h1><PageStatus q={q} /></>;
-  const { policy, group, profiles } = q.data;
+  const { policy, group, profiles, published } = q.data;
+  const pub = (g: string, k: string) => (published ? (published.blend as unknown as Record<string, Record<string, number>>)[g]?.[k] : undefined);
   return (
     <>
       <h1>Programming settings</h1>
       <p className="small">Everything the engine uses. Targets are the share (%) of workouts you want in each bucket over the last {policy.windowDays} days; each group should add up to about 100. Version {policy.version}.</p>
       {sp.saved ? <p className="ok">Saved. New proposals use these settings; approved days are not changed.</p> : null}
+      {published ? (
+        <div className="profile-note">
+          <p className="small">
+            <b>Measured from the published programming</b> ({published.all.workouts.toLocaleString()} workouts, 2005 on, with the {published.eraLabel} weighted to a quarter):
+            shown as "published" next to each target below. For example, {published.blend.priority.task}% of published workouts are for time, {published.blend.load.heavy}% are heavy days,
+            and {published.blend.movementCount['1']}% are a single movement.
+          </p>
+          <ActionForm action="usePublishedProfileAction"><button className="btn">Use the published mix as my targets</button></ActionForm>
+        </div>
+      ) : null}
       <ActionForm key={policy.version} action="savePolicyAction" className="settings">
         <fieldset><legend>Schedule</legend>
           <div className="bar">{DOW.map((d, i) => <label key={d} className="check"><input type="checkbox" name="trainingDays" value={i + 1} defaultChecked={group.training_days.includes(i + 1)} /> {d}</label>)}</div>
@@ -34,7 +47,7 @@ export default function Settings() {
           const sum = Object.values(rec).reduce((a, b) => a + b, 0);
           return (
             <fieldset key={g}><legend>{LABELS[g]} <span className={sum === 100 ? 'small' : 'warn'}>total {sum}%</span></legend>
-              {Object.entries(rec).map(([k, v]) => <label key={k}>{LABELS[`${g}.${k}`] ?? LABELS[k] ?? k} <input type="number" name={`${g}.${k}`} min={0} max={100} defaultValue={v} />%</label>)}
+              {Object.entries(rec).map(([k, v]) => <label key={k}>{LABELS[`${g}.${k}`] ?? LABELS[k] ?? k} <input type="number" name={`${g}.${k}`} min={0} max={100} defaultValue={v} />%{pub(g, k) !== undefined ? <span className="small pub"> published {pub(g, k)}%</span> : null}</label>)}
             </fieldset>
           );
         })}

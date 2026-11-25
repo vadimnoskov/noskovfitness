@@ -7,7 +7,7 @@
  * Nothing existing is edited: no names, results or settings change.
  */
 import { gunzipSync } from 'node:zlib';
-import { contentSignature, deriveTags, keyOf, nameOf, benchmarkOf, FAMILY_BY_ID, FEMALE_RX, withCap, type Workout, type MovementRef } from '@workspace/fitness-core';
+import { styleProfile, contentSignature, deriveTags, keyOf, nameOf, benchmarkOf, FAMILY_BY_ID, FEMALE_RX, withCap, type Workout, type MovementRef } from '@workspace/fitness-core';
 import { sql } from './client';
 
 interface Entry {
@@ -154,4 +154,27 @@ export async function flaggedWorkouts(limit = 200, offset = 0) {
   return (await sql`SELECT w.id, w.name, w.original_text, w.programmable_reason, (SELECT max(source_date)::text FROM workout_sources s WHERE s.workout_id = w.id) AS last
     FROM workouts w WHERE w.source = ${SOURCE} AND NOT w.programmable ORDER BY last DESC NULLS LAST LIMIT ${limit} OFFSET ${offset}`)
     .map((r) => ({ id: r.id as string, name: r.name as string | null, text: r.original_text as string, reason: r.programmable_reason as string, last: r.last as string | null }));
+}
+
+/** The preferred era: programmed by the method's founder (first half of 2019). */
+export const PREFERRED_ERA = { from: '2019-01-01', to: '2019-06-30', share: 0.25 };
+
+/**
+ * Style profile of the published programming (clean workouts, 2005 on, each appearance counted): all years, the
+ * preferred era alone, and the blend where the preferred era makes up a quarter of the weight (used as targets).
+ */
+export function publishedProfile(gz: Uint8Array) {
+  const { entries } = readLibrary(gz);
+  const days = entries.filter((e) => e.clean).flatMap((e) => {
+    const tags = deriveTags({ id: '', ...e.workout } as Workout);
+    return e.dates.filter((d) => d >= '2005-01-01').map((d) => ({ tags, era: d >= PREFERRED_ERA.from && d <= PREFERRED_ERA.to }));
+  });
+  const eraN = days.filter((d) => d.era).length, restN = days.length - eraN;
+  const eraWeight = eraN ? (PREFERRED_ERA.share * restN) / ((1 - PREFERRED_ERA.share) * eraN) : 1;
+  return {
+    all: styleProfile(days.map((d) => ({ tags: d.tags, weight: 1 }))),
+    era: styleProfile(days.filter((d) => d.era).map((d) => ({ tags: d.tags, weight: 1 }))),
+    blend: styleProfile(days.map((d) => ({ tags: d.tags, weight: d.era ? eraWeight : 1 }))),
+    eraLabel: 'first half of 2019',
+  };
 }

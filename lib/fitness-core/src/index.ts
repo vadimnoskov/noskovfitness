@@ -13,3 +13,5 @@ export * from './workouts/personalize';
 export * from './workouts/coaching';
 export * from './workouts/warmup';
 export * from './import/published';
+export * from './workouts/estimate';
+export * from './engine/profile';

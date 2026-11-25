@@ -6,7 +6,7 @@
  * Titles are cleaned of brand names. Anything that doesn't read cleanly is flagged, never guessed.
  */
 import type { Workout, MovementPrescription, Structure, ScoreType, Units } from '../model/types';
-import { parseLine } from './btwb';
+import { parseLine, withCap } from './btwb';
 import { resolveSequence, keyOf } from '../movements/resolver';
 import { FAMILY_BY_ID, type Implement } from '../movements/catalog';
 import { benchmarkOf } from '../workouts/benchmarks';
@@ -337,7 +337,7 @@ export function parsePublishedRow(row: PublishedRow): PublishedWorkout {
 
   const bm = name ? benchmarkOf(name) : undefined;
   const workout: Workout = {
-    id: '', name: bm?.name ?? name ?? undefined, structure: header.structure, movements, scoreType,
+    id: '', name: bm?.name ?? name ?? undefined, structure: withCap(header.structure, text), movements, scoreType,
     source: 'published', originalText: text,
   };
   const clean = flags.length === 0;

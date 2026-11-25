@@ -1,3 +1,4 @@
+import { estimateMinutes } from './estimate';
 /**
  * Derived workout tags: the color-coded day header (modality pattern, load, time, volume, priority) is computed,
  * never typed, so the analysis map is always consistent. A coach override on Workout.tags wins.
@@ -95,8 +96,8 @@ export function workMinutes(w: Workout, resultSec?: number): number | undefined 
   if (s.kind === 'max' && s.minutes) return s.minutes;
   if (resultSec) return resultSec / 60;
   if (w.targetMinutes) return (w.targetMinutes[0] + w.targetMinutes[1]) / 2;
-  if (s.kind === 'for-time' && s.capMin) return s.capMin;
-  return undefined;
+  // No result and no coach target: estimate it (fixed-time formats are exact, a cap bounds the estimate).
+  return estimateMinutes(w) ?? (s.kind === 'for-time' && s.capMin ? s.capMin : undefined);
 }
 
 export function deriveTags(w: Workout, opts: { resultSec?: number; amrapRounds?: number; sex?: 'male' | 'female' } = {}): WorkoutTags {

@@ -1,3 +1,4 @@
+import { getPublishedProfile } from './library-data';
 import { sql, savePolicy, getPolicy } from '@workspace/fitness-db';
 import { DEFAULT_POLICY, type ProgrammingPolicy } from '@workspace/fitness-core';
 import { GROUP_ID } from './data';
@@ -26,6 +27,13 @@ export async function savePolicyAction(f: FormData) {
   await savePolicy(GROUP_ID, next);
   const days = f.getAll('trainingDays').map(Number).filter((d) => d >= 1 && d <= 7);
   await sql`UPDATE groups SET training_days = ${days.length ? days : [1, 2, 4, 5, 6]}, default_equipment_id = ${String(f.get('defaultEquipmentId') ?? 'gym')} WHERE id = ${GROUP_ID}`;
+}
+
+/** Adopt the measured style profile of the published programming (preferred era weighted) as the targets. */
+export async function usePublishedProfileAction() {
+  const cur = await getPolicy(GROUP_ID);
+  const { workouts: _n, ...targets } = getPublishedProfile().blend;
+  await savePolicy(GROUP_ID, { ...cur, version: cur.version + 1, targets });
 }
 
 export async function resetPolicyAction() {
