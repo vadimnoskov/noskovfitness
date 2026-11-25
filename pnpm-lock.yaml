@@ -676,6 +676,10 @@ importers:
       postgres:
         specifier: ^3.4.5
         version: 3.4.9
+    devDependencies:
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
 
   scripts:
     devDependencies:

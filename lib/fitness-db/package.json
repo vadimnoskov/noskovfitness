@@ -13,5 +13,8 @@
   "dependencies": {
     "postgres": "^3.4.5",
     "@workspace/fitness-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "catalog:"
   }
 }
