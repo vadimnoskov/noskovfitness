@@ -72,6 +72,8 @@ export const FAMILIES: Family[] = [
   { id: 'clean-and-jerk', name: 'Clean & Jerk', modality: 'W', pattern: 'clean-jerk', implements: BB_DB_KB, count: ['double', 'single', 'alternating'],
     start: ['floor', 'hang'], receive: ['power', 'squat', 'split'], variants: ['push-jerk', 'split-jerk', 'power-jerk'], unit: 'reps',
     match: ['clean (&|and) (push |split |power )?jerk', 'clean-?and-?jerk', '\\bc&j\\b', 'clean,? (push |split )?jerk'] },
+  { id: 'over-shoulder', name: 'Over-the-Shoulder', modality: 'W', pattern: 'hinge', implements: ['sandbag', 'medball'], unit: 'reps',
+    match: ['over[- ]the[- ]shoulders?', 'over[- ]shoulders?', '\\bots\\b'] },
   { id: 'ground-to-overhead', name: 'Ground to Overhead', modality: 'W', pattern: 'clean-jerk', implements: ['barbell', 'dumbbell', 'plate', 'sandbag'], unit: 'reps',
     match: ['ground[- ]to[- ]overhead', 'floor[- ]to[- ]overhead', 'clean[- ]to[- ]overhead'] },
   { id: 'shoulder-to-overhead', name: 'Shoulder to Overhead', modality: 'W', pattern: 'press', implements: BB_DB_KB, count: ['double', 'single', 'alternating'], unit: 'reps',
@@ -165,7 +167,7 @@ export const FAMILIES: Family[] = [
     match: ['back extension', 'hip extension', 'hip & back', 'gh raise'] },
   { id: 'air-squat', name: 'Air Squat', modality: 'G', pattern: 'squat', implements: ['bodyweight'], variants: ['jumping', 'hold'], unit: 'reps',
     match: ['air squat', '^squats?$', 'squat jumps?', 'squat hold', 'jumping (air )?squat'] },
-  { id: 'pistol', name: 'Pistol', modality: 'G', pattern: 'single-leg', implements: ['bodyweight', 'kettlebell', 'plate'], unit: 'reps',
+  { id: 'pistol', name: 'Pistol', modality: 'G', pattern: 'single-leg', implements: ['bodyweight', 'kettlebell', 'dumbbell', 'plate'], unit: 'reps',
     match: ['pistol', 'one legged squat', 'single-leg squat'] },
   { id: 'box-jump', name: 'Box Jump', modality: 'G', pattern: 'jump', implements: ['box', 'plate'], variants: ['over', 'lateral', 'seated'], unit: 'reps',
     match: ['box jump', 'plate jump', 'box get over'] },
@@ -181,7 +183,7 @@ export const FAMILIES: Family[] = [
 
   // ---------- Monostructural ----------
   { id: 'jump-rope', name: 'Jump Rope', modality: 'M', pattern: 'jump-rope', implements: ['jump-rope'], variants: ['single-under', 'double-under', 'crossover', 'triple-under'], unit: 'reps',
-    match: ['double[- ]?unders?', '\\bdus?\\b', 'single[- ]?unders?', 'jump rope', 'cross ?overs?', 'over[- ]?unders?'] },
+    match: ['double[- ]?unders?', 'triple[- ]?unders?', '\\bdus?\\b', 'single[- ]?unders?', 'jump rope', 'cross ?overs?', 'over[- ]?unders?'] },
   { id: 'run', name: 'Run', modality: 'M', pattern: 'locomotion', implements: ['none', 'medball', 'plate', 'sandbag'],
     variants: ['shuttle', 'sprint', 'trail', 'backward', 'lateral-shuffle'], unit: 'distance',
     match: ['^runs?\\b', '\\bruns?$', 'run \\(', 'shuttle', 'sprint', 'trail run', 'road run', 'backward run', 'lateral shuffle', 'medicine ball run', 'med ball run', 'plate run', 'fast feet'] },

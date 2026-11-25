@@ -95,7 +95,7 @@ function readHeader(lines: string[]): { h?: Header; used: number } {
     return { h: { structure: { kind: 'intervals', rounds: Number(m[1]), workSec: Number(m[2]) * 60, restSec: 0, scored: 'reps' }, scoreType: 'reps' }, used: 1 };
   }
   if ((m = first.match(/^for (\d+) minutes(?: complete)?:?$/))) return { h: { structure: { kind: 'amrap', minutes: Number(m[1]) }, scoreType: 'reps' }, used: 1 };
-  if ((m = first.match(/^every minute for (\d+) minutes/))) return { h: { structure: { kind: 'emom', minutes: Number(m[1]) }, scoreType: 'none' }, used: 1 };
+  if ((m = first.match(/^every minute,?(?: alternating,?)? for (\d+) minutes/))) return { h: { structure: { kind: 'emom', minutes: Number(m[1]) }, scoreType: 'none' }, used: 1 };
   if (/^for (?:max )?load:?$/.test(first)) return { h: { structure: { kind: 'max', what: 'load' }, scoreType: 'load' }, used: 1 };
   if (/^for (?:total |max )?reps:?$/.test(first)) return { h: { structure: { kind: 'max', what: 'reps' }, scoreType: 'reps' }, used: 1 };
   if ((m = first.match(/^(?:on a (\d+)[- ]minute clock|in front of a clock set for (\d+) minutes|in (\d+) minutes),?(?: complete)?:?/))) {
@@ -105,10 +105,12 @@ function readHeader(lines: string[]): { h?: Header; used: number } {
     if (inner.h && inner.h.structure.kind === 'for-time') return { h: { ...inner.h, structure: { ...inner.h.structure, capMin: cap } }, used: 1 };
     return { h: { structure: { kind: 'amrap', minutes: cap }, scoreType: 'reps' }, used: 1 };
   }
-  if ((m = both.match(/every minute on the minute for (\d+) minutes|emom (?:for )?(\d+)|every (\d+) minutes? for (\d+) minutes/))) {
+  if ((m = first.match(/for max(?:imum)? load:?$|^for load of:?$/))) return { h: { structure: { kind: 'max', what: 'load' }, scoreType: 'load' }, used: 1 };
+  if ((m = both.match(/every minute on the minute,?(?: alternating,?)? for (\d+) minutes|emom,?(?: alternating,?)? (?:for )?(\d+)|every (\d+) minutes?,?(?: alternating,?)? for (\d+) minutes/))) {
     const minutes = Number(m[1] ?? m[2] ?? m[4]);
     return { h: { structure: { kind: 'emom', minutes, ...(m[3] ? { everySec: Number(m[3]) * 60 } : {}) }, scoreType: 'none' }, used: 1 };
   }
+  if ((m = first.match(/^tabata x(\d+)$/))) return { h: { structure: { kind: 'tabata', rounds: Number(m[1]) }, scoreType: 'reps' }, used: 1 };
   if (/tabata/.test(first)) return { h: { structure: { kind: 'tabata' }, scoreType: 'reps' }, used: /^tabata [a-z]/.test(first) ? 0 : 1 };
   if ((m = first.match(/^(\d+) rounds?,? (?:each )?for time/)) && /each|rest/.test(both)) {
     const rest = words2num(lines.join(' ')).toLowerCase().match(/rest(?:ing)? (\d+) (minutes?|seconds?)/);
@@ -125,8 +127,17 @@ function readHeader(lines: string[]): { h?: Header; used: number } {
 }
 
 /** Turn one published movement line into the "21 Thrusters, 95 lbs" style the line parser reads. */
+/** "Minute 1: 20 wall-balls", "Odd minutes: 10 deadlifts" → the movement part. */
+export const stripMinutePrefix = (l: string) => l.replace(/^(?:(?:odd|even)(?:[- ]numbered)? minutes?|minutes? \d+(?:\s*[-–,&]\s*\d+)*|min(?:ute)?s? \d+|station \d+|(?:1st|2nd|3rd|\d+th) minute)\s*[:–-]\s*/i, '');
+
 export function normalizeLine(line: string): string {
-  let s = words2num(line).replace(/\(([^)]*)\)/g, (_, inner: string) => (/\d+\s*\/\s*\d+/.test(inner) ? ` ${inner} ` : ' ')).replace(/\s+/g, ' ').trim();
+  let s = words2num(stripMinutePrefix(line)).replace(/\(([^)]*)\)/g, (_, inner: string) => {
+    if (/^\s*or\b/i.test(inner)) return ' '; // "(or 55 pound dumbbell swing)": an alternative, not this movement
+    if (/\d+\s*\/\s*\d+/.test(inner)) return ` ${inner} `;
+    if (/\d+(?:\.\d+)?\s*(?:lbs?|pounds?|kg|pood)\b/i.test(inner)) return `, ${inner} `; // "20 Deadlifts (275lbs)"
+    if (/\d+\s*(?:"|in\b|inch)/i.test(inner)) return `, ${inner.replace(/"/, ' in')} `; // "Box jumps (24\")"
+    return inner.split(' ').length <= 4 ? ` ${inner} ` : ' '; // "Pullups (Chest to Bar)" keeps the words
+  }).replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
   s = s.replace(/(\d),(\d{3})\b/g, '$1$2').replace(/\.$/, '').replace(/\b(\d+) 1\/2\b/g, '$1.5');
   // "1.5 pood Kettlebell X 21 swings" → "21 Kettlebell swings, 1.5 pood"
   s = s.replace(/^(\d+(?:\.\d+)?\s*(?:pood|pounds?|lbs?|kg)\.?\s+)?(.+?)\s+x\s+(\d+)\s+(.+)$/i, (all, load, a, n, b) => (/^\d/.test(a) && !load ? all : `${n} ${a} ${b}${load ? `, ${load.trim()}` : ''}`));
@@ -200,6 +211,7 @@ function applyLoadLines(mv: MovementPrescription[], lines: string[], flags: stri
     const { female, male } = readLoadLine(line);
     for (const [sex, list] of [['female', female], ['male', male]] as const) {
       for (const p of list) {
+        if (/ruck|pack|vest/.test(p.noun)) continue; // worn weight, noted in the text
         const kind = NOUN_IMPLEMENT.find(([rx]) => rx.test(p.noun))?.[1];
         if (p.unit === 'in' || p.unit === 'ft') {
           const inches = p.unit === 'ft' ? p.value * 12 : p.value;
@@ -212,6 +224,20 @@ function applyLoadLines(mv: MovementPrescription[], lines: string[], flags: stri
           if (kind && kind !== 'target' && kind !== 'box') return imp === kind;
           return imp && !['bodyweight', 'none', 'box', 'rings', 'bar', 'rope', 'rower', 'jump-rope', 'air-bike', 'bike-erg', 'ski-erg', 'wall', 'ghd', 'parallettes', 'p-bars', 'sled'].includes(imp);
         });
+        // "Weighted pistols" with a dumbbell, front-rack lunges with a barbell: movements that are bodyweight by default
+        // but can take that implement get it (only those still without a load).
+        const canTake = (m: MovementPrescription) => !m.load && FAMILY_BY_ID[m.movement.family]?.modality !== 'M' && FAMILY_BY_ID[m.movement.family]?.implements.some((i) => i === (kind && kind !== 'target' && kind !== 'box' ? kind : 'barbell') || (!kind && ['dumbbell', 'kettlebell', 'sandbag'].includes(i)));
+        const takers = loadable.length ? [] : mv.filter(canTake);
+        // With no implement named, prefer weightlifting movements (the lunge, not the sit-up).
+        const fallback = kind ? takers : takers.filter((m) => FAMILY_BY_ID[m.movement.family]?.modality === 'W').length ? takers.filter((m) => FAMILY_BY_ID[m.movement.family]?.modality === 'W') : takers;
+        if (fallback.length === 1 || (fallback.length && kind)) {
+          for (const m of fallback) {
+            const imp = (kind && kind !== 'target' && kind !== 'box' ? kind : FAMILY_BY_ID[m.movement.family]!.implements.find((i) => i !== 'bodyweight' && i !== 'none')) as Implement;
+            m.movement = { ...m.movement, implement: imp };
+            m.load = { ...(m.load ?? { unit: p.unit as Units }), unit: (m.load?.unit ?? p.unit) as Units, [sex]: p.value };
+          }
+          continue;
+        }
         if (!loadable.length) { flags.push(`load "${p.value} ${p.unit} ${p.noun}" matched no movement`); continue; }
         for (const m of loadable) m.load = { ...(m.load ?? { unit: p.unit as Units }), unit: (m.load?.unit ?? p.unit) as Units, [sex]: p.value };
       }
@@ -258,6 +284,15 @@ export function parsePublishedRow(row: PublishedRow): PublishedWorkout {
   let lines = body.filter((l) => !LOAD_LINE.test(l));
   if (!lines.length) return { ...base, name, text, flags: ['no prescription found'] };
 
+  // A series of Tabatas ("Tabata row / Rest 1 minute / Tabata squats …"): one tabata per movement, back to back.
+  const tabatas = lines.filter((l) => /^tabata\s+\S/i.test(l));
+  if (tabatas.length >= 2) lines = [`Tabata x${tabatas.length}`, ...tabatas.map((l) => l.replace(/^tabata\s+/i, '')), ...lines.filter((l) => !/^tabata\s+\S/i.test(l) && !/^rest\b/i.test(l) && !/^for (?:total |max )?reps:?$/i.test(l))];
+  // Repeated EMOM blocks ("EMOM 5 for load: 3 snatches / EMOM 5: 2 snatches / …"): one EMOM of the total length.
+  const emoms = lines.map((l) => words2num(l).toLowerCase().match(/^every minute on the minute for (\d+) minutes/)).filter(Boolean) as RegExpMatchArray[];
+  if (emoms.length >= 2) {
+    const total = emoms.reduce((a, m) => a + Number(m[1]), 0);
+    lines = [`Every minute on the minute for ${total} minutes:`, ...lines.filter((l) => !/^every minute on the minute/i.test(l))];
+  }
   const { h, used } = readHeader(lines);
   // No header is fine for a single effort ("Run 5,000 meters", "Deadlift 1-1-1"); flagged once we know there is more than one movement.
   const header = h ?? { structure: { kind: 'for-time' } as Structure, scoreType: 'time' as ScoreType };
@@ -265,11 +300,13 @@ export function parsePublishedRow(row: PublishedRow): PublishedWorkout {
   if (header.movementFromHeader) lines = [header.movementFromHeader, ...lines];
 
   // A second header further down means a multi-part day (e.g. strength, then a metcon).
-  if (lines.some((l, i) => i > 0 && readHeader([l]).h && !/^\d/.test(l.replace(/^(\d+(?:-\d+)+)/, '')) && readHeader([l]).h?.structure.kind !== 'sets') && h) flags.push('multi-part day');
+  // (a "Back squat, 1 rep" line or a set scheme is a movement line, not a new part)
+  if (lines.some((l, i) => { if (i === 0 || l.split(/\s+/).length > 9) return false; const r = readHeader([l]); return r.h && r.used > 0 && r.h.structure.kind !== 'sets' && !/^\d/.test(l.replace(/^(\d+(?:-\d+)+)/, '')); }) && h) flags.push('multi-part day');
 
   const movements: MovementPrescription[] = [];
   const unknown: string[] = [];
-  for (const l of lines) {
+  for (const raw of lines) {
+    const l = stripMinutePrefix(raw);
     if (IGNORE_LINE.test(l) || /:$/.test(l) && !/\d/.test(l)) continue;
     const n = normalizeLine(l);
     const fem = n.match(/ \/F(\d+(?:\.\d+)?)$/);

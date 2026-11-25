@@ -6,7 +6,7 @@ type Report = {
   published: number; bundled: number; builtAt: string; programmable: number; notProgrammable: number; opens: number;
   reasons: { reason: string; count: number }[]; flagged: { id: string; name: string | null; text: string; reason: string; last: string | null }[]; offset: number;
 };
-type ImportResult = { inserted: number; linked: number; alreadyImported: number; entries: number };
+type ImportResult = { inserted: number; linked: number; alreadyImported: number; entries: number; replaced: number };
 
 /** Coach: the workout library, the import button, and what the engine will not propose (and why). */
 export function LibrarySection() {
@@ -27,7 +27,7 @@ export function LibrarySection() {
         {' '}Workouts that match your own history are linked to it, not duplicated. Coaching text and brand names are not kept.
       </p>
       <button type="button" className="btn primary" disabled={imp.isPending} onClick={run}>{imp.isPending ? 'Importing…' : r.published ? 'Update library' : 'Import library'}</button>
-      {result ? <p className="ok">Done: {result.inserted} added, {result.linked} matched your history, {result.alreadyImported} already there.</p> : null}
+      {result ? <p className="ok">Done: {result.inserted} added, {result.replaced} older readings removed, {result.linked} matched your history, {result.alreadyImported} already in the library (refreshed unless in use).</p> : null}
       {imp.isError ? <p className="warn" role="alert">Import failed. Nothing was changed; try again.</p> : null}
       {r.notProgrammable ? (
         <details className="flagged">

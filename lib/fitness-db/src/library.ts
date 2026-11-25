@@ -16,6 +16,10 @@ interface Entry {
 }
 export interface LibraryReport {
   builtAt: string; entries: number; inserted: number; linked: number; alreadyImported: number;
+  /** Earlier published imports nothing used yet, replaced by this import's reading. */
+  replaced: number;
+  /** Already imported and unused: details refreshed from this import's reading. */
+  refreshed: number;
   programmable: number; notProgrammable: number; opens: number; reasons: { reason: string; count: number }[];
 }
 
@@ -35,8 +39,20 @@ export function readLibrary(gz: Uint8Array): { builtAt: string; entries: Entry[]
 }
 
 export async function importLibrary(gz: Uint8Array): Promise<LibraryReport> {
-  const { builtAt, entries } = readLibrary(gz);
-  const existing = await sql`SELECT id, signature, name, structure, movements, score_type, original_text FROM workouts`;
+  const { builtAt, entries: all } = readLibrary(gz);
+  // 2001–2004 workouts (odd formats) stay in the bundled file for measuring principles, not in the library.
+  const entries = all.filter((e) => e.dates.some((d) => d >= '2005-01-01'));
+  // A changed reading of a workout replaces the earlier import (rows whose signature is no longer in the dataset), as long
+  // as nothing uses it: no results, no program days or alternatives, no coach settings. Anything in use stays as it is.
+  const current = entries.map((e) => (e.key.startsWith('bm:') ? e.key : `p:${e.key}`));
+  const replaced = await sql`DELETE FROM workouts w WHERE w.source = ${SOURCE} AND NOT (w.signature = ANY(${current}))
+      AND NOT EXISTS (SELECT 1 FROM results r WHERE r.workout_id = w.id)
+      AND NOT EXISTS (SELECT 1 FROM program_days d WHERE d.main_workout_id = w.id OR d.practice_workout_id = w.id
+                      OR d.alternatives @> jsonb_build_array(jsonb_build_object('candidateId', w.id::text)))
+      AND w.warm_up IS NULL AND w.repeat_every_days IS NULL AND coalesce(w.programmable_reason, '') <> 'excluded by coach'
+    RETURNING id`;
+  const existing = await sql`SELECT id, signature, name, structure, movements, score_type, original_text, source FROM workouts`;
+  const publishedIds = new Set(existing.filter((r) => r.source === SOURCE).map((r) => r.id as string));
   const bySig = new Map(existing.map((r) => [r.signature as string, r.id as string]));
   const byContent = new Map<string, string>();
   for (const r of existing) {
@@ -48,38 +64,64 @@ export async function importLibrary(gz: Uint8Array): Promise<LibraryReport> {
   let inserted = 0, linked = 0, alreadyImported = 0;
   const links: { workout_id: string; source: string; source_date: string }[] = [];
   const toInsert: { sig: string; e: Entry; def: Omit<Workout, 'id'>; bench?: ReturnType<typeof benchmarkOf> }[] = [];
+  const toRefresh: { id: string; sig: string; e: Entry; def: Omit<Workout, 'id'>; bench?: ReturnType<typeof benchmarkOf> }[] = [];
   for (const e of entries) {
     const sig = e.key.startsWith('bm:') ? e.key : `p:${e.key}`;
     const name = e.open ? `Open ${e.open}` : e.name;
     const bench = name ? benchmarkOf(name) : undefined;
     const known = bySig.get(sig) ?? byContent.get(contentSignature({ id: '', ...e.workout } as Workout));
+    const def = withFemaleRx({ ...e.workout, ...(name ? { name } : {}) }, bench?.name);
     if (known) {
-      if (bySig.get(sig) === known && sig.startsWith('p:')) alreadyImported++; else linked++;
+      if (publishedIds.has(known) && bySig.get(sig) === known) { alreadyImported++; toRefresh.push({ id: known, sig, e, def, bench }); } else linked++;
       for (const d of e.dates) links.push({ workout_id: known, source: SOURCE, source_date: d });
       continue;
     }
-    const def = withFemaleRx({ ...e.workout, ...(name ? { name } : {}) }, bench?.name);
     toInsert.push({ sig, e, def, bench });
   }
 
   // Movements the new workouts use (the movement table is keyed by the controlled identity).
   const refs = new Map<string, MovementRef>();
-  for (const { def } of toInsert) for (const m of def.movements) refs.set(keyOf(m.movement), m.movement);
+  for (const { def } of [...toInsert, ...toRefresh]) for (const m of def.movements) refs.set(keyOf(m.movement), m.movement);
   const movementRows = [...refs.entries()].filter(([, r]) => FAMILY_BY_ID[r.family]).map(([key, r]) => {
     const f = FAMILY_BY_ID[r.family]!;
     return { key, family: r.family, name: nameOf(r), modality: f.modality, pattern: f.pattern, ref: sql.json(r as never) };
   });
   for (const part of chunk(movementRows, 500)) await sql`INSERT INTO movements ${sql(part)} ON CONFLICT (key) DO NOTHING`;
 
+  const fields = (e: Entry, def: Omit<Workout, 'id'>, bench?: ReturnType<typeof benchmarkOf>) => {
+    const modern = e.dates.some((d) => d >= '2005-01-01');
+    const programmable = e.clean && modern;
+    const reason = programmable ? null : (e.flags.find((f) => !f.startsWith('early format')) ?? (modern ? 'not clean' : 'early format (2001–2004)'));
+    return {
+      name: def.name ?? null, structure: def.structure, movements: def.movements, score_type: def.scoreType,
+      benchmark: bench && bench.category !== 'lift' ? { category: bench.category, retestEveryDays: bench.retestEveryDays, label: bench.name } : null,
+      tags: deriveTags(def as Workout), original_text: e.text, programmable, programmable_reason: reason,
+    };
+  };
+
+  // Same workout, newer reading (flags, text, women's loads): refresh it in place when nothing uses it.
+  let refreshed = 0;
+  for (const part of chunk(toRefresh, 500)) {
+    const data = part.map(({ id, e, def, bench }) => ({ id, ...fields(e, def, bench) }));
+    const ids = await sql`UPDATE workouts w SET name = x.name, structure = x.structure, movements = x.movements, score_type = x.score_type,
+        benchmark = x.benchmark, tags = x.tags, original_text = x.original_text, programmable = x.programmable, programmable_reason = x.programmable_reason
+      FROM jsonb_to_recordset(${sql.json(data as never)}) AS x(id uuid, name text, structure jsonb, movements jsonb, score_type text, benchmark jsonb,
+        tags jsonb, original_text text, programmable boolean, programmable_reason text)
+      WHERE w.id = x.id
+        AND NOT EXISTS (SELECT 1 FROM results r WHERE r.workout_id = w.id)
+        AND NOT EXISTS (SELECT 1 FROM program_days d WHERE d.main_workout_id = w.id OR d.practice_workout_id = w.id)
+        AND w.warm_up IS NULL AND w.repeat_every_days IS NULL AND coalesce(w.programmable_reason, '') <> 'excluded by coach'
+      RETURNING w.id`;
+    refreshed += ids.length;
+  }
+
   for (const part of chunk(toInsert, 300)) {
     const rows = part.map(({ sig, e, def, bench }) => {
-      const modern = e.dates.some((d) => d >= '2005-01-01');
-      const programmable = e.clean && modern;
-      const reason = programmable ? null : (e.flags[0] ?? (modern ? 'not clean' : 'early format (2001–2004)'));
+      const f = fields(e, def, bench);
       return {
-        signature: sig, name: def.name ?? null, structure: sql.json(def.structure as never), movements: sql.json(def.movements as never),
-        score_type: def.scoreType, benchmark: bench && bench.category !== 'lift' ? sql.json({ category: bench.category, retestEveryDays: bench.retestEveryDays, label: bench.name } as never) : null,
-        tags: sql.json(deriveTags(def as Workout) as never), source: SOURCE, original_text: e.text, programmable, programmable_reason: reason,
+        signature: sig, name: f.name, structure: sql.json(f.structure as never), movements: sql.json(f.movements as never), score_type: f.score_type,
+        benchmark: f.benchmark ? sql.json(f.benchmark as never) : null, tags: sql.json(f.tags as never), source: SOURCE,
+        original_text: f.original_text, programmable: f.programmable, programmable_reason: f.programmable_reason,
       };
     });
     const ids = await sql`INSERT INTO workouts ${sql(rows)} ON CONFLICT (signature) DO UPDATE SET signature = EXCLUDED.signature RETURNING id, signature`;
@@ -95,7 +137,7 @@ export async function importLibrary(gz: Uint8Array): Promise<LibraryReport> {
   }
   const uniqueLinks = [...new Map(links.map((l) => [`${l.workout_id}|${l.source_date}`, l])).values()];
   for (const p of chunk(uniqueLinks, 1000)) await sql`INSERT INTO workout_sources ${sql(p)} ON CONFLICT DO NOTHING`;
-  return { builtAt, entries: entries.length, inserted, linked, alreadyImported, ...(await libraryCounts()) };
+  return { builtAt, entries: entries.length, inserted, linked, alreadyImported, refreshed, replaced: replaced.length, ...(await libraryCounts()) };
 }
 
 /** Counts for the quality report (from the database, so it reflects any later changes too). */
