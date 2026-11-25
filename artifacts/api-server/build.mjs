@@ -16,6 +16,8 @@ async function buildAll() {
 
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    // The workout library dataset ships inside the server bundle (imported as base64 text).
+    loader: { ".gz": "base64" },
     platform: "node",
     bundle: true,
     format: "esm",

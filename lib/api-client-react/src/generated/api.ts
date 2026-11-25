@@ -33,6 +33,7 @@ import type {
   GetCoachingNoteParams,
   GetFitnessPageParams,
   GetHistoryParams,
+  GetLibraryParams,
   GetTodayParams,
   GetWorkoutDetailParams,
   HealthStatus,
@@ -1390,6 +1391,188 @@ export function useGetWarmUpTemplates<TData = Awaited<ReturnType<typeof getWarmU
 
 
 
+
+export const getGetLibraryUrl = (params?: GetLibraryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/library?${stringifiedParams}` : `/api/fitness/library`
+}
+
+/**
+ * @summary Coach - the workout library's counts and the workouts it does not propose (with reasons)
+ */
+export const getLibrary = async (params?: GetLibraryParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetLibraryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLibraryQueryKey = (params?: GetLibraryParams,) => {
+    return [
+    `/api/fitness/library`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLibraryQueryOptions = <TData = Awaited<ReturnType<typeof getLibrary>>, TError = ErrorType<unknown>>(params?: GetLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLibraryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLibrary>>> = ({ signal }) => getLibrary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof getLibrary>>>
+export type GetLibraryQueryError = ErrorType<unknown>
+
+
+export function useGetLibrary<TData = Awaited<ReturnType<typeof getLibrary>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetLibraryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLibrary>>,
+          TError,
+          Awaited<ReturnType<typeof getLibrary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLibrary<TData = Awaited<ReturnType<typeof getLibrary>>, TError = ErrorType<unknown>>(
+ params?: GetLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLibrary>>,
+          TError,
+          Awaited<ReturnType<typeof getLibrary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLibrary<TData = Awaited<ReturnType<typeof getLibrary>>, TError = ErrorType<unknown>>(
+ params?: GetLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - the workout library's counts and the workouts it does not propose (with reasons)
+ */
+
+export function useGetLibrary<TData = Awaited<ReturnType<typeof getLibrary>>, TError = ErrorType<unknown>>(
+ params?: GetLibraryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLibrary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetLibraryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportLibraryUrl = () => {
+
+
+
+
+  return `/api/fitness/library/import`
+}
+
+/**
+ * @summary Coach - add the bundled workout library to the database (additive, safe to repeat)
+ */
+export const importLibrary = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getImportLibraryUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getImportLibraryMutationKey = () => ['importLibrary'] as const;
+
+export const getImportLibraryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importLibrary>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importLibrary>>, TError,void, TContext> => {
+
+const mutationKey = getImportLibraryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importLibrary>>, void> = () => {
+
+
+          return  importLibrary(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof importLibrary>>>
+
+    export type ImportLibraryMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Coach - add the bundled workout library to the database (additive, safe to repeat)
+ */
+export const useImportLibrary = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importLibrary>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importLibrary>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getImportLibraryMutationOptions(options), queryClient);
+    }
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -125,6 +125,10 @@ dayId: string;
 athleteId?: string;
 };
 
+export type GetLibraryParams = {
+offset?: number;
+};
+
 export type GetHistoryParams = {
 athleteId?: string;
 q?: string;

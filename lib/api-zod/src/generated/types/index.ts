@@ -17,6 +17,7 @@ export * from './getCoachingNoteParams';
 export * from './getFitnessPageParams';
 export * from './getFitnessPageScreen';
 export * from './getHistoryParams';
+export * from './getLibraryParams';
 export * from './getTodayParams';
 export * from './getWorkoutDetailParams';
 export * from './healthStatus';

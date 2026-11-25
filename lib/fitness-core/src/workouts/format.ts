@@ -1,4 +1,5 @@
 import { nameOf } from '../movements/resolver';
+import { cleanTitle } from '../import/published';
 import type { MovementPrescription, Structure, Workout, Result } from '../model/types';
 
 export function structureLabel(s: Structure): string {
@@ -32,7 +33,13 @@ export function movementLine(m: MovementPrescription, sex: 'male' | 'female' = '
 }
 
 /** Compact one-line title, e.g. "AMRAP 20 min: Pull-up / Push-up / Air Squat". */
+/** Display title, with brand names removed (imported names may contain them). */
 export function workoutTitle(w: Pick<Workout, 'name' | 'structure' | 'movements' | 'benchmark'>): string {
+  const t = rawTitle(w);
+  return cleanTitle(t) || t;
+}
+
+function rawTitle(w: Pick<Workout, 'name' | 'structure' | 'movements' | 'benchmark'>): string {
   if (w.benchmark || (w.name && !/^(AMRAP|AMReps|FT|\d+x? RFT|\d+ RF|Every|Alt EMOM|EMOM|Chipper|Lifting|Complex|\d+-\d+)/i.test(w.name) && !w.name.includes(':'))) return w.name ?? '';
   // Strength and max tests are already clearly named ("Press : 2 Rep Max", "Back Squat : 5-5-5-5-5").
   if (w.name && / : (\d+ Rep Max|\d+(-\d+)+|Max Set|\d+ Reps for Time)$/i.test(w.name)) return w.name.replace(' : ', ': ');

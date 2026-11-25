@@ -6,7 +6,12 @@
   "main": "src/index.ts",
   "scripts": {
     "migrate": "tsx src/migrate.ts",
-    "import": "tsx src/import.ts"
+    "import": "tsx src/import.ts",
+    "build:library": "tsx src/build-library.ts",
+    "import:library": "tsx src/import-library-cli.ts"
   },
-  "dependencies": { "postgres": "^3.4.5", "@workspace/fitness-core": "workspace:*" }
+  "dependencies": {
+    "postgres": "^3.4.5",
+    "@workspace/fitness-core": "workspace:*"
+  }
 }

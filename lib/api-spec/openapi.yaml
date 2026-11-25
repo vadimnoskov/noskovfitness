@@ -232,6 +232,28 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/library:
+    get:
+      operationId: getLibrary
+      summary: Coach - the workout library's counts and the workouts it does not propose (with reasons)
+      parameters:
+        - { in: query, name: offset, schema: { type: integer } }
+      responses:
+        "200":
+          description: Library report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/library/import:
+    post:
+      operationId: importLibrary
+      summary: Coach - add the bundled workout library to the database (additive, safe to repeat)
+      responses:
+        "200":
+          description: Import report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory

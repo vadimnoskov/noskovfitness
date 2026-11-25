@@ -113,3 +113,9 @@ export const planEdits = pgTable('plan_edits', {
   body: text('body').notNull(),
   editedAt: timestamp('edited_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);
+
+/** Where and when a workout was published (e.g. the daily archive), one row per appearance. Feeds era weighting and anti-copy. */
+export const workoutSources = pgTable('workout_sources', {
+  workoutId: uuid('workout_id').notNull().references(() => workouts.id, { onDelete: 'cascade' }),
+  source: text('source').notNull(), sourceDate: date('source_date', { mode: 'string' }).notNull(),
+}, t => [primaryKey({ columns: [t.workoutId, t.source, t.sourceDate] }), index('workout_sources_date_idx').on(t.sourceDate)]);

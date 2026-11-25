@@ -1,7 +1,7 @@
 import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
-import { getGroup, getPolicy, getEquipmentProfiles } from '@workspace/fitness-db';
+import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
 import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
@@ -12,6 +12,9 @@ import { getPlannedDays } from '../fitness/program';
 import * as program from '../fitness/program-actions';
 import * as settings from '../fitness/settings-actions';
 import * as warmups from '../fitness/warmups';
+import libraryGzBase64 from '@workspace/fitness-db/data/published-library.json.gz';
+
+const libraryGz = Buffer.from(libraryGzBase64, 'base64');
 
 const router: IRouter = Router();
 router.use(cookieParser());
@@ -249,6 +252,18 @@ router.post('/fitness/plan-note', wrap(async (req, res) => {
 router.get('/fitness/warm-up-templates', wrap(async (_req, res) => {
   if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can see saved warm-ups.', 403);
   return { templates: await warmups.listWarmUpTemplates() };
+}));
+
+router.get('/fitness/library', wrap(async (req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can see the workout library report.', 403);
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  const [counts, flagged, [n]] = await Promise.all([libraryCounts(), flaggedWorkouts(100, offset), sql`SELECT count(*)::int AS c FROM workouts WHERE source = 'published'`]);
+  return { ...counts, published: n!.c, bundled: readLibrary(libraryGz).entries.length, builtAt: readLibrary(libraryGz).builtAt, flagged, offset };
+}));
+
+router.post('/fitness/library/import', wrap(async (_req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can import the workout library.', 403);
+  return importLibrary(libraryGz);
 }));
 
 router.get('/fitness/history', wrap(async (req, res) => {

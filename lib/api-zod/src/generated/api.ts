@@ -196,6 +196,22 @@ export const GetWarmUpTemplatesResponse = zod.record(zod.string(), zod.unknown()
 
 
 /**
+ * @summary Coach - the workout library's counts and the workouts it does not propose (with reasons)
+ */
+export const GetLibraryQueryParams = zod.object({
+  "offset": zod.coerce.number().int().optional()
+})
+
+export const GetLibraryResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - add the bundled workout library to the database (additive, safe to repeat)
+ */
+export const ImportLibraryResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({

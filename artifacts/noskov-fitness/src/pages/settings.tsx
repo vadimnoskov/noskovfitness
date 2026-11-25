@@ -2,6 +2,7 @@ import { useSearch } from 'wouter';
 import type { ProgrammingPolicy } from '@workspace/fitness-core';
 import { DOW } from '@/lib/dates';
 import { usePage, PageStatus, ActionForm } from '@/lib/api';
+import { LibrarySection } from '@/components/LibrarySection';
 
 const LABELS: Record<string, string> = {
   movementCount: 'Movements per workout', timeDomain: 'Time domain', priority: 'Priority', load: 'Load', modality: 'Modality (share of movements)',
@@ -53,6 +54,7 @@ export default function Settings() {
         <div className="bar"><button className="btn primary" type="submit">Save settings</button></div>
       </ActionForm>
       <ActionForm action="resetPolicyAction"><button className="btn ghost">Reset targets, weights and rules to defaults</button></ActionForm>
+      <LibrarySection />
     </>
   );
 }
