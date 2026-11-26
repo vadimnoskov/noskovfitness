@@ -1,6 +1,7 @@
 export * from './types';
 export { SOURCES, AREAS } from './sources';
 export { METHODOLOGY_CARDS } from './cards';
+export { MOVEMENT_FACTS, MOVEMENT_GUIDE, type MovementFacts, type MovementGuide } from './movements';
 import type { CardStatus, KnowledgeCard } from './types';
 
 /** The coach's layer on a card, stored in the database. */

@@ -3,7 +3,7 @@
  * (database), the current value of every setting a card names, and how often each rule shaped the plan.
  */
 import { sql, getPolicy, getGroup } from '@workspace/fitness-db';
-import { METHODOLOGY_CARDS, SOURCES, AREAS, mergeCards, settingAt, firedCounts, type CardState, type CardStatus } from '@workspace/fitness-core';
+import { METHODOLOGY_CARDS, SOURCES, AREAS, MOVEMENT_FACTS, MOVEMENT_GUIDE, FAMILY_BY_ID, mergeCards, settingAt, firedCounts, type CardState, type CardStatus } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import { GROUP_ID } from './data';
 import { recentQuestions } from './knowledge-ask';
@@ -51,4 +51,39 @@ export async function setKnowledgeCard(input: { cardId: string; status?: string;
       ${tx.json({ from: { status: cur?.status ?? null, note: cur?.coach_note ?? null }, to: { status, note: coachNote } } as never)}, ${byAthlete})`;
   });
   return { ok: true };
+}
+
+
+/** Movement list: the coach's facts plus how often the family has been done (all athletes) in the last 12 weeks. */
+export async function getMovements() {
+  const use = await sql`
+    SELECT m.family, count(DISTINCT r.date)::int AS days, max(r.date)::text AS last
+    FROM results r JOIN workout_movements wm ON wm.workout_id = r.workout_id JOIN movements m ON m.key = wm.movement_key
+    WHERE r.date >= current_date - 84 GROUP BY m.family`;
+  const byFam = new Map(use.map((u) => [u.family as string, { days: u.days as number, last: u.last as string }]));
+  const guide = new Set(MOVEMENT_GUIDE.map((g) => g.key));
+  return { movements: MOVEMENT_FACTS.map((f) => ({ ...f, use12w: byFam.get(f.key)?.days ?? 0, last: byFam.get(f.key)?.last ?? null, hasGuide: guide.has(f.key) })) };
+}
+
+/** One movement: facts, the L1 points of performance (when covered), catalog variants, recent and library workouts. */
+export async function getMovement(key: string) {
+  const facts = MOVEMENT_FACTS.find((f) => f.key === key);
+  if (!facts) throw new InputError('Unknown movement.');
+  const fam = FAMILY_BY_ID[key];
+  const [recent, [lib], [last]] = await Promise.all([
+    sql`SELECT DISTINCT ON (w.id) w.id, coalesce(w.name, '') AS name, r.date::text AS date
+        FROM results r JOIN workouts w ON w.id = r.workout_id JOIN workout_movements wm ON wm.workout_id = w.id JOIN movements m ON m.key = wm.movement_key
+        WHERE m.family = ${key} ORDER BY w.id, r.date DESC`,
+    sql`SELECT count(DISTINCT w.id)::int AS n FROM workouts w JOIN workout_movements wm ON wm.workout_id = w.id JOIN movements m ON m.key = wm.movement_key
+        WHERE m.family = ${key} AND w.programmable`,
+    sql`SELECT max(r.date)::text AS d, count(DISTINCT r.date) FILTER (WHERE r.date >= current_date - 84)::int AS days
+        FROM results r JOIN workout_movements wm ON wm.workout_id = r.workout_id JOIN movements m ON m.key = wm.movement_key WHERE m.family = ${key}`,
+  ]);
+  return {
+    facts, guide: MOVEMENT_GUIDE.find((g) => g.key === key) ?? null,
+    catalog: fam ? { implements: fam.implements, variants: fam.variants ?? [], unit: fam.unit } : null,
+    recent: [...recent].sort((a, b) => (b.date as string).localeCompare(a.date as string)).slice(0, 12).map((r) => ({ id: r.id, name: r.name, date: r.date })),
+    libraryWorkouts: lib!.n, last: last!.d, use12w: last!.days,
+    cards: METHODOLOGY_CARDS.filter((c) => c.area === 'movements' || new RegExp(`\\b${facts.name.split(/[ /(]/)[0]}`, 'i').test(`${c.title} ${c.statement}`)).map((c) => ({ id: c.id, title: c.title })).slice(0, 8),
+  };
 }

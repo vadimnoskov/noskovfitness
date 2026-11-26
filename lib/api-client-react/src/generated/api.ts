@@ -33,6 +33,7 @@ import type {
   GetCoachingNoteParams,
   GetFitnessPageParams,
   GetHistoryParams,
+  GetKnowledgeMovementParams,
   GetLibraryParams,
   GetTodayParams,
   GetWorkoutDetailParams,
@@ -1852,6 +1853,215 @@ export const useAskKnowledge = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAskKnowledgeMutationOptions(options), queryClient);
     }
+
+export const getGetKnowledgeMovementsUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/movements`
+}
+
+/**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+export const getKnowledgeMovements = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetKnowledgeMovementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeMovementsQueryKey = () => {
+    return [
+    `/api/fitness/knowledge/movements`
+    ] as const;
+    }
+
+
+export const getGetKnowledgeMovementsQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeMovementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeMovements>>> = ({ signal }) => getKnowledgeMovements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeMovementsQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeMovements>>>
+export type GetKnowledgeMovementsQueryError = ErrorType<unknown>
+
+
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovements>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovements>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeMovementsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetKnowledgeMovementUrl = (params: GetKnowledgeMovementParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/knowledge/movement?${stringifiedParams}` : `/api/fitness/knowledge/movement`
+}
+
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+export const getKnowledgeMovement = async (params: GetKnowledgeMovementParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetKnowledgeMovementUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeMovementQueryKey = (params?: GetKnowledgeMovementParams,) => {
+    return [
+    `/api/fitness/knowledge/movement`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetKnowledgeMovementQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeMovementQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeMovement>>> = ({ signal }) => getKnowledgeMovement(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeMovementQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeMovement>>>
+export type GetKnowledgeMovementQueryError = ErrorType<unknown>
+
+
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovement>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovement>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovement>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovement>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeMovementQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {
   const normalizedParams = new URLSearchParams();

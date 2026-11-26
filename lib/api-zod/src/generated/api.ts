@@ -240,6 +240,22 @@ export const AskKnowledgeResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+export const GetKnowledgeMovementsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+export const GetKnowledgeMovementQueryParams = zod.object({
+  "key": zod.coerce.string()
+})
+
+export const GetKnowledgeMovementResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({

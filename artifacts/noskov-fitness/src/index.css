@@ -214,3 +214,4 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .kqa{max-width:760px;margin:14px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .kq{background:var(--panel);border-radius:10px;padding:8px 12px;display:inline-block;margin-bottom:8px;font-weight:600}
 .ka{border-left:3px solid var(--ink);padding:2px 0 2px 12px;line-height:1.55}.kcited{margin-top:6px}
+.kpop{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 18px}.kpop ul{margin:4px 0 0;padding-left:18px}.kcard .ktable th{width:9.5em}

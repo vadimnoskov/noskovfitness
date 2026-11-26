@@ -150,6 +150,10 @@ export type GetLibraryParams = {
 offset?: number;
 };
 
+export type GetKnowledgeMovementParams = {
+key: string;
+};
+
 export type GetHistoryParams = {
 athleteId?: string;
 q?: string;

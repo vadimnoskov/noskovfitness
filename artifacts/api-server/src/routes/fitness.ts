@@ -259,6 +259,15 @@ router.get('/fitness/knowledge', wrap(async (_req, res) => {
   return knowledge.getKnowledge();
 }));
 
+router.get('/fitness/knowledge/movements', wrap(async (_req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Coach only.', 403);
+  return knowledge.getMovements();
+}));
+router.get('/fitness/knowledge/movement', wrap(async (req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Coach only.', 403);
+  return knowledge.getMovement(String(req.query.key ?? ''));
+}));
+
 router.post('/fitness/knowledge/ask', wrap(async (req, res) => {
   const user = userOf(res);
   if (!user?.isCoach) throw new logging.InputError('Only the coach can ask Chalkboard (for now).', 403);

@@ -294,6 +294,28 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/movements:
+    get:
+      operationId: getKnowledgeMovements
+      summary: Coach - every movement with its facts and how often it has been done
+      responses:
+        "200":
+          description: Movements
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/movement:
+    get:
+      operationId: getKnowledgeMovement
+      summary: Coach - one movement's facts, points of performance, versions and workouts
+      parameters:
+        - { in: query, name: key, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Movement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory

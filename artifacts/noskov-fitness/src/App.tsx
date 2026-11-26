@@ -9,6 +9,7 @@ import Analysis from '@/pages/analysis';
 import Benchmarks from '@/pages/benchmarks';
 import Settings from '@/pages/settings';
 import { KnowledgeMap, KnowledgeCardPage, KnowledgeAsk } from '@/pages/knowledge';
+import { MovementsPage, MovementPage } from '@/pages/movements';
 import Login from '@/pages/login';
 import Today from '@/pages/today';
 import History from '@/pages/history';
@@ -76,6 +77,8 @@ function Router() {
         <Route path="/calendar"><CoachOnly><CalendarPage /></CoachOnly></Route>
         <Route path="/program"><CoachOnly><ProgramPage /></CoachOnly></Route>
         <Route path="/analysis"><CoachOnly><Analysis /></CoachOnly></Route>
+        <Route path="/knowledge/movements/:key"><CoachOnly><MovementPage /></CoachOnly></Route>
+        <Route path="/knowledge/movements"><CoachOnly><MovementsPage /></CoachOnly></Route>
         <Route path="/knowledge/ask"><CoachOnly><KnowledgeAsk /></CoachOnly></Route>
         <Route path="/knowledge/:id"><CoachOnly><KnowledgeCardPage /></CoachOnly></Route>
         <Route path="/knowledge"><CoachOnly><KnowledgeMap /></CoachOnly></Route>
