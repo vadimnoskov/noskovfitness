@@ -37,3 +37,29 @@ describe('knowledge cards', () => {
     expect(m!.coachNote).toMatch(/two weeks/);
   });
 });
+
+import { MOVEMENT_FACTS, MOVEMENT_GUIDE, FAMILIES } from '../src/index';
+describe('movement facts', () => {
+  it('cover catalog families and point only at known ones', () => {
+    const fam = new Set(FAMILIES.map((f) => f.id));
+    const facts = new Set(MOVEMENT_FACTS.map((m) => m.key));
+    expect(facts.size).toBe(MOVEMENT_FACTS.length);
+    for (const k of facts) expect(fam.has(k), k).toBe(true);
+    const missing = [...fam].filter((k) => !facts.has(k));
+    expect(missing).toEqual([]);
+    for (const g of MOVEMENT_GUIDE) expect(facts.has(g.key), g.key).toBe(true);
+  });
+});
+
+import { tunableSettings, withSetting } from '../src/index';
+describe('teachable settings', () => {
+  it('lists numbers and switches with their paths, and replaces one value', () => {
+    const t = tunableSettings(DEFAULT_POLICY);
+    expect(t.find((x) => x.path === 'rules.rareExceptionDays')?.value).toBe(28);
+    expect(t.find((x) => x.path === 'targets.timeDomain.heavy')?.value).toBe(22);
+    expect(t.some((x) => x.path === 'version')).toBe(false);
+    const p = withSetting(DEFAULT_POLICY, 'rules.rareExceptionDays', 21);
+    expect(p.rules.rareExceptionDays).toBe(21);
+    expect(DEFAULT_POLICY.rules.rareExceptionDays).toBe(28);
+  });
+});

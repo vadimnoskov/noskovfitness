@@ -185,11 +185,13 @@ export function KnowledgeCardPage() {
   );
 }
 
-export function KnowledgeTabs({ current }: { current: 'map' | 'ask' }) {
+export function KnowledgeTabs({ current }: { current: 'map' | 'ask' | 'movements' | 'coach' }) {
   return (
     <p className="row wrap ktabs">
       <Link href="/knowledge" className="btn sm" aria-current={current === 'map'}>Map</Link>
       <Link href="/knowledge/ask" className="btn sm" aria-current={current === 'ask'}>Ask</Link>
+      <Link href="/knowledge/coach" className="btn sm" aria-current={current === 'coach'}>Coach</Link>
+      <Link href="/knowledge/movements" className="btn sm" aria-current={current === 'movements'}>Movements</Link>
     </p>
   );
 }

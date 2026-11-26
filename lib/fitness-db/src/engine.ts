@@ -77,7 +77,25 @@ async function loadPicture(groupId: string, from: string, exclude?: { from: stri
  * approved and done days are kept and taken into account.
  */
 export async function proposeRange(groupId: string, from: string, to: string, opts: { extraDates?: string[] } = {}) {
-  const [policy, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
+  const { proposals, policy, dates, profileFor } = await planRange(groupId, from, to, opts);
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM program_days WHERE group_id = ${groupId} AND status = 'proposed' AND date BETWEEN ${from} AND ${to}`;
+    for (const p of proposals) {
+      await tx`INSERT INTO program_days (group_id, date, status, equipment_profile_id, main_workout_id, origin, alternatives, warnings)
+        VALUES (${groupId}, ${p.date}, 'proposed', ${profileFor(p.date).id}, ${p.candidateId},
+          ${tx.json({ by: 'engine', score: p.score, policyVersion: policy.version } as never)}, ${tx.json(p.alternatives as never)}, ${tx.json(p.warnings)})`;
+    }
+  });
+  return { planned: proposals.length, skippedDates: dates.length - proposals.length };
+}
+
+/**
+ * What the planner would propose for the open days in [from, to] (nothing is saved). `policy` overrides the saved one,
+ * e.g. to preview a setting change before the coach confirms it.
+ */
+export async function planRange(groupId: string, from: string, to: string, opts: { extraDates?: string[]; policy?: ProgrammingPolicy } = {}) {
+  const [saved, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
+  const policy = opts.policy ?? saved;
   // Workout history reaches back a year so "not repeated within N days" sees older repeats.
   const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(from, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from, to });
   const existing = await sql`SELECT date::text AS date, status, equipment_profile_id FROM program_days WHERE group_id = ${groupId} AND date BETWEEN ${from} AND ${to}`;
@@ -90,15 +108,7 @@ export async function proposeRange(groupId: string, from: string, to: string, op
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
   const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 4 });
-  await sql.begin(async (tx) => {
-    await tx`DELETE FROM program_days WHERE group_id = ${groupId} AND status = 'proposed' AND date BETWEEN ${from} AND ${to}`;
-    for (const p of proposals) {
-      await tx`INSERT INTO program_days (group_id, date, status, equipment_profile_id, main_workout_id, origin, alternatives, warnings)
-        VALUES (${groupId}, ${p.date}, 'proposed', ${profileFor(p.date).id}, ${p.candidateId},
-          ${tx.json({ by: 'engine', score: p.score, policyVersion: policy.version } as never)}, ${tx.json(p.alternatives as never)}, ${tx.json(p.warnings)})`;
-    }
-  });
-  return { planned: proposals.length, skippedDates: dates.length - proposals.length };
+  return { proposals, policy, dates, profileFor, candidates };
 }
 
 /**

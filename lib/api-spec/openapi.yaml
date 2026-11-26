@@ -294,6 +294,58 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/movements:
+    get:
+      operationId: getKnowledgeMovements
+      summary: Coach - every movement with its facts and how often it has been done
+      responses:
+        "200":
+          description: Movements
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/movement:
+    get:
+      operationId: getKnowledgeMovement
+      summary: Coach - one movement's facts, points of performance, versions and workouts
+      parameters:
+        - { in: query, name: key, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Movement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/teach:
+    post:
+      operationId: teachKnowledge
+      summary: Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TeachInput" }
+      responses:
+        "200":
+          description: Draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/teach/decide:
+    post:
+      operationId: decideTeaching
+      summary: Coach - confirm, confirm as coach decision, discard or undo a teaching
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TeachDecision" }
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory
@@ -383,6 +435,18 @@ components:
     FitnessPage:
       type: object
       additionalProperties: true
+    TeachInput:
+      type: object
+      properties:
+        text: { type: string }
+        teachingId: { type: string }
+        correction: { type: string }
+    TeachDecision:
+      type: object
+      required: [teachingId, action]
+      properties:
+        teachingId: { type: string }
+        action: { type: string, enum: [confirm, override, discard, undo] }
     KnowledgeQuestionInput:
       type: object
       required: [question]

@@ -214,3 +214,9 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .kqa{max-width:760px;margin:14px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .kq{background:var(--panel);border-radius:10px;padding:8px 12px;display:inline-block;margin-bottom:8px;font-weight:600}
 .ka{border-left:3px solid var(--ink);padding:2px 0 2px 12px;line-height:1.55}.kcited{margin-top:6px}
+.kpop{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 18px}.kpop ul{margin:4px 0 0;padding-left:18px}.kcard .ktable th{width:9.5em}
+.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0;max-width:820px}
+.steps>li{counter-increment:s;position:relative;padding:0 0 18px 38px}
+.steps>li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);font-weight:700;display:grid;place-items:center;font-size:13px}
+.kdraft,.kconflict{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.kconflict{border-color:#e8b4ae}.kconflict.k-pos-agree{border-color:var(--line)}

@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -14,6 +14,7 @@ import * as settings from '../fitness/settings-actions';
 import * as warmups from '../fitness/warmups';
 import * as knowledge from '../fitness/knowledge';
 import * as knowledgeAsk from '../fitness/knowledge-ask';
+import * as teaching from '../fitness/knowledge-teach';
 import { libraryGz, getPublishedProfile } from '../fitness/library-data';
 
 const router: IRouter = Router();
@@ -259,12 +260,37 @@ router.get('/fitness/knowledge', wrap(async (_req, res) => {
   return knowledge.getKnowledge();
 }));
 
+router.get('/fitness/knowledge/movements', wrap(async (_req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Coach only.', 403);
+  return knowledge.getMovements();
+}));
+router.get('/fitness/knowledge/movement', wrap(async (req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError('Coach only.', 403);
+  return knowledge.getMovement(String(req.query.key ?? ''));
+}));
+
 router.post('/fitness/knowledge/ask', wrap(async (req, res) => {
   const user = userOf(res);
   if (!user?.isCoach) throw new logging.InputError('Only the coach can ask Chalkboard (for now).', 403);
   const body = AskKnowledgeBody.safeParse(req.body);
   if (!body.success) throw new logging.InputError('Write a question.');
   return knowledgeAsk.ask(body.data.question, user.id);
+}));
+
+router.post('/fitness/knowledge/teach', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user?.isCoach) throw new logging.InputError('Only the coach can teach Chalkboard.', 403);
+  const body = TeachKnowledgeBody.safeParse(req.body);
+  if (!body.success || (body.data.teachingId && !UUID.test(body.data.teachingId))) throw new logging.InputError('Explain what to teach.');
+  return teaching.teach({ text: body.data.text ?? '', teachingId: body.data.teachingId, correction: body.data.correction }, user.id);
+}));
+router.post('/fitness/knowledge/teach/decide', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user?.isCoach) throw new logging.InputError('Only the coach can decide.', 403);
+  const body = DecideTeachingBody.safeParse(req.body);
+  if (!body.success || !UUID.test(body.data.teachingId)) throw new logging.InputError('Choose a teaching and an action.');
+  const { teachingId: id, action } = body.data;
+  return action === 'discard' ? teaching.discardTeaching(id) : action === 'undo' ? teaching.undoTeaching(id, user.id) : teaching.confirmTeaching(id, action === 'override' ? 'override' : 'agree', user.id);
 }));
 
 router.post('/fitness/knowledge/card', wrap(async (req, res) => {

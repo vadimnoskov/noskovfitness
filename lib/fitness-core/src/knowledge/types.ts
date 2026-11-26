@@ -55,6 +55,10 @@ export interface KnowledgeCard {
   scope?: string;
   /** For disputed cards and gaps: what is open, in one or two sentences. */
   open?: string;
+  /** 'coach' for cards the coach taught (stored in the database); methodology cards have no origin. */
+  origin?: 'coach';
+  /** The teaching that created a coach card. */
+  teachingId?: string;
 }
 
 export interface Source {

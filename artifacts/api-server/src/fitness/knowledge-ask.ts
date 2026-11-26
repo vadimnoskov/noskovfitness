@@ -9,7 +9,8 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { sql, getPolicy } from '@workspace/fitness-db';
-import { METHODOLOGY_CARDS, AREAS, mergeCards, settingAt, type MergedCard, type CardState } from '@workspace/fitness-core';
+import { AREAS, settingAt, type MergedCard } from '@workspace/fitness-core';
+import { loadAllCards } from './knowledge';
 import { logger } from '../lib/logger';
 import { InputError } from './logging';
 import { GROUP_ID } from './data';
@@ -70,7 +71,7 @@ export function relevantCards(question: string, cards: MergedCard[], n = MAX_CAR
 }
 
 const cardText = (c: MergedCard, settings: (p: string) => unknown) => [
-  `[${c.id}] ${c.title} (status: ${c.status}; strength: ${c.strength}${c.scope ? `; for: ${c.scope}` : ''})`,
+  `[${c.id}] ${c.title} (${c.origin === 'coach' ? 'coach card; ' : ''}status: ${c.status}; strength: ${c.strength}${c.scope ? `; for: ${c.scope}` : ''})`,
   c.statement,
   c.open ? `Open: ${c.open}` : '',
   c.coachNote ? `Coach's note: ${c.coachNote}` : '',
@@ -86,15 +87,14 @@ export async function ask(question: string, byAthlete: string): Promise<AskAnswe
   const c = getClient();
   if (!c) throw new InputError('Ask needs the ANTHROPIC_API_KEY secret.', 503);
 
-  const [states, policy, plan] = await Promise.all([
-    sql`SELECT card_id, status, coach_note FROM knowledge_state`,
+  const [cards, policy, plan] = await Promise.all([
+    loadAllCards(),
     getPolicy(GROUP_ID),
     sql`SELECT d.date::text AS date, to_char(d.date, 'Dy') AS dow, d.status, coalesce(w.name, '') AS name, w.tags->>'timeDomain' AS td,
           w.tags->'modalityPattern' AS mods, coalesce(d.origin->'score'->'notes', '[]'::jsonb) AS notes
         FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
         WHERE d.group_id = ${GROUP_ID} AND d.date BETWEEN current_date - 14 AND current_date + 14 ORDER BY d.date, d.seq`,
   ]);
-  const cards = mergeCards(METHODOLOGY_CARDS, states.map((s): CardState => ({ cardId: s.card_id, status: s.status ?? undefined, coachNote: s.coach_note })));
   // Cards the plan's notes point to are always relevant to questions about the plan.
   const planNotes = plan.flatMap((r) => r.notes as string[]);
   const noteCards = cards.filter((x) => x.engine?.notePattern && planNotes.some((n) => new RegExp(x.engine!.notePattern!, 'i').test(n)));

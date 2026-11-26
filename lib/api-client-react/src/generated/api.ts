@@ -33,6 +33,7 @@ import type {
   GetCoachingNoteParams,
   GetFitnessPageParams,
   GetHistoryParams,
+  GetKnowledgeMovementParams,
   GetLibraryParams,
   GetTodayParams,
   GetWorkoutDetailParams,
@@ -44,7 +45,9 @@ import type {
   PasswordChange,
   PasswordSet,
   PlanNoteInput,
-  SearchWorkoutsParams
+  SearchWorkoutsParams,
+  TeachDecision,
+  TeachInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1851,6 +1854,391 @@ export const useAskKnowledge = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAskKnowledgeMutationOptions(options), queryClient);
+    }
+
+export const getGetKnowledgeMovementsUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/movements`
+}
+
+/**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+export const getKnowledgeMovements = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetKnowledgeMovementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeMovementsQueryKey = () => {
+    return [
+    `/api/fitness/knowledge/movements`
+    ] as const;
+    }
+
+
+export const getGetKnowledgeMovementsQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeMovementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeMovements>>> = ({ signal }) => getKnowledgeMovements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeMovementsQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeMovements>>>
+export type GetKnowledgeMovementsQueryError = ErrorType<unknown>
+
+
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovements>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovements>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+
+export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKnowledgeMovements>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeMovementsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetKnowledgeMovementUrl = (params: GetKnowledgeMovementParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/knowledge/movement?${stringifiedParams}` : `/api/fitness/knowledge/movement`
+}
+
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+export const getKnowledgeMovement = async (params: GetKnowledgeMovementParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetKnowledgeMovementUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeMovementQueryKey = (params?: GetKnowledgeMovementParams,) => {
+    return [
+    `/api/fitness/knowledge/movement`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetKnowledgeMovementQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeMovementQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeMovement>>> = ({ signal }) => getKnowledgeMovement(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeMovementQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeMovement>>>
+export type GetKnowledgeMovementQueryError = ErrorType<unknown>
+
+
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovement>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovement>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeMovement>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeMovement>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+
+export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKnowledgeMovement>>, TError = ErrorType<unknown>>(
+ params: GetKnowledgeMovementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeMovement>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeMovementQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getTeachKnowledgeUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/teach`
+}
+
+/**
+ * @summary Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+ */
+export const teachKnowledge = async (teachInput: TeachInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getTeachKnowledgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(teachInput)
+  }
+);}
+
+
+
+
+
+export const getTeachKnowledgeMutationKey = () => ['teachKnowledge'] as const;
+
+export const getTeachKnowledgeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext> => {
+
+const mutationKey = getTeachKnowledgeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof teachKnowledge>>, TeachKnowledgeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  teachKnowledge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TeachKnowledgeMutationResult = NonNullable<Awaited<ReturnType<typeof teachKnowledge>>>
+    export type TeachKnowledgeMutationBody = BodyType<TeachInput>
+    export type TeachKnowledgeMutationError = ErrorType<unknown>
+    export type TeachKnowledgeMutationVariables = {data: BodyType<TeachInput>}
+
+    /**
+ * @summary Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+ */
+export const useTeachKnowledge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof teachKnowledge>>,
+        TError,
+        TeachKnowledgeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTeachKnowledgeMutationOptions(options), queryClient);
+    }
+
+export const getDecideTeachingUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/teach/decide`
+}
+
+/**
+ * @summary Coach - confirm, confirm as coach decision, discard or undo a teaching
+ */
+export const decideTeaching = async (teachDecision: TeachDecision, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getDecideTeachingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(teachDecision)
+  }
+);}
+
+
+
+
+
+export const getDecideTeachingMutationKey = () => ['decideTeaching'] as const;
+
+export const getDecideTeachingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext> => {
+
+const mutationKey = getDecideTeachingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideTeaching>>, DecideTeachingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  decideTeaching(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideTeachingMutationResult = NonNullable<Awaited<ReturnType<typeof decideTeaching>>>
+    export type DecideTeachingMutationBody = BodyType<TeachDecision>
+    export type DecideTeachingMutationError = ErrorType<unknown>
+    export type DecideTeachingMutationVariables = {data: BodyType<TeachDecision>}
+
+    /**
+ * @summary Coach - confirm, confirm as coach decision, discard or undo a teaching
+ */
+export const useDecideTeaching = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof decideTeaching>>,
+        TError,
+        DecideTeachingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideTeachingMutationOptions(options), queryClient);
     }
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {

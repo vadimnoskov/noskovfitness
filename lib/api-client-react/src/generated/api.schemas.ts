@@ -7,6 +7,27 @@
  */
 export interface FitnessPage { [key: string]: unknown }
 
+export interface TeachInput {
+  text?: string;
+  teachingId?: string;
+  correction?: string;
+}
+
+export type TeachDecisionAction = typeof TeachDecisionAction[keyof typeof TeachDecisionAction];
+
+
+export const TeachDecisionAction = {
+  confirm: 'confirm',
+  override: 'override',
+  discard: 'discard',
+  undo: 'undo',
+} as const;
+
+export interface TeachDecision {
+  teachingId: string;
+  action: TeachDecisionAction;
+}
+
 export interface KnowledgeQuestionInput {
   question: string;
 }
@@ -148,6 +169,10 @@ athleteId?: string;
 
 export type GetLibraryParams = {
 offset?: number;
+};
+
+export type GetKnowledgeMovementParams = {
+key: string;
 };
 
 export type GetHistoryParams = {

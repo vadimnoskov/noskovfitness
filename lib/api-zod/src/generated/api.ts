@@ -240,6 +240,45 @@ export const AskKnowledgeResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Coach - every movement with its facts and how often it has been done
+ */
+export const GetKnowledgeMovementsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - one movement's facts, points of performance, versions and workouts
+ */
+export const GetKnowledgeMovementQueryParams = zod.object({
+  "key": zod.coerce.string()
+})
+
+export const GetKnowledgeMovementResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+ */
+export const TeachKnowledgeBody = zod.object({
+  "text": zod.string().optional(),
+  "teachingId": zod.string().optional(),
+  "correction": zod.string().optional()
+})
+
+export const TeachKnowledgeResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - confirm, confirm as coach decision, discard or undo a teaching
+ */
+export const DecideTeachingBody = zod.object({
+  "teachingId": zod.string(),
+  "action": zod.enum(['confirm', 'override', 'discard', 'undo'])
+})
+
+export const DecideTeachingResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({
