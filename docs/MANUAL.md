@@ -143,13 +143,13 @@ What it's for: the weeks ahead.
 - **Targets**: the share of workouts wanted in each bucket. Time domain: heavy day, short (under 4 min), medium (4–12), long (12–20), endurance (20+). Also movements per workout, task or time priority, load, modality. Next to each target is the share measured from the published programming (2005 on, first half of 2019 weighted to a quarter); "Use the published mix as my targets" adopts it.
 - **Weights**: how the planner ranks candidates (variety gap, movement freshness, weakness focus, benchmark due).
 - **Rules**:
-  - Don't repeat a workout within N days (default 180). Benchmarks and coach repeats follow their own schedules.
-  - Max benchmarks per week (default 1).
-  - Days between lift tests (default 14).
-  - Longest workout (default 60 minutes).
-  - People training together (default 4; used for the equipment check).
-  - Avoid the same movement on two consecutive days, but allow it once every N days (default 28).
-  - Avoid heavy days back to back, but allow it once every N days (default 28). The two are separate settings.
+    - Don't repeat a workout within N days (default 180). Benchmarks and coach repeats follow their own schedules.
+    - Max benchmarks per week (default 1).
+    - Days between lift tests (default 14).
+    - Longest workout (default 60 minutes).
+    - People training together (default 4; used for the equipment check).
+    - Avoid the same movement on two consecutive days, but allow it once every N days (default 28).
+    - Avoid heavy days back to back, but allow it once every N days (default 28). The two are separate settings.
 - **Workout library**: import or update the published library (safe to repeat); lists the workouts the planner won't propose and why.
 
 ### 4.4 How Chalkboard plans (the engine)
@@ -210,10 +210,10 @@ What it's for: teaching Chalkboard something new, or correcting it, with a check
 4. **What would change**: any setting the teaching implies (now → new, with why). The planner is dry-run on the next four weeks with the new setting and lists the days that would get a different workout. Nothing is saved yet.
 5. **Conflicts**: each existing card the teaching contradicts or narrows, with Chalkboard's position: agree (the card should yield), partly (both hold, with a limit), or disagree (it thinks the card is right), with reasons from the card's sources.
 6. **You decide**:
-   - **Confirm**: the cards become your cards (status confirmed, source "Coach decision" with your words) and the settings change.
-   - **Confirm as coach decision**: shown instead of Confirm when Chalkboard disagrees. Same as Confirm, and the overruled card stays linked as a conflict, on record.
-   - **Correct it**: write what it got wrong; it redrafts.
-   - **Discard**.
+    - **Confirm**: the cards become your cards (status confirmed, source "Coach decision" with your words) and the settings change.
+    - **Confirm as coach decision**: shown instead of Confirm when Chalkboard disagrees. Same as Confirm, and the overruled card stays linked as a conflict, on record.
+    - **Correct it**: write what it got wrong; it redrafts.
+    - **Discard**.
 7. **Earlier teachings** lists every teaching with its status. **Undo** on a confirmed teaching turns its cards off and puts its settings back, except settings you changed since (those are named and left alone).
 
 Setting changes apply to the next proposals; re-plan on Program to update proposed days.
@@ -271,4 +271,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (01 Plans and design). Next up: Phase 5, the athlete picture from data (fitness curve and health over time, weaknesses with evidence, conditioning level and readiness, volume-jump warnings).
+See "Chalkboard: the plan" in Drive (02 Plans and design). Next up: Phase 5, the athlete picture from data (fitness curve and health over time, weaknesses with evidence, conditioning level and readiness, volume-jump warnings).

@@ -26,6 +26,8 @@ CrossFit workout programming and tracking for the family. This is a faithful por
 
 ## Where things live
 
+- `docs/MANUAL.md`: the app manual (architecture, features, how to use them). Update it with every change; a copy is kept as a Google Doc.
+
 - `artifacts/noskov-fitness` — original screens ported to Vite/React.
 - `artifacts/api-server/src/fitness` — original SQL readers and coaching actions.
 - `lib/fitness-core` — original pure domain engine and tests.
