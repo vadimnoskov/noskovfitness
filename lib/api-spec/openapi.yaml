@@ -279,6 +279,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/ask:
+    post:
+      operationId: askKnowledge
+      summary: Coach - ask Chalkboard a question; answered only from its knowledge and the plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/KnowledgeQuestionInput" }
+      responses:
+        "200":
+          description: Answer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory
@@ -368,6 +383,11 @@ components:
     FitnessPage:
       type: object
       additionalProperties: true
+    KnowledgeQuestionInput:
+      type: object
+      required: [question]
+      properties:
+        question: { type: string }
     KnowledgeCardInput:
       type: object
       required: [cardId]

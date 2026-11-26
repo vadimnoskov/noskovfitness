@@ -38,6 +38,7 @@ import type {
   GetWorkoutDetailParams,
   HealthStatus,
   KnowledgeCardInput,
+  KnowledgeQuestionInput,
   LoadProfileInput,
   LogResultInput,
   PasswordChange,
@@ -1762,6 +1763,94 @@ export const useSetKnowledgeCard = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSetKnowledgeCardMutationOptions(options), queryClient);
+    }
+
+export const getAskKnowledgeUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/ask`
+}
+
+/**
+ * @summary Coach - ask Chalkboard a question; answered only from its knowledge and the plan
+ */
+export const askKnowledge = async (knowledgeQuestionInput: KnowledgeQuestionInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getAskKnowledgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeQuestionInput)
+  }
+);}
+
+
+
+
+
+export const getAskKnowledgeMutationKey = () => ['askKnowledge'] as const;
+
+export const getAskKnowledgeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askKnowledge>>, TError,AskKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askKnowledge>>, TError,AskKnowledgeMutationVariables, TContext> => {
+
+const mutationKey = getAskKnowledgeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askKnowledge>>, AskKnowledgeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  askKnowledge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskKnowledgeMutationResult = NonNullable<Awaited<ReturnType<typeof askKnowledge>>>
+    export type AskKnowledgeMutationBody = BodyType<KnowledgeQuestionInput>
+    export type AskKnowledgeMutationError = ErrorType<unknown>
+    export type AskKnowledgeMutationVariables = {data: BodyType<KnowledgeQuestionInput>}
+
+    /**
+ * @summary Coach - ask Chalkboard a question; answered only from its knowledge and the plan
+ */
+export const useAskKnowledge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askKnowledge>>, TError,AskKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof askKnowledge>>,
+        TError,
+        AskKnowledgeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAskKnowledgeMutationOptions(options), queryClient);
     }
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {

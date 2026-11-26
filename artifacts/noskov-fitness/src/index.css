@@ -209,3 +209,8 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .kopen{border-left:3px solid #8a6200;padding:4px 0 4px 10px}.knote{border-left:3px solid var(--ink);padding:4px 0 4px 10px}
 .kcard blockquote{margin:4px 0 0 0;padding-left:10px;border-left:2px solid var(--line);color:var(--mute);font-style:italic}
 .knotefield{display:block;margin:10px 0 6px}.knotefield textarea{display:block;width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:4px}
+.ktabs{margin:4px 0 10px}
+.kask textarea{display:block;width:100%;max-width:760px;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0}
+.kqa{max-width:760px;margin:14px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.kq{background:var(--panel);border-radius:10px;padding:8px 12px;display:inline-block;margin-bottom:8px;font-weight:600}
+.ka{border-left:3px solid var(--ink);padding:2px 0 2px 12px;line-height:1.55}.kcited{margin-top:6px}

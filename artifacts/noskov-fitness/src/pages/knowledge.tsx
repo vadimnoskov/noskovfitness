@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGetKnowledge, getGetKnowledgeQueryKey, useSetKnowledgeCard, type KnowledgeCardInput } from '@workspace/api-client-react';
+import { useGetKnowledge, getGetKnowledgeQueryKey, useSetKnowledgeCard, useAskKnowledge, type KnowledgeCardInput } from '@workspace/api-client-react';
 import type { Area, MergedCard, Source, CardStatus } from '@workspace/fitness-core';
 
 type KnowledgeData = {
   areas: Area[]; sources: Record<string, Source>; cards: MergedCard[]; settings: Record<string, unknown>;
-  fired: Record<string, number>; events: { cardId: string; action: string; at: string; by: string | null; detail: { to?: { status: string | null; note: string | null } } }[];
+  fired: Record<string, number>;
+  questions: { id: string; question: string; answer: string; cardIds: string[]; covered: boolean; gap: string | null; at: string }[];
+  events: { cardId: string; action: string; at: string; by: string | null; detail: { to?: { status: string | null; note: string | null } } }[];
 };
 
 const STATUS_LABEL: Record<CardStatus, string> = { confirmed: 'confirmed', proposed: 'proposed', disputed: 'disputed', gap: 'gap' };
@@ -43,6 +45,7 @@ export function KnowledgeMap() {
   return (
     <>
       <h1>What Chalkboard knows</h1>
+      <KnowledgeTabs current="map" />
       <p className="small">Every principle, rule and number the engine works from, with its sources. {d.cards.length} cards: {total('confirmed')} confirmed, {total('proposed')} proposed, {total('disputed')} disputed, {total('gap')} gaps. Change a card's status or add a note on its page.</p>
       <p className="small klegend">{(['confirmed', 'proposed', 'disputed', 'gap'] as CardStatus[]).map((s) => <span key={s}><StatusChip s={s} /> {STATUS_HELP[s]}</span>)}</p>
       <div className="row wrap ksearch">
@@ -70,6 +73,12 @@ export function KnowledgeMap() {
           })}</tbody>
         </table></div>
       )}
+      {d.questions.some((x) => !x.covered) ? (
+        <section>
+          <h2 className="sec">Questions Chalkboard couldn't answer</h2>
+          <ul className="small">{d.questions.filter((x) => !x.covered).slice(0, 10).map((x) => <li key={x.id}>{x.at.slice(0, 10)} · “{x.question}”{x.gap ? <> → gap: <b>{x.gap}</b></> : null}</li>)}</ul>
+        </section>
+      ) : null}
       {d.events.length ? (
         <section>
           <h2 className="sec">Recent changes</h2>
@@ -173,5 +182,66 @@ export function KnowledgeCardPage() {
         {history.length ? <ul className="small">{history.map((e, i) => <li key={i}>{e.at.slice(0, 16).replace('T', ' ')} · {e.by ?? 'coach'} · {e.action === 'status' ? `status → ${e.detail.to?.status ?? 'methodology'}` : `note${e.detail.to?.note ? '' : ' removed'}`}</li>)}</ul> : null}
       </section>
     </article>
+  );
+}
+
+export function KnowledgeTabs({ current }: { current: 'map' | 'ask' }) {
+  return (
+    <p className="row wrap ktabs">
+      <Link href="/knowledge" className="btn sm" aria-current={current === 'map'}>Map</Link>
+      <Link href="/knowledge/ask" className="btn sm" aria-current={current === 'ask'}>Ask</Link>
+    </p>
+  );
+}
+
+type Answer = { id: string; answer: string; cardIds: string[]; covered: boolean; gap: string };
+
+/** Ask: questions answered only from the cards and the plan, with the cards used. */
+export function KnowledgeAsk() {
+  const { q, d } = useKnowledge();
+  const qc = useQueryClient();
+  const ask = useAskKnowledge();
+  const [text, setText] = useState('');
+  const [last, setLast] = useState<(Answer & { question: string }) | null>(null);
+  const titles = new Map((d?.cards ?? []).map((c) => [c.id, c]));
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const question = text.trim();
+    if (question.length < 3) return;
+    ask.mutate({ data: { question } }, { onSuccess: (r) => { setLast({ ...(r as Answer), question }); setText(''); qc.invalidateQueries({ queryKey: getGetKnowledgeQueryKey() }); } });
+  };
+  const err = ask.error as { data?: { error?: string } } | null;
+  const shown = (d?.questions ?? []).filter((x) => x.id !== last?.id);
+  const Cited = ({ ids }: { ids: string[] }) => ids.length ? (
+    <div className="small kcited">Cards: {ids.map((id, i) => <span key={id}>{i ? ' · ' : ''}<Link href={`/knowledge/${id}`}>{titles.get(id)?.title ?? id}</Link>{titles.get(id) && titles.get(id)!.status !== 'confirmed' ? <> <StatusChip s={titles.get(id)!.status} /></> : null}</span>)}</div>
+  ) : null;
+  return (
+    <>
+      <h1>Ask Chalkboard</h1>
+      <KnowledgeTabs current="ask" />
+      <p className="small">Answers come only from Chalkboard's cards, your settings and the plan (two weeks back and ahead), with the cards used. If nothing covers the question, it says so and the question is listed as a gap on the Map.</p>
+      <form onSubmit={submit} className="kask">
+        <textarea rows={3} aria-label="Your question" value={text} onChange={(e) => setText(e.target.value)} placeholder="Why is Thursday a heavy day? · How often should we do long efforts? · What do you know about muscle-up progressions?" />
+        <div className="row wrap"><button type="submit" className="btn primary" disabled={ask.isPending || text.trim().length < 3}>{ask.isPending ? 'Thinking…' : 'Ask'}</button></div>
+      </form>
+      {ask.isError ? <p className="warn" role="alert">{err?.data?.error ?? 'Chalkboard could not answer right now.'}</p> : null}
+      {last ? (
+        <div className="kqa">
+          <div className="kq">{last.question}</div>
+          <div className="ka">{last.answer}{!last.covered ? <div className="kopen small">Not covered yet{last.gap ? `: ${last.gap}` : ''}. Listed as a gap on the Map.</div> : null}<Cited ids={last.cardIds} /></div>
+        </div>
+      ) : null}
+      {!d ? <p className="small">{q.isError ? 'Could not load the knowledge.' : 'Loading…'}</p> : shown.length ? (
+        <section>
+          <h2 className="sec">Earlier questions</h2>
+          {shown.map((x) => (
+            <div className="kqa" key={x.id}>
+              <div className="kq">{x.question} <span className="small">{x.at.slice(0, 10)}</span></div>
+              <div className="ka">{x.answer}{!x.covered ? <div className="kopen small">Not covered{x.gap ? `: ${x.gap}` : ''}.</div> : null}<Cited ids={x.cardIds} /></div>
+            </div>
+          ))}
+        </section>
+      ) : null}
+    </>
   );
 }

@@ -23,6 +23,7 @@ export * from './getWorkoutDetailParams';
 export * from './healthStatus';
 export * from './knowledgeCardInput';
 export * from './knowledgeCardInputStatus';
+export * from './knowledgeQuestionInput';
 export * from './loadProfileInput';
 export * from './logResultInput';
 export * from './logResultInputLoadsItem';

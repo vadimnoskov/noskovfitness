@@ -230,6 +230,16 @@ export const SetKnowledgeCardResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Coach - ask Chalkboard a question; answered only from its knowledge and the plan
+ */
+export const AskKnowledgeBody = zod.object({
+  "question": zod.string()
+})
+
+export const AskKnowledgeResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({

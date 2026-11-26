@@ -134,3 +134,11 @@ export const knowledgeEvents = pgTable('knowledge_events', {
   byAthlete: text('by_athlete').references(() => athletes.id, { onDelete: 'set null' }),
   at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [index('knowledge_events_card_idx').on(t.cardId)]);
+
+/** Questions the coach asked Chalkboard, with its answer and the cards it used; unanswered ones become gaps. */
+export const knowledgeQuestions = pgTable('knowledge_questions', {
+  id: uuid('id').primaryKey().defaultRandom(), question: text('question').notNull(), answer: text('answer').notNull(),
+  cardIds: text('card_ids').array().notNull().default(sql`'{}'::text[]`), covered: boolean('covered').notNull(), gap: text('gap'),
+  model: text('model').notNull(), byAthlete: text('by_athlete').references(() => athletes.id, { onDelete: 'set null' }),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+});

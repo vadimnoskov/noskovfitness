@@ -6,6 +6,7 @@ import { sql, getPolicy, getGroup } from '@workspace/fitness-db';
 import { METHODOLOGY_CARDS, SOURCES, AREAS, mergeCards, settingAt, firedCounts, type CardState, type CardStatus } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import { GROUP_ID } from './data';
+import { recentQuestions } from './knowledge-ask';
 
 const CARD_IDS = new Set(METHODOLOGY_CARDS.map((c) => c.id));
 const STATUSES: ReadonlySet<string> = new Set(['confirmed', 'proposed', 'disputed', 'gap']);
@@ -30,6 +31,7 @@ export async function getKnowledge() {
     areas: AREAS, sources: SOURCES, cards, settings,
     fired: firedCounts(METHODOLOGY_CARDS, notesRows.map((r) => r.note as string)),
     events: events.map((e) => ({ cardId: e.card_id, action: e.action, detail: e.detail, at: e.at, by: e.by })),
+    questions: await recentQuestions(),
   };
 }
 

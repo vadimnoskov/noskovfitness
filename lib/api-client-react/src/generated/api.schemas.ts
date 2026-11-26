@@ -7,6 +7,10 @@
  */
 export interface FitnessPage { [key: string]: unknown }
 
+export interface KnowledgeQuestionInput {
+  question: string;
+}
+
 export type KnowledgeCardInputStatus = typeof KnowledgeCardInputStatus[keyof typeof KnowledgeCardInputStatus];
 
 
