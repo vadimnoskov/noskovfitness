@@ -21,12 +21,14 @@ export interface ProgrammingPolicy {
   rules: {
     /** Do not repeat the same workout within this many days (a due benchmark is the exception). */
     noRepeatWorkoutDays: number;
-    /** Avoid the same movement family on consecutive days. Not absolute: allowed once per rareExceptionDays. */
+    /** Avoid the same movement family on consecutive days. Not absolute: allowed once per movementExceptionDays. */
     noSameMovementConsecutiveDays: boolean;
-    /** Avoid heavy days back to back (L2: "on occasion may be entirely appropriate"): allowed once per rareExceptionDays. */
+    /** Avoid heavy days back to back (L2: "on occasion may be entirely appropriate"): allowed once per heavyExceptionDays. */
     noConsecutiveHeavyDays: boolean;
-    /** How often a back-to-back exception may be used (days). */
-    rareExceptionDays: number;
+    /** How often heavy days may fall back to back (days between exceptions). */
+    heavyExceptionDays: number;
+    /** How often the same movement family may appear on consecutive days (days between exceptions). */
+    movementExceptionDays: number;
     /** Minimum days between lift tests (1RM, 3RM…), so most heavy days stay regular heavy work, not max attempts. */
     minDaysBetweenLiftTests: number;
     maxBenchmarksPerWeek: number;
@@ -48,7 +50,7 @@ export const DEFAULT_POLICY: ProgrammingPolicy = {
     modality: { G: 44, W: 39, M: 17 },
   },
   weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15 },
-  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, rareExceptionDays: 28, minDaysBetweenLiftTests: 14 },
+  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14 },
 };
 
 /** Fill any missing fields from the defaults (older saved policies keep working when new settings are added). */
@@ -66,7 +68,7 @@ export function withDefaults(p: Partial<ProgrammingPolicy> | null | undefined): 
       modality: { ...d.targets.modality, ...p.targets?.modality },
     },
     weights: { ...d.weights, ...p.weights },
-    rules: { ...d.rules, ...p.rules },
+    rules: migrateRules(d.rules, p.rules),
   };
 }
 
@@ -80,4 +82,11 @@ function migrateTimeDomain(d: ProgrammingPolicy['targets']['timeDomain'], saved?
   const short = saved.short ?? d.short + d.heavy;
   const heavy = Math.min(d.heavy, short);
   return { ...d, ...saved, heavy, short: short - heavy };
+}
+
+/** Saved policies from before the split had one rareExceptionDays for both rules: it becomes both new settings. */
+function migrateRules(d: ProgrammingPolicy['rules'], saved?: Partial<ProgrammingPolicy['rules']> & { rareExceptionDays?: number }) {
+  if (!saved) return { ...d };
+  const { rareExceptionDays: old, ...rest } = saved;
+  return { ...d, ...rest, ...(old !== undefined ? { heavyExceptionDays: rest.heavyExceptionDays ?? old, movementExceptionDays: rest.movementExceptionDays ?? old } : {}) };
 }

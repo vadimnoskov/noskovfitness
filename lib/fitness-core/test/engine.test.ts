@@ -231,3 +231,13 @@ describe('schedule', () => {
     expect(insertDay(days, '2026-12-09', 'x').find((d) => d.id === 'x')).toMatchObject({ date: '2026-12-09', status: 'proposed' });
   });
 });
+
+describe('exception settings', () => {
+  it('moves an old shared rareExceptionDays into both new settings', () => {
+    const { heavyExceptionDays: _h, movementExceptionDays: _m, ...old } = DEFAULT_POLICY.rules;
+    const p = withDefaults({ rules: { ...old, rareExceptionDays: 21 } as never });
+    expect(p.rules.heavyExceptionDays).toBe(21);
+    expect(p.rules.movementExceptionDays).toBe(21);
+    expect((p.rules as Record<string, unknown>).rareExceptionDays).toBeUndefined();
+  });
+});
