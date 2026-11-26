@@ -7,6 +7,23 @@
  */
 export interface FitnessPage { [key: string]: unknown }
 
+export type KnowledgeCardInputStatus = typeof KnowledgeCardInputStatus[keyof typeof KnowledgeCardInputStatus];
+
+
+export const KnowledgeCardInputStatus = {
+  confirmed: 'confirmed',
+  proposed: 'proposed',
+  disputed: 'disputed',
+  gap: 'gap',
+  methodology: 'methodology',
+} as const;
+
+export interface KnowledgeCardInput {
+  cardId: string;
+  status?: KnowledgeCardInputStatus;
+  note?: string;
+}
+
 export interface PlanNoteInput {
   dayId: string;
   athleteId: string;

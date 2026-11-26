@@ -254,6 +254,31 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge:
+    get:
+      operationId: getKnowledge
+      summary: Coach - Chalkboard's knowledge cards with the coach's statuses, current settings and how often each rule fired
+      responses:
+        "200":
+          description: Knowledge map
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/knowledge/card:
+    post:
+      operationId: setKnowledgeCard
+      summary: Coach - change a card's status or note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/KnowledgeCardInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/history:
     get:
       operationId: getHistory
@@ -343,6 +368,13 @@ components:
     FitnessPage:
       type: object
       additionalProperties: true
+    KnowledgeCardInput:
+      type: object
+      required: [cardId]
+      properties:
+        cardId: { type: string }
+        status: { type: string, enum: [confirmed, proposed, disputed, gap, methodology] }
+        note: { type: string }
     PlanNoteInput:
       type: object
       required: [dayId, athleteId, text]

@@ -212,6 +212,24 @@ export const ImportLibraryResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Coach - Chalkboard's knowledge cards with the coach's statuses, current settings and how often each rule fired
+ */
+export const GetKnowledgeResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - change a card's status or note
+ */
+export const SetKnowledgeCardBody = zod.object({
+  "cardId": zod.string(),
+  "status": zod.enum(['confirmed', 'proposed', 'disputed', 'gap', 'methodology']).optional(),
+  "note": zod.string().optional()
+})
+
+export const SetKnowledgeCardResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary An athlete's results, newest first
  */
 export const GetHistoryQueryParams = zod.object({

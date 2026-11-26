@@ -15,3 +15,4 @@ export * from './workouts/warmup';
 export * from './import/published';
 export * from './workouts/estimate';
 export * from './engine/profile';
+export * from './knowledge';

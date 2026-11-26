@@ -195,3 +195,17 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .plan>summary{cursor:pointer}.plan[open]>summary{margin-bottom:4px}
 .library{margin-top:28px;display:grid;gap:10px}.flagged summary{cursor:pointer}.flagged ul{list-style:none;padding:0;display:grid;gap:8px}.flagged pre{white-space:pre-wrap;font:13px/1.4 ui-monospace,monospace;background:var(--panel);padding:8px;border-radius:8px;margin:4px 0 0}
 .profile-note{display:grid;gap:8px;margin:10px 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.pub{color:var(--mute)}
+
+/* Chalkboard knowledge */
+.kstatus{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;line-height:1.3}
+.k-confirmed{color:#1d7a3a}.k-proposed{color:#8a6200}.k-disputed{color:#b3261e}.k-gap{color:var(--mute);border-style:dashed}
+.klegend{display:flex;flex-wrap:wrap;gap:6px 14px}
+.ksearch input{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;flex:1 1 240px;max-width:420px}
+.ktable{width:100%;border-collapse:collapse;font-size:14px}.ktable th,.ktable td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.ktable th{font-size:12px;color:var(--mute);font-weight:600}.ktable .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.linkish{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px}
+.kcards{list-style:none;padding:0;margin:0}.kcards li{padding:10px 0;border-bottom:1px solid var(--line)}
+.kcard{max-width:760px}.kstatement{font-size:16px;line-height:1.55}
+.kopen{border-left:3px solid #8a6200;padding:4px 0 4px 10px}.knote{border-left:3px solid var(--ink);padding:4px 0 4px 10px}
+.kcard blockquote{margin:4px 0 0 0;padding-left:10px;border-left:2px solid var(--line);color:var(--mute);font-style:italic}
+.knotefield{display:block;margin:10px 0 6px}.knotefield textarea{display:block;width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:4px}

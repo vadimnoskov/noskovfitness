@@ -37,6 +37,7 @@ import type {
   GetTodayParams,
   GetWorkoutDetailParams,
   HealthStatus,
+  KnowledgeCardInput,
   LoadProfileInput,
   LogResultInput,
   PasswordChange,
@@ -1572,6 +1573,195 @@ export const useImportLibrary = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getImportLibraryMutationOptions(options), queryClient);
+    }
+
+export const getGetKnowledgeUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge`
+}
+
+/**
+ * @summary Coach - Chalkboard's knowledge cards with the coach's statuses, current settings and how often each rule fired
+ */
+export const getKnowledge = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetKnowledgeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeQueryKey = () => {
+    return [
+    `/api/fitness/knowledge`
+    ] as const;
+    }
+
+
+export const getGetKnowledgeQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledge>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledge>>> = ({ signal }) => getKnowledge({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledge>>>
+export type GetKnowledgeQueryError = ErrorType<unknown>
+
+
+export function useGetKnowledge<TData = Awaited<ReturnType<typeof getKnowledge>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledge>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledge>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledge<TData = Awaited<ReturnType<typeof getKnowledge>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledge>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledge>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledge<TData = Awaited<ReturnType<typeof getKnowledge>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - Chalkboard's knowledge cards with the coach's statuses, current settings and how often each rule fired
+ */
+
+export function useGetKnowledge<TData = Awaited<ReturnType<typeof getKnowledge>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledge>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetKnowledgeCardUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/card`
+}
+
+/**
+ * @summary Coach - change a card's status or note
+ */
+export const setKnowledgeCard = async (knowledgeCardInput: KnowledgeCardInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSetKnowledgeCardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeCardInput)
+  }
+);}
+
+
+
+
+
+export const getSetKnowledgeCardMutationKey = () => ['setKnowledgeCard'] as const;
+
+export const getSetKnowledgeCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setKnowledgeCard>>, TError,SetKnowledgeCardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setKnowledgeCard>>, TError,SetKnowledgeCardMutationVariables, TContext> => {
+
+const mutationKey = getSetKnowledgeCardMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setKnowledgeCard>>, SetKnowledgeCardMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  setKnowledgeCard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetKnowledgeCardMutationResult = NonNullable<Awaited<ReturnType<typeof setKnowledgeCard>>>
+    export type SetKnowledgeCardMutationBody = BodyType<KnowledgeCardInput>
+    export type SetKnowledgeCardMutationError = ErrorType<unknown>
+    export type SetKnowledgeCardMutationVariables = {data: BodyType<KnowledgeCardInput>}
+
+    /**
+ * @summary Coach - change a card's status or note
+ */
+export const useSetKnowledgeCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setKnowledgeCard>>, TError,SetKnowledgeCardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setKnowledgeCard>>,
+        TError,
+        SetKnowledgeCardMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetKnowledgeCardMutationOptions(options), queryClient);
     }
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {

@@ -8,6 +8,7 @@ import ProgramPage from '@/pages/program';
 import Analysis from '@/pages/analysis';
 import Benchmarks from '@/pages/benchmarks';
 import Settings from '@/pages/settings';
+import { KnowledgeMap, KnowledgeCardPage } from '@/pages/knowledge';
 import Login from '@/pages/login';
 import Today from '@/pages/today';
 import History from '@/pages/history';
@@ -41,6 +42,7 @@ function Layout({ children }: { children: ReactNode }) {
               <Link href="/program">Program</Link>
               <Link href="/calendar">Calendar</Link>
               <Link href="/analysis">Analysis</Link>
+              <Link href="/knowledge">Chalkboard</Link>
               <Link href="/settings">Settings</Link>
             </>
           ) : null}
@@ -74,6 +76,8 @@ function Router() {
         <Route path="/calendar"><CoachOnly><CalendarPage /></CoachOnly></Route>
         <Route path="/program"><CoachOnly><ProgramPage /></CoachOnly></Route>
         <Route path="/analysis"><CoachOnly><Analysis /></CoachOnly></Route>
+        <Route path="/knowledge/:id"><CoachOnly><KnowledgeCardPage /></CoachOnly></Route>
+        <Route path="/knowledge"><CoachOnly><KnowledgeMap /></CoachOnly></Route>
         <Route path="/settings"><CoachOnly><Settings /></CoachOnly></Route>
         <Route path="/login" component={Login} />
         <Route component={NotFound} />

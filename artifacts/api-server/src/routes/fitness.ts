@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -12,6 +12,7 @@ import { getPlannedDays } from '../fitness/program';
 import * as program from '../fitness/program-actions';
 import * as settings from '../fitness/settings-actions';
 import * as warmups from '../fitness/warmups';
+import * as knowledge from '../fitness/knowledge';
 import { libraryGz, getPublishedProfile } from '../fitness/library-data';
 
 const router: IRouter = Router();
@@ -250,6 +251,19 @@ router.post('/fitness/plan-note', wrap(async (req, res) => {
 router.get('/fitness/warm-up-templates', wrap(async (_req, res) => {
   if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can see saved warm-ups.', 403);
   return { templates: await warmups.listWarmUpTemplates() };
+}));
+
+router.get('/fitness/knowledge', wrap(async (_req, res) => {
+  if (!userOf(res)?.isCoach) throw new logging.InputError("Only the coach can see Chalkboard's knowledge.", 403);
+  return knowledge.getKnowledge();
+}));
+
+router.post('/fitness/knowledge/card', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user?.isCoach) throw new logging.InputError('Only the coach can change the knowledge.', 403);
+  const body = SetKnowledgeCardBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Choose a card and a valid status.');
+  return knowledge.setKnowledgeCard(body.data, user.id);
 }));
 
 router.get('/fitness/library', wrap(async (req, res) => {

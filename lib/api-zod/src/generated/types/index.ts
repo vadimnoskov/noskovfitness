@@ -21,6 +21,8 @@ export * from './getLibraryParams';
 export * from './getTodayParams';
 export * from './getWorkoutDetailParams';
 export * from './healthStatus';
+export * from './knowledgeCardInput';
+export * from './knowledgeCardInputStatus';
 export * from './loadProfileInput';
 export * from './logResultInput';
 export * from './logResultInputLoadsItem';

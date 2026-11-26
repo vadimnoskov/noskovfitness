@@ -119,3 +119,18 @@ export const workoutSources = pgTable('workout_sources', {
   workoutId: uuid('workout_id').notNull().references(() => workouts.id, { onDelete: 'cascade' }),
   source: text('source').notNull(), sourceDate: date('source_date', { mode: 'string' }).notNull(),
 }, t => [primaryKey({ columns: [t.workoutId, t.source, t.sourceDate] }), index('workout_sources_date_idx').on(t.sourceDate)]);
+
+/** The coach's layer on Chalkboard's knowledge cards (the cards themselves live in code): status changes and notes. */
+export const knowledgeState = pgTable('knowledge_state', {
+  cardId: text('card_id').primaryKey(),
+  status: text('status'), coachNote: text('coach_note'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [check('knowledge_state_status_check', sql`${t.status} IS NULL OR ${t.status} IN ('confirmed','proposed','disputed','gap')`)]);
+
+/** History of every change to the knowledge (who, what, when), for the change log and undo. */
+export const knowledgeEvents = pgTable('knowledge_events', {
+  id: uuid('id').primaryKey().defaultRandom(), cardId: text('card_id').notNull(),
+  action: text('action').notNull(), detail: jsonb('detail').notNull().default({}),
+  byAthlete: text('by_athlete').references(() => athletes.id, { onDelete: 'set null' }),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('knowledge_events_card_idx').on(t.cardId)]);
