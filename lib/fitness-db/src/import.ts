@@ -6,7 +6,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  parseBtwbRow, deriveTags, keyOf, nameOf, FAMILY_BY_ID, benchmarkOf, normalizeWorkoutName, FEMALE_RX, MISSING_DEFINITIONS, resolve,
+  parseBtwbRow, deriveTags, movementModality, keyOf, nameOf, FAMILY_BY_ID, benchmarkOf, normalizeWorkoutName, FEMALE_RX, MISSING_DEFINITIONS, resolve,
   type BtwbRow, type Workout, type MovementRef, type ParsedSession,
 } from '@workspace/fitness-core';
 import { sql } from './client';
@@ -22,8 +22,8 @@ async function ensureMovement(ref: MovementRef) {
   const key = keyOf(ref);
   if (movementCache.has(key)) return key;
   const f = FAMILY_BY_ID[ref.family]!;
-  await sql`INSERT INTO movements (key, family, name, modality, pattern, ref) VALUES (${key}, ${ref.family}, ${nameOf(ref)}, ${f.modality}, ${f.pattern}, ${sql.json(ref as never)})
-            ON CONFLICT (key) DO NOTHING`;
+  await sql`INSERT INTO movements (key, family, name, modality, pattern, ref) VALUES (${key}, ${ref.family}, ${nameOf(ref)}, ${movementModality({ movement: ref })}, ${f.pattern}, ${sql.json(ref as never)})
+            ON CONFLICT (key) DO UPDATE SET modality = EXCLUDED.modality`;
   movementCache.add(key);
   return key;
 }

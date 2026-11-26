@@ -31,7 +31,7 @@ export function styleProfile(items: { tags: WorkoutTags; weight: number }[]): Ta
   return {
     workouts: items.length,
     movementCount: percents(['1', '2-3', '4+'] as const, mc),
-    timeDomain: percents(['short', 'medium', 'long', 'endurance'] as const, td),
+    timeDomain: percents(['heavy', 'short', 'medium', 'long', 'endurance'] as const, td),
     priority: percents(['task', 'time'] as const, pr),
     load: percents(['bodyweight', 'light', 'medium', 'heavy'] as const, ld),
     modality: percents(['G', 'W', 'M'] as const, mo),

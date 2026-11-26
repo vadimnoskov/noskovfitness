@@ -101,7 +101,8 @@ export interface Workout {
 export type LoadKind = 'barbell' | 'dumbbell' | 'kettlebell' | 'medball' | 'other';
 export type LoadProfile = Partial<Record<LoadKind, number>>;
 
-export type TimeDomain = 'short' | 'medium' | 'long' | 'endurance';
+/** 'heavy' = a heavy lifting day (sets of 1–5 or a max lift): its own category, whatever the weight (L2 analysis worksheet). */
+export type TimeDomain = 'heavy' | 'short' | 'medium' | 'long' | 'endurance';
 export interface WorkoutTags {
   modalityPattern: Modality[]; // per movement in order, e.g. ['W','G'] for Fran
   movementCount: number;

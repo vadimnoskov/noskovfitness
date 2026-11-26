@@ -7,7 +7,7 @@ import { LibrarySection } from '@/components/LibrarySection';
 const LABELS: Record<string, string> = {
   movementCount: 'Movements per workout', timeDomain: 'Time domain', priority: 'Priority', load: 'Load', modality: 'Modality (share of movements)',
   '1': '1 (single)', '2-3': '2–3 (couplet, triplet)', '4+': '4 or more', short: 'Short (< 4 min)', medium: 'Medium (4–12)', long: 'Long (12–20)', endurance: 'Endurance (20+)',
-  'load.medium': 'Medium', 'load.light': 'Light', 'load.heavy': 'Heavy',
+  'load.medium': 'Medium', 'load.light': 'Light', 'load.heavy': 'Heavy', 'timeDomain.heavy': 'Heavy day (sets of 1–5, max lifts)',
   task: 'Task priority (for time)', time: 'Time priority (AMRAP, EMOM)', bodyweight: 'Bodyweight', light: 'Light', heavy: 'Heavy',
   G: 'Gymnastics', W: 'Weightlifting', M: 'Monostructural', variety: 'Variety gap', freshness: 'Movement freshness', weakness: 'Weakness focus', benchmark: 'Benchmark due',
 };
@@ -59,10 +59,14 @@ export default function Settings() {
           <label>Don't repeat a workout within (days) <input type="number" name="rules.noRepeatWorkoutDays" min={0} max={730} defaultValue={policy.rules.noRepeatWorkoutDays} /></label>
           <p className="small">Stops the engine proposing the exact same workout again too soon, so variety comes from new workouts rather than favorites. With about 5 workouts a week, 180 days means roughly 130 other workouts before a repeat. 90–180 is a sensible range: lower means familiar workouts come back more often, higher means more novelty. It never blocks you: benchmarks follow their own retest intervals, you can pick any workout for a day yourself, and a workout can be set to repeat on its own schedule (Program → More… → Repeat).</p>
           <label>Max benchmarks per week <input type="number" name="rules.maxBenchmarksPerWeek" min={0} max={7} defaultValue={policy.rules.maxBenchmarksPerWeek} /></label>
+          <label>Days between lift tests (1RM, 3RM…) <input type="number" name="rules.minDaysBetweenLiftTests" min={0} max={90} defaultValue={policy.rules.minDaysBetweenLiftTests} /></label>
+          <p className="small">Each lift comes due for a re-test 90 days after it was last tested (any rep max). Tests only fall on heavy days, so this spacing keeps most heavy days as regular heavy work.</p>
           <label>Longest workout (minutes) <input type="number" name="rules.maxMinutes" min={5} max={120} defaultValue={policy.rules.maxMinutes} /></label>
           <label>People training together <input type="number" name="rules.groupSize" min={1} max={30} defaultValue={policy.rules.groupSize} /></label>
-          <label className="check"><input type="checkbox" name="rules.noSameMovementConsecutiveDays" defaultChecked={policy.rules.noSameMovementConsecutiveDays} /> No movement on two consecutive days</label>
-          <label className="check"><input type="checkbox" name="rules.noConsecutiveHeavyDays" defaultChecked={policy.rules.noConsecutiveHeavyDays} /> No heavy days back to back</label>
+          <label className="check"><input type="checkbox" name="rules.noSameMovementConsecutiveDays" defaultChecked={policy.rules.noSameMovementConsecutiveDays} /> Avoid the same movement on two consecutive days</label>
+          <label className="check"><input type="checkbox" name="rules.noConsecutiveHeavyDays" defaultChecked={policy.rules.noConsecutiveHeavyDays} /> Avoid heavy days back to back</label>
+          <label>…but allow one exception every (days) <input type="number" name="rules.rareExceptionDays" min={0} max={365} defaultValue={policy.rules.rareExceptionDays} /></label>
+          <p className="small">L2: "a few heavy days back-to-back on occasion may be entirely appropriate." The engine still prefers other days and says so on the day when it uses the exception. 0 makes both rules strict.</p>
         </fieldset>
         <div className="bar"><button className="btn primary" type="submit">Save settings</button></div>
       </ActionForm>

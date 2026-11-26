@@ -4,12 +4,12 @@ import type { WorkoutTags } from '@workspace/fitness-core';
 import { usePage, PageStatus } from '@/lib/api';
 
 const WINDOWS = { '4w': 4, '12w': 12, '52w': 52 } as const;
-/** Draft targets; these become editable programming policy. */
+/** Reference targets: the default policy (the published programming's measured mix). */
 const TARGETS = {
-  movements: { '1': 20, '2–3': 65, '4+': 15 },
-  timeDomain: { short: 25, medium: 35, long: 25, endurance: 15 },
-  priority: { task: 60, time: 40 },
-  load: { bodyweight: 25, light: 25, medium: 30, heavy: 20 },
+  movements: { '1': 31, '2–3': 58, '4+': 11 },
+  timeDomain: { heavy: 22, short: 5, medium: 27, long: 25, endurance: 21 },
+  priority: { task: 85, time: 15 },
+  load: { bodyweight: 42, light: 12, medium: 15, heavy: 31 },
 };
 const MOD_NAME = { G: 'Gymnastics', W: 'Weightlifting', M: 'Monostructural' } as const;
 

@@ -3,7 +3,7 @@
  * runs the pure planner from @nf/core, and saves proposed days.
  */
 import {
-  plan, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
+  isHeavyDay, plan, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
   type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags,
 } from '@workspace/fitness-core';
 import { sql } from './client';
@@ -58,11 +58,12 @@ async function loadPicture(groupId: string, from: string, exclude?: { from: stri
   const byDate = new Map<string, PastDay>();
   const lastWorkout = new Map<string, string>(), lastMovement = new Map<string, string>();
   for (const r of [...res, ...planned]) {
-    const d: PastDay = byDate.get(r.date) ?? { date: r.date, workoutIds: [], tags: [], movementKeys: [], heavy: false, benchmarkCount: 0 };
+    const d: PastDay = byDate.get(r.date) ?? { date: r.date, workoutIds: [], tags: [], movementKeys: [], heavy: false, benchmarkCount: 0, liftTestCount: 0 };
     if (!d.workoutIds.includes(r.id)) {
       d.workoutIds.push(r.id); d.tags.push(r.tags); d.movementKeys.push(...r.keys);
-      d.heavy ||= r.tags.load === 'heavy';
+      d.heavy ||= isHeavyDay(r.tags);
       if (r.benchmark && r.benchmark.category !== 'lift') d.benchmarkCount++;
+      if (r.benchmark?.category === 'lift') d.liftTestCount = (d.liftTestCount ?? 0) + 1;
     }
     byDate.set(r.date, d);
     if ((lastWorkout.get(r.id) ?? '') < r.date) lastWorkout.set(r.id, r.date);

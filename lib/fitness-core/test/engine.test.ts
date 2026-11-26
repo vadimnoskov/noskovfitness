@@ -70,13 +70,54 @@ describe('equipment', () => {
 });
 
 describe('movement roles', () => {
-  it('strongly avoids Turkish get-ups in a metcon', () => {
-    const tgu = mk('tgu', 'FT: TGU', '5 rounds of:\n4 Turkish Get-ups, 24 kg\n20 Air Squats', '12 mins');
-    const p = plan(input({ dates: ['2026-12-07'], candidates: [tgu, C.find((c) => c.id === 'kbdu')!] }));
+  const tgu = mk('tgu', 'FT: TGU', '5 rounds of:\n4 Turkish Get-ups, 24 kg\n20 Air Squats', '12 mins');
+  it('allows Turkish get-ups in a metcon occasionally', () => {
+    const p = plan(input({ dates: ['2026-12-07'], candidates: [tgu] }));
+    expect(p[0]!.candidateId).toBe('tgu');
+    expect(p[0]!.score.penalty).toBeLessThan(0.2);
+    expect(p[0]!.score.notes.join(' ')).toMatch(/occasional use/);
+  });
+  it('strongly avoids them again within 4 weeks', () => {
+    const tguKey = 'tgu|implement=kettlebell';
+    const p = plan(input({ dates: ['2026-12-07'], candidates: [tgu, C.find((c) => c.id === 'kbdu')!], lastMovementDate: new Map([[tguKey, '2026-11-25']]) }));
     expect(p[0]!.candidateId).toBe('kbdu');
-    const only = plan(input({ dates: ['2026-12-07'], candidates: [tgu] }));
-    expect(only[0]!.candidateId).toBe('tgu'); // still possible as a last resort
-    expect(only[0]!.score.notes.join(' ')).toMatch(/warm-ups or practice/);
+    const only = plan(input({ dates: ['2026-12-07'], candidates: [tgu], lastMovementDate: new Map([[tguKey, '2026-11-25']]) }));
+    expect(only[0]!.score.notes.join(' ')).toMatch(/again within 4 weeks/);
+  });
+});
+
+describe('tags', () => {
+  it('counts heavy lifting days as their own time domain, whatever the weight', () => {
+    expect(C.find((c) => c.id === 'bs')!.tags.timeDomain).toBe('heavy');
+    expect(C.find((c) => c.id === 'fran')!.tags.timeDomain).not.toBe('heavy');
+  });
+  it('classes bodyweight lunges as gymnastics and loaded ones as weightlifting', () => {
+    expect(mk('l1', 'L', '50 Walking Lunges', '5 mins').tags.modalityPattern).toEqual(['G']);
+    expect(mk('l2', 'L', '50 Dumbbell Walking Lunges, 35 lbs', '5 mins').tags.modalityPattern).toEqual(['W']);
+    expect(mk('p1', 'P', '20 Kettlebell Pistols, 16 kg', '5 mins').tags.modalityPattern).toEqual(['W']);
+    expect(mk('p2', 'P', '20 Pistols', '5 mins').tags.modalityPattern).toEqual(['G']);
+    expect(mk('s1', 'S', '20 Box Step-ups, 24 in, 35 lbs', '5 mins').tags.modalityPattern).toEqual(['W']);
+  });
+  it('moves heavy days out of a saved "short" target without changing the total', () => {
+    const p = withDefaults({ targets: { ...DEFAULT_POLICY.targets, timeDomain: { short: 27, medium: 27, long: 25, endurance: 21 } as never } });
+    expect(p.targets.timeDomain).toEqual({ heavy: 22, short: 5, medium: 27, long: 25, endurance: 21 });
+  });
+});
+
+describe('lift tests', () => {
+  const lift = (id: string, label: string): Candidate => ({ ...C.find((c) => c.id === 'bs')!, id, benchmark: { category: 'lift', retestEveryDays: 90, label } });
+  const bs1 = lift('bs1', 'Back Squat 1RM'), bs3 = lift('bs3', 'Back Squat 3RM');
+  it('comes due 90 days after the last test of the same lift, any rep max', () => {
+    const due = plan(input({ dates: ['2026-12-07'], candidates: [bs1, bs3], lastWorkoutDate: new Map([['bs3', '2026-08-01']]) }));
+    expect(due[0]!.score.notes.join(' ')).toMatch(/Back Squat test due \(last 2026-08-01\)/);
+    const notDue = plan(input({ dates: ['2026-12-07'], candidates: [bs1, bs3], lastWorkoutDate: new Map([['bs3', '2026-11-01']]) }));
+    expect(notDue[0]!.candidateId).toBe('bs1'); // bs3 itself was done recently
+    expect(notDue[0]!.score.benchmark).toBe(0);
+  });
+  it('spaces lift tests at least 14 days apart', () => {
+    const dl1 = lift('dl1', 'Deadlift 1RM'), sn1 = lift('sn1', 'Snatch 1RM');
+    const p = plan(input({ dates: ['2026-12-07', '2026-12-14', '2026-12-21'], candidates: [bs1, dl1, sn1] }));
+    expect(p.map((x) => x.date)).toEqual(['2026-12-07', '2026-12-21']);
   });
 });
 
@@ -95,17 +136,27 @@ describe('planner', () => {
     expect(plan(input()).length).toBeLessThan(10);
   });
 
-  it('never schedules heavy two days in a row or the same movement on consecutive days', () => {
+  it('uses a back-to-back exception (heavy days, same movement) at most once in 4 weeks, and says so', () => {
     const byId = new Map(C.map((c) => [c.id, c]));
+    const exceptions: string[] = [];
     for (let i = 1; i < proposals.length; i++) {
       const a = proposals[i - 1]!, b = proposals[i]!;
-      const consecutive = Date.parse(b.date) - Date.parse(a.date) === 86400000;
-      if (!consecutive) continue;
+      if (Date.parse(b.date) - Date.parse(a.date) !== 86400000) continue;
       const ca = byId.get(a.candidateId)!, cb = byId.get(b.candidateId)!;
-      expect(ca.tags.load === 'heavy' && cb.tags.load === 'heavy').toBe(false);
       const fa = new Set(ca.workout.movements.map((m) => m.movement.family));
-      expect(cb.workout.movements.some((m) => fa.has(m.movement.family))).toBe(false);
+      if ((ca.tags.timeDomain === 'heavy' && cb.tags.timeDomain === 'heavy') || cb.workout.movements.some((m) => fa.has(m.movement.family))) {
+        exceptions.push(b.date);
+        expect(b.score.notes.join(' ')).toMatch(/allowed occasionally/);
+      }
     }
+    for (let i = 1; i < exceptions.length; i++) expect(Date.parse(exceptions[i]!) - Date.parse(exceptions[i - 1]!)).toBeGreaterThan(28 * 86400000);
+  });
+
+  it('blocks a second back-to-back exception within 4 weeks', () => {
+    const bs = C.find((c) => c.id === 'bs')!, dl = C.find((c) => c.id === 'dl')!, sn = C.find((c) => c.id === 'snatch')!;
+    const window = [toPastDay('2026-11-20', [bs]), toPastDay('2026-11-21', [dl]), toPastDay('2026-12-06', [sn])];
+    expect(blocked(bs, '2026-12-07', input(), window, window[2])).toMatch(/exception already used recently/);
+    expect(blocked(bs, '2026-12-07', input(), window.slice(2), window[2])).toBeUndefined();
   });
 
   it('never proposes what the location cannot support', () => {

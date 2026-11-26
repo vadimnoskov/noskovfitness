@@ -45,6 +45,14 @@ Write for the athlete directly ("you"). Be specific to this workout and this per
 - If there is a time cap, say how to use it.
 - If the coach left a note, follow it.
 
+How to write tips (CrossFit L1/L2 coaching standards):
+- A cue says what to do with which body part ("push your knees out", "drive through your heels"). Never only name the fault, and use no anatomy jargon.
+- Say what to do, not what to avoid: "keep your chest up", not "don't round your back".
+- Threshold: if it's moving well, go faster; if positions break down, slow down or lighten the load.
+- Breaking up the work: give concrete set breaks where it helps (e.g. "21s in at most 3 sets, 15s in 2, 9s unbroken").
+- If the work gets too hard mid-workout, rest and keep the load; never suggest lowering the weight bit by bit to keep moving.
+- Hydration, if it comes up at all: drink when thirsty.
+
 Keep it short and plain: one or two sentences for the overall approach, then 2 to 4 short tips. No headings, no emoji, no medical advice.`;
 
 const SCHEMA = {

@@ -32,8 +32,28 @@ export function distinctMovements(w: Workout): MovementPrescription[] {
   return w.movements.filter((m) => { const k = keyOf(m.movement); if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
+/** Implements that put an external load in the athlete's hands (a plate jump's plate or a box is not a load). */
+const CARRIED: ReadonlySet<string> = new Set(['barbell', 'dumbbell', 'kettlebell', 'medball', 'sandbag']);
+const SUPPORT_ONLY: ReadonlySet<string> = new Set(['push-up', 'plank', 'lateral-jump']);
+
+/**
+ * Modality of one prescribed movement. The Template's rule: W is an external load, G is bodyweight. So a bodyweight
+ * lunge or step-up is G, and a pistol holding a kettlebell is W. Monostructural movements stay M whatever is carried.
+ */
+export function movementModality(m: Pick<MovementPrescription, 'movement'> & { load?: MovementPrescription['load'] }): Modality {
+  const f = FAMILY_BY_ID[m.movement.family];
+  const base = f?.modality ?? 'G';
+  if (base === 'M') return 'M';
+  const imp = m.movement.implement ?? f?.implements[0];
+  if (base === 'W' && imp === 'bodyweight' && !m.load) return 'G'; // "weighted step-ups, 4-4-4" carry a load
+  // Loaded gymnastics (a pistol holding a kettlebell, a weighted sit-up) needs a weight in the prescription; dumbbells
+  // under the hands for push-ups or planks are a support, not a load.
+  if (base === 'G' && m.load && imp && CARRIED.has(imp) && !SUPPORT_ONLY.has(m.movement.family)) return 'W';
+  return base;
+}
+
 export function modalityPattern(w: Workout): Modality[] {
-  return distinctMovements(w).map((m) => FAMILY_BY_ID[m.movement.family]?.modality ?? 'G');
+  return distinctMovements(w).map(movementModality);
 }
 
 function rounds(w: Workout): number {
@@ -108,7 +128,7 @@ export function deriveTags(w: Workout, opts: { resultSec?: number; amrapRounds?:
   const v = TAG_POLICY.volumeReps;
   const strength = s.kind === 'sets' || (s.kind === 'max' && s.what === 'load');
   const priority: WorkoutTags['priority'] = ['amrap', 'emom', 'tabata'].includes(s.kind) || (s.kind === 'intervals' && s.scored !== 'time') || (s.kind === 'max' && !!s.minutes) ? 'time' : 'task';
-  const td = strength ? 'short' : timeDomainOf(minutes) ?? 'medium';
+  const td: TimeDomain = strength ? 'heavy' : timeDomainOf(minutes) ?? 'medium';
   const pathway: WorkoutTags['pathway'] = strength || (minutes !== undefined && minutes < 2) ? 'phosphagen' : td === 'short' || td === 'medium' ? 'glycolytic' : 'oxidative';
   const computed: WorkoutTags = {
     modalityPattern: pattern,

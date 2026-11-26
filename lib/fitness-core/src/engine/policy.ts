@@ -1,8 +1,8 @@
 /**
  * Programming policy: every number the engine uses, in one editable object (stored per group in the database).
- * Defaults follow the coach's brief and CrossFit's "constantly varied" principle: mostly couplets and triplets,
- * some single-modality days, fewer long chippers; all time domains and loads represented; task and time priority mixed.
- * These are starting points the coach adjusts, not CrossFit-official ratios.
+ * Default targets are the measured mix of the published programming (2005 on, first half of 2019 weighted to a
+ * quarter; see styleProfile), so a new group starts from what CrossFit actually programmed. The coach adjusts them.
+ * Heavy lifting days are their own time-domain bucket (about one in five days, i.e. roughly weekly on a 5-day week).
  */
 export interface ProgrammingPolicy {
   version: number;
@@ -10,7 +10,8 @@ export interface ProgrammingPolicy {
   windowDays: number;
   targets: {
     movementCount: Record<'1' | '2-3' | '4+', number>;
-    timeDomain: Record<'short' | 'medium' | 'long' | 'endurance', number>;
+    /** 'heavy' = heavy lifting days (sets of 1–5 or a max), counted apart from the metcon time domains. */
+    timeDomain: Record<'heavy' | 'short' | 'medium' | 'long' | 'endurance', number>;
     priority: Record<'task' | 'time', number>;
     load: Record<'bodyweight' | 'light' | 'medium' | 'heavy', number>;
     /** Share of movements by modality across the window. */
@@ -20,8 +21,14 @@ export interface ProgrammingPolicy {
   rules: {
     /** Do not repeat the same workout within this many days (a due benchmark is the exception). */
     noRepeatWorkoutDays: number;
+    /** Avoid the same movement family on consecutive days. Not absolute: allowed once per rareExceptionDays. */
     noSameMovementConsecutiveDays: boolean;
+    /** Avoid heavy days back to back (L2: "on occasion may be entirely appropriate"): allowed once per rareExceptionDays. */
     noConsecutiveHeavyDays: boolean;
+    /** How often a back-to-back exception may be used (days). */
+    rareExceptionDays: number;
+    /** Minimum days between lift tests (1RM, 3RM…), so most heavy days stay regular heavy work, not max attempts. */
+    minDaysBetweenLiftTests: number;
     maxBenchmarksPerWeek: number;
     /** Longest workout the engine proposes on a normal day, minutes. */
     maxMinutes: number;
@@ -34,14 +41,14 @@ export const DEFAULT_POLICY: ProgrammingPolicy = {
   version: 1,
   windowDays: 42,
   targets: {
-    movementCount: { '1': 20, '2-3': 65, '4+': 15 },
-    timeDomain: { short: 25, medium: 35, long: 25, endurance: 15 },
-    priority: { task: 60, time: 40 },
-    load: { bodyweight: 25, light: 25, medium: 30, heavy: 20 },
-    modality: { G: 35, W: 40, M: 25 },
+    movementCount: { '1': 31, '2-3': 58, '4+': 11 },
+    timeDomain: { heavy: 22, short: 5, medium: 27, long: 25, endurance: 21 },
+    priority: { task: 85, time: 15 },
+    load: { bodyweight: 42, light: 12, medium: 15, heavy: 31 },
+    modality: { G: 44, W: 39, M: 17 },
   },
   weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15 },
-  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4 },
+  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, rareExceptionDays: 28, minDaysBetweenLiftTests: 14 },
 };
 
 /** Fill any missing fields from the defaults (older saved policies keep working when new settings are added). */
@@ -53,7 +60,7 @@ export function withDefaults(p: Partial<ProgrammingPolicy> | null | undefined): 
     windowDays: p.windowDays ?? d.windowDays,
     targets: {
       movementCount: { ...d.targets.movementCount, ...p.targets?.movementCount },
-      timeDomain: { ...d.targets.timeDomain, ...p.targets?.timeDomain },
+      timeDomain: migrateTimeDomain(d.targets.timeDomain, p.targets?.timeDomain),
       priority: { ...d.targets.priority, ...p.targets?.priority },
       load: { ...d.targets.load, ...p.targets?.load },
       modality: { ...d.targets.modality, ...p.targets?.modality },
@@ -61,4 +68,16 @@ export function withDefaults(p: Partial<ProgrammingPolicy> | null | undefined): 
     weights: { ...d.weights, ...p.weights },
     rules: { ...d.rules, ...p.rules },
   };
+}
+
+/**
+ * Saved targets from before heavy days had their own bucket counted them as "short". Split them out: heavy takes
+ * the default share (or all of "short" if that is smaller), so each group still adds up the same.
+ */
+function migrateTimeDomain(d: ProgrammingPolicy['targets']['timeDomain'], saved?: Partial<ProgrammingPolicy['targets']['timeDomain']>) {
+  if (!saved) return { ...d };
+  if (saved.heavy !== undefined) return { ...d, ...saved };
+  const short = saved.short ?? d.short + d.heavy;
+  const heavy = Math.min(d.heavy, short);
+  return { ...d, ...saved, heavy, short: short - heavy };
 }

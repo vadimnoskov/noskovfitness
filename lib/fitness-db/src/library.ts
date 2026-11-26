@@ -7,7 +7,7 @@
  * Nothing existing is edited: no names, results or settings change.
  */
 import { gunzipSync } from 'node:zlib';
-import { styleProfile, contentSignature, deriveTags, keyOf, nameOf, benchmarkOf, FAMILY_BY_ID, FEMALE_RX, withCap, type Workout, type MovementRef } from '@workspace/fitness-core';
+import { styleProfile, contentSignature, deriveTags, movementModality, keyOf, nameOf, benchmarkOf, FAMILY_BY_ID, FEMALE_RX, withCap, type Workout, type MovementRef } from '@workspace/fitness-core';
 import { sql } from './client';
 
 interface Entry {
@@ -84,9 +84,9 @@ export async function importLibrary(gz: Uint8Array): Promise<LibraryReport> {
   for (const { def } of [...toInsert, ...toRefresh]) for (const m of def.movements) refs.set(keyOf(m.movement), m.movement);
   const movementRows = [...refs.entries()].filter(([, r]) => FAMILY_BY_ID[r.family]).map(([key, r]) => {
     const f = FAMILY_BY_ID[r.family]!;
-    return { key, family: r.family, name: nameOf(r), modality: f.modality, pattern: f.pattern, ref: sql.json(r as never) };
+    return { key, family: r.family, name: nameOf(r), modality: movementModality({ movement: r }), pattern: f.pattern, ref: sql.json(r as never) };
   });
-  for (const part of chunk(movementRows, 500)) await sql`INSERT INTO movements ${sql(part)} ON CONFLICT (key) DO NOTHING`;
+  for (const part of chunk(movementRows, 500)) await sql`INSERT INTO movements ${sql(part)} ON CONFLICT (key) DO UPDATE SET modality = EXCLUDED.modality`;
 
   const fields = (e: Entry, def: Omit<Workout, 'id'>, bench?: ReturnType<typeof benchmarkOf>) => {
     const modern = e.dates.some((d) => d >= '2005-01-01');

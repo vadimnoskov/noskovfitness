@@ -27,7 +27,7 @@ export function repeatDue(c: Candidate, date: string, last: string | undefined):
 }
 
 /** A day already in the picture: done in history or planned. */
-export interface PastDay { date: string; workoutIds: string[]; tags: WorkoutTags[]; movementKeys: string[]; heavy: boolean; benchmarkCount: number }
+export interface PastDay { date: string; workoutIds: string[]; tags: WorkoutTags[]; movementKeys: string[]; heavy: boolean; benchmarkCount: number; liftTestCount?: number }
 
 export interface ScoreBreakdown { variety: number; freshness: number; weakness: number; benchmark: number; penalty: number; total: number; notes: string[] }
 export interface Proposal { date: string; candidateId: string; score: ScoreBreakdown; alternatives: { candidateId: string; score: ScoreBreakdown }[]; warnings: string[] }
@@ -44,11 +44,54 @@ export interface PlanInput {
   /** 0..1 per movement family: higher = group is weaker / less exposed there. Empty until fitness profiles exist. */
   weakness?: Map<string, number>;
   alternatives?: number;
+  /** Last date each lift was tested, any rep max ("Back Squat" → date). Filled by plan() from lastWorkoutDate when absent. */
+  lastLiftTest?: Map<string, string>;
 }
 
 const DAY = 86400000;
 const days = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / DAY);
-const isHeavy = (t: WorkoutTags) => t.load === 'heavy';
+/** A heavy lifting day is decided by the workout's structure (sets of 1–5, a max), not by the weight on the bar. */
+export const isHeavyDay = (t: WorkoutTags) => t.timeDomain === 'heavy';
+const isLiftTest = (c: Pick<Candidate, 'benchmark'>) => c.benchmark?.category === 'lift';
+/** "Back Squat 1RM" and "Back Squat 3RM" test the same lift. */
+export const liftOf = (c: Pick<Candidate, 'benchmark' | 'id'>) => (c.benchmark?.label ?? c.id).replace(/\s+\d+RM$/i, '');
+
+/** Days since this candidate's benchmark was last tested (lifts: any rep max of the same lift), or undefined if never. */
+function lastTested(c: Candidate, input: PlanInput): string | undefined {
+  return isLiftTest(c) ? input.lastLiftTest?.get(liftOf(c)) ?? input.lastWorkoutDate.get(c.id) : input.lastWorkoutDate.get(c.id);
+}
+const benchmarkDue = (c: Candidate, date: string, input: PlanInput) => {
+  if (!c.benchmark) return false;
+  const l = lastTested(c, input);
+  return !l || days(l, date) >= (c.benchmark.retestEveryDays ?? 120);
+};
+
+type Conflict = 'heavy' | 'movement';
+/** Back-to-back conflicts between a candidate and a neighbouring day (rules that are avoided, but allowed rarely). */
+function conflictsWith(c: Candidate, nb: PastDay, rules: ProgrammingPolicy['rules']): Conflict[] {
+  const out: Conflict[] = [];
+  if (rules.noConsecutiveHeavyDays && nb.heavy && isHeavyDay(c.tags)) out.push('heavy');
+  if (rules.noSameMovementConsecutiveDays) {
+    const fams = new Set(nb.movementKeys.map(familyOf));
+    if (candidateMovementKeys(c).some((k) => fams.has(familyOf(k)))) out.push('movement');
+  }
+  return out;
+}
+/** Was a back-to-back exception already used in the last rareExceptionDays (consecutive days that conflict)? */
+function exceptionUsedRecently(window: PastDay[], date: string, rules: ProgrammingPolicy['rules']): boolean {
+  const recent = window.filter((d) => days(d.date, date) <= (rules.rareExceptionDays ?? 28)).sort((a, b) => a.date.localeCompare(b.date));
+  for (let i = 1; i < recent.length; i++) {
+    const a = recent[i - 1]!, b = recent[i]!;
+    if (days(a.date, b.date) !== 1) continue;
+    if (rules.noConsecutiveHeavyDays && a.heavy && b.heavy) return true;
+    if (rules.noSameMovementConsecutiveDays) {
+      const fa = new Set(a.movementKeys.map(familyOf));
+      if (b.movementKeys.some((k) => fa.has(familyOf(k)))) return true;
+    }
+  }
+  return false;
+}
+const CONFLICT_NOTE: Record<Conflict, string> = { heavy: 'heavy two days in a row', movement: 'same movement as a neighbouring day' };
 const mcBucket = (n: number) => (n <= 1 ? '1' : n <= 3 ? '2-3' : '4+') as '1' | '2-3' | '4+';
 
 export function candidateMovementKeys(c: Candidate): string[] {
@@ -66,7 +109,7 @@ function windowShares(window: PastDay[]) {
   return { movementCount: share((x) => mcBucket(x.movementCount)), timeDomain: share((x) => x.timeDomain), priority: share((x) => x.priority), load: share((x) => x.load), modality: modShare, n: t.length };
 }
 
-export function score(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay): ScoreBreakdown {
+export function score(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay, tomorrow?: PastDay): ScoreBreakdown {
   const { policy } = input;
   const notes: string[] = [];
   const sh = windowShares(window);
@@ -97,9 +140,13 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
 
   // Benchmark: due (or never done) benchmarks score up to 1 by how overdue they are.
   let benchmark = 0; // also used for coach-set repeats below
-  if (c.benchmark && c.benchmark.category !== 'lift') {
-    const overdue = lw ? days(lw, date) / c.benchmark.retestEveryDays : 2;
-    if (overdue >= 1) { benchmark = Math.min(1, 0.5 + (overdue - 1) / 2); notes.push(`benchmark due${lw ? ` (last ${lw})` : ''}`); }
+  if (c.benchmark) {
+    const lt = lastTested(c, input);
+    const overdue = lt ? days(lt, date) / (c.benchmark.retestEveryDays ?? 120) : 2;
+    if (overdue >= 1) {
+      benchmark = Math.min(1, 0.5 + (overdue - 1) / 2);
+      notes.push(isLiftTest(c) ? `${liftOf(c)} test due${lt ? ` (last ${lt})` : ''}` : `benchmark due${lt ? ` (last ${lt})` : ''}`);
+    }
   }
 
   // Coach-set repeat (e.g. a short testing block): when due, it ranks like a due benchmark.
@@ -116,8 +163,18 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   penalty += Math.min(0.15, eq.warnings.length * 0.04);
   // One box or one set of rings for the whole group: possible, but the stimulus is lost. Strongly avoided.
   if (eq.crowded.length) { penalty += Math.min(0.5, 0.25 * eq.crowded.length); notes.push(...eq.crowded); }
-  // Controlled, skill-heavy movements (Turkish get-up) belong in warm-ups and practice, not metcons: last resort only.
-  if (inMetcon(c.workout) && c.workout.movements.some((m) => WARM_UP_ONLY.has(m.movement.family))) { penalty += 0.35; notes.push('Turkish get-ups belong in warm-ups or practice, not a metcon'); }
+  // Back-to-back heavy days or the same movement on neighbouring days: avoided, allowed rarely (blocked() limits how often).
+  for (const [nb, when] of [[yesterday, 'yesterday'], [tomorrow, 'tomorrow']] as const) {
+    if (!nb) continue;
+    for (const k of conflictsWith(c, nb, input.policy.rules)) { penalty += 0.3; notes.push(`${CONFLICT_NOTE[k]} (${when}): allowed occasionally`); }
+  }
+  // Low-power, controlled movements (Turkish get-up) are "useful occasionally" in workouts (L2): fine about once a
+  // month, strongly avoided more often than that.
+  if (inMetcon(c.workout) && c.workout.movements.some((m) => OCCASIONAL_IN_METCON.has(m.movement.family))) {
+    const recent = [...input.lastMovementDate].some(([k, d]) => OCCASIONAL_IN_METCON.has(familyOf(k)) && days(d, date) < OCCASIONAL_DAYS);
+    if (recent) { penalty += 0.35; notes.push('Turkish get-ups in a metcon again within 4 weeks'); }
+    else { penalty += 0.08; notes.push('Turkish get-ups in a metcon: occasional use'); }
+  }
 
   const w = policy.weights;
   const wsum = w.variety + w.freshness + w.weakness + w.benchmark || 1;
@@ -128,8 +185,9 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   return { variety: r(variety), freshness: r(freshness), weakness: r(weakness), benchmark: r(benchmark), penalty: r(penalty), total: r(total), notes };
 }
 
-/** Movements done slowly and controlled: warm-up and practice material, not metcon material. */
-const WARM_UP_ONLY = new Set(['tgu']);
+/** Movements done slowly and controlled: mostly warm-up and practice material, in a metcon only occasionally. */
+const OCCASIONAL_IN_METCON = new Set(['tgu']);
+const OCCASIONAL_DAYS = 28;
 const inMetcon = (w: Candidate['workout']) => w.scoreType !== 'load' && w.scoreType !== 'none' && w.structure.kind !== 'sets' && w.structure.kind !== 'skill-practice';
 
 /** Hard rules. Returns the reason a candidate is not allowed on this date, or undefined. */
@@ -137,7 +195,7 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
   const { rules } = input.policy;
   if (!c.workout.movements.length) return 'no movements';
   const lw = input.lastWorkoutDate.get(c.id);
-  const due = c.benchmark && c.benchmark.category !== 'lift' && (!lw || days(lw, date) >= c.benchmark.retestEveryDays);
+  const due = benchmarkDue(c, date, input);
   const repeating = c.repeat && (!c.repeat.until || date <= c.repeat.until);
   if (repeating && !repeatDue(c, date, lw)) return 'repeat not due yet';
   if (lw && days(lw, date) < rules.noRepeatWorkoutDays && !due && !repeating) return 'done recently';
@@ -146,16 +204,21 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
   for (const [nb, when] of [[yesterday, 'yesterday'], [tomorrow, 'tomorrow']] as const) {
     if (!nb) continue;
     if (nb.workoutIds.includes(c.id)) return `same workout ${when}`;
-    if (rules.noSameMovementConsecutiveDays) {
-      const y = new Set(nb.movementKeys.map(familyOf));
-      if (candidateMovementKeys(c).some((k) => y.has(familyOf(k)))) return `movement used ${when}`;
+    const conflicts = conflictsWith(c, nb, rules);
+    if (conflicts.length && exceptionUsedRecently(window, date, rules)) {
+      return conflicts[0] === 'heavy' ? 'heavy two days in a row (exception already used recently)' : `movement used ${when} (exception already used recently)`;
     }
-    if (rules.noConsecutiveHeavyDays && nb.heavy && isHeavy(c.tags)) return 'heavy two days in a row';
   }
-  if (c.benchmark && c.benchmark.category !== 'lift') {
+  if (c.benchmark) {
     const weekStart = new Date(Date.parse(date) - ((new Date(date).getUTCDay() + 6) % 7) * DAY).toISOString().slice(0, 10);
-    const thisWeek = window.filter((d) => d.date >= weekStart).reduce((a, d) => a + d.benchmarkCount, 0);
-    if (thisWeek >= rules.maxBenchmarksPerWeek) return 'benchmark limit this week';
+    const week = window.filter((d) => d.date >= weekStart);
+    // Lift tests (1RM, 3RM…) have their own spacing, so they neither crowd out the metcon benchmarks nor turn every
+    // heavy day into a max attempt.
+    if (isLiftTest(c)) {
+      const gap = rules.minDaysBetweenLiftTests ?? 14;
+      if (window.some((d) => (d.liftTestCount ?? 0) > 0 && days(d.date, date) < gap)) return `lift test within the last ${gap} days`;
+    }
+    else if (week.reduce((a, d) => a + d.benchmarkCount, 0) >= rules.maxBenchmarksPerWeek) return 'benchmark limit this week';
   }
   const eq = checkEquipment(c.workout, input.equipmentFor(date), rules.groupSize);
   if (!eq.ok) return eq.problems[0];
@@ -165,8 +228,9 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
 export function toPastDay(date: string, picks: Candidate[]): PastDay {
   return {
     date, workoutIds: picks.map((p) => p.id), tags: picks.map((p) => p.tags),
-    movementKeys: picks.flatMap(candidateMovementKeys), heavy: picks.some((p) => isHeavy(p.tags)),
-    benchmarkCount: picks.filter((p) => p.benchmark && p.benchmark.category !== 'lift').length,
+    movementKeys: picks.flatMap(candidateMovementKeys), heavy: picks.some((p) => isHeavyDay(p.tags)),
+    benchmarkCount: picks.filter((p) => p.benchmark && !isLiftTest(p)).length,
+    liftTestCount: picks.filter(isLiftTest).length,
   };
 }
 
@@ -175,7 +239,12 @@ export function plan(input: PlanInput): Proposal[] {
   const out: Proposal[] = [];
   const timeline = [...input.history].sort((a, b) => a.date.localeCompare(b.date));
   const lastW = new Map(input.lastWorkoutDate), lastM = new Map(input.lastMovementDate);
-  const local = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM };
+  const lastL = new Map(input.lastLiftTest ?? []);
+  if (!input.lastLiftTest) for (const c of input.candidates) {
+    const d = isLiftTest(c) ? lastW.get(c.id) : undefined;
+    if (d && (lastL.get(liftOf(c)) ?? '') < d) lastL.set(liftOf(c), d);
+  }
+  const local = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM, lastLiftTest: lastL };
   for (const date of [...input.dates].sort()) {
     const window = timeline.filter((d) => d.date < date && days(d.date, date) <= input.policy.windowDays);
     const prevDay = timeline.filter((d) => d.date < date).at(-1);
@@ -183,7 +252,7 @@ export function plan(input: PlanInput): Proposal[] {
     const tomorrow = timeline.find((d) => days(date, d.date) === 1);
     const ranked = input.candidates
       .filter((c) => !blocked(c, date, local, window, yesterday, tomorrow))
-      .map((c) => ({ c, s: score(c, date, local, window, yesterday) }))
+      .map((c) => ({ c, s: score(c, date, local, window, yesterday, tomorrow) }))
       .sort((a, b) => b.s.total - a.s.total || a.c.id.localeCompare(b.c.id));
     const best = ranked[0];
     if (!best) continue;
@@ -192,6 +261,7 @@ export function plan(input: PlanInput): Proposal[] {
       alternatives: ranked.slice(1, 1 + (input.alternatives ?? 4)).map((r) => ({ candidateId: r.c.id, score: r.s })) });
     timeline.push(toPastDay(date, [best.c]));
     lastW.set(best.c.id, date);
+    if (isLiftTest(best.c)) lastL.set(liftOf(best.c), date);
     for (const k of candidateMovementKeys(best.c)) lastM.set(k, date);
   }
   return out;
