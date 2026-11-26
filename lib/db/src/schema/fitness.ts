@@ -142,3 +142,21 @@ export const knowledgeQuestions = pgTable('knowledge_questions', {
   model: text('model').notNull(), byAthlete: text('by_athlete').references(() => athletes.id, { onDelete: 'set null' }),
   at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** What the coach taught Chalkboard: the explanation, Chalkboard's draft (cards, setting changes, conflicts), the preview and the decision. */
+export const knowledgeTeachings = pgTable('knowledge_teachings', {
+  id: uuid('id').primaryKey().defaultRandom(), text: text('text').notNull(),
+  draft: jsonb('draft').notNull(), preview: jsonb('preview'), status: text('status').notNull().default('draft'),
+  decision: text('decision'), policyBefore: jsonb('policy_before'), policyAfter: jsonb('policy_after'),
+  byAthlete: text('by_athlete').references(() => athletes.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, t => [check('knowledge_teachings_status_check', sql`${t.status} IN ('draft','confirmed','discarded','undone')`)]);
+
+/** Cards the coach taught (same shape as methodology cards), merged into the knowledge when active. */
+export const coachCards = pgTable('coach_cards', {
+  id: text('id').primaryKey(), body: jsonb('body').notNull(),
+  teachingId: uuid('teaching_id').references(() => knowledgeTeachings.id, { onDelete: 'set null' }),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

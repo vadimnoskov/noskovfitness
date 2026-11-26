@@ -45,7 +45,9 @@ import type {
   PasswordChange,
   PasswordSet,
   PlanNoteInput,
-  SearchWorkoutsParams
+  SearchWorkoutsParams,
+  TeachDecision,
+  TeachInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2062,6 +2064,182 @@ export function useGetKnowledgeMovement<TData = Awaited<ReturnType<typeof getKno
 
 
 
+
+export const getTeachKnowledgeUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/teach`
+}
+
+/**
+ * @summary Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+ */
+export const teachKnowledge = async (teachInput: TeachInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getTeachKnowledgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(teachInput)
+  }
+);}
+
+
+
+
+
+export const getTeachKnowledgeMutationKey = () => ['teachKnowledge'] as const;
+
+export const getTeachKnowledgeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext> => {
+
+const mutationKey = getTeachKnowledgeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof teachKnowledge>>, TeachKnowledgeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  teachKnowledge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TeachKnowledgeMutationResult = NonNullable<Awaited<ReturnType<typeof teachKnowledge>>>
+    export type TeachKnowledgeMutationBody = BodyType<TeachInput>
+    export type TeachKnowledgeMutationError = ErrorType<unknown>
+    export type TeachKnowledgeMutationVariables = {data: BodyType<TeachInput>}
+
+    /**
+ * @summary Coach - teach Chalkboard (or correct a draft); returns the draft, conflicts and a dry-run preview
+ */
+export const useTeachKnowledge = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof teachKnowledge>>, TError,TeachKnowledgeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof teachKnowledge>>,
+        TError,
+        TeachKnowledgeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTeachKnowledgeMutationOptions(options), queryClient);
+    }
+
+export const getDecideTeachingUrl = () => {
+
+
+
+
+  return `/api/fitness/knowledge/teach/decide`
+}
+
+/**
+ * @summary Coach - confirm, confirm as coach decision, discard or undo a teaching
+ */
+export const decideTeaching = async (teachDecision: TeachDecision, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getDecideTeachingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(teachDecision)
+  }
+);}
+
+
+
+
+
+export const getDecideTeachingMutationKey = () => ['decideTeaching'] as const;
+
+export const getDecideTeachingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext> => {
+
+const mutationKey = getDecideTeachingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideTeaching>>, DecideTeachingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  decideTeaching(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideTeachingMutationResult = NonNullable<Awaited<ReturnType<typeof decideTeaching>>>
+    export type DecideTeachingMutationBody = BodyType<TeachDecision>
+    export type DecideTeachingMutationError = ErrorType<unknown>
+    export type DecideTeachingMutationVariables = {data: BodyType<TeachDecision>}
+
+    /**
+ * @summary Coach - confirm, confirm as coach decision, discard or undo a teaching
+ */
+export const useDecideTeaching = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideTeaching>>, TError,DecideTeachingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof decideTeaching>>,
+        TError,
+        DecideTeachingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideTeachingMutationOptions(options), queryClient);
+    }
 
 export const getGetHistoryUrl = (params?: GetHistoryParams,) => {
   const normalizedParams = new URLSearchParams();

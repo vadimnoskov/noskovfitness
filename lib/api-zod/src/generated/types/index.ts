@@ -34,3 +34,6 @@ export * from './passwordChange';
 export * from './passwordSet';
 export * from './planNoteInput';
 export * from './searchWorkoutsParams';
+export * from './teachDecision';
+export * from './teachDecisionAction';
+export * from './teachInput';

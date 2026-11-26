@@ -50,3 +50,16 @@ describe('movement facts', () => {
     for (const g of MOVEMENT_GUIDE) expect(facts.has(g.key), g.key).toBe(true);
   });
 });
+
+import { tunableSettings, withSetting } from '../src/index';
+describe('teachable settings', () => {
+  it('lists numbers and switches with their paths, and replaces one value', () => {
+    const t = tunableSettings(DEFAULT_POLICY);
+    expect(t.find((x) => x.path === 'rules.rareExceptionDays')?.value).toBe(28);
+    expect(t.find((x) => x.path === 'targets.timeDomain.heavy')?.value).toBe(22);
+    expect(t.some((x) => x.path === 'version')).toBe(false);
+    const p = withSetting(DEFAULT_POLICY, 'rules.rareExceptionDays', 21);
+    expect(p.rules.rareExceptionDays).toBe(21);
+    expect(DEFAULT_POLICY.rules.rareExceptionDays).toBe(28);
+  });
+});

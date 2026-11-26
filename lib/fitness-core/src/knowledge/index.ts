@@ -33,3 +33,29 @@ export function firedCounts(cards: KnowledgeCard[], notes: string[]): Record<str
   }
   return out;
 }
+
+/** Every policy value the coach may change by teaching (numbers and on/off rules), with its current value. */
+export function tunableSettings(policy: unknown): { path: string; value: number | boolean }[] {
+  const out: { path: string; value: number | boolean }[] = [];
+  const walk = (o: unknown, pre: string) => {
+    if (!o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      const p = pre ? `${pre}.${k}` : k;
+      if (p === 'version') continue;
+      if (typeof v === 'number' || typeof v === 'boolean') out.push({ path: p, value: v });
+      else walk(v, p);
+    }
+  };
+  walk(policy, '');
+  return out;
+}
+
+/** A copy of `obj` with the value at a dotted path replaced. */
+export function withSetting<T>(obj: T, path: string, value: unknown): T {
+  const copy = structuredClone(obj) as Record<string, unknown>;
+  const keys = path.split('.');
+  let o = copy;
+  for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
+  o[keys.at(-1)!] = value;
+  return copy as T;
+}
