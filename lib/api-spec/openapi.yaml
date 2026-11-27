@@ -118,7 +118,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [addAthlete, editAthlete, editProgram, saveLocation]
+            enum: [addAthlete, editAthlete, editProgram, saveLocation, importHistory]
       requestBody:
         required: true
         content:

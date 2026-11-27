@@ -37,6 +37,8 @@ export const groupMembers = pgTable('group_members', {
 export const equipmentProfiles = pgTable('equipment_profiles', {
   id: text('id').primaryKey(), groupId: text('group_id').references(() => groups.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), items: jsonb('items').notNull(),
+  /** What the place can't do even with that equipment (fitness-core LocationLimit). */
+  limits: jsonb('limits').notNull().default(sql`'[]'::jsonb`),
 });
 export const workouts = pgTable('workouts', {
   id: uuid('id').primaryKey().defaultRandom(), signature: text('signature').unique().notNull(), name: text('name'),

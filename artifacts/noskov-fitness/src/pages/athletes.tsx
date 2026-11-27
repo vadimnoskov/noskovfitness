@@ -8,9 +8,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGetPeople, getGetPeopleQueryKey, usePeopleAction, getGetMeQueryKey } from '@workspace/api-client-react';
 import { useMe } from '@/lib/session';
 import { setProgram } from '@/lib/program';
+import { LOCATION_LIMITS } from '@workspace/fitness-core';
 
 type Item = { implement: string; quantity: number; loads?: { value: number; unit: 'lb' | 'kg'; qty: number }[]; note?: string };
-type Location = { id: string; name: string; items: Item[] };
+type Location = { id: string; name: string; items: Item[]; limits?: string[] };
 type Member = { id: string; name: string; sex: string; units: string; birthYear: number | null; birthDate: string | null; isCoach: boolean; hasPassword: boolean };
 type Program = { id: string; name: string; coachId: string | null; family: boolean; trainingDays: number[]; defaultLocation: string | null; members: Member[]; locations: Location[] };
 type People = { programs: Program[]; coaches: { id: string; name: string }[] };
@@ -62,7 +63,7 @@ function useAct() {
   const qc = useQueryClient();
   const m = usePeopleAction();
   const [error, setError] = useState<string | null>(null);
-  const run = (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation', data: Record<string, string | string[]>, after?: (r: Record<string, unknown>) => void) => {
+  const run = (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory', data: Record<string, string | string[]>, after?: (r: Record<string, unknown>) => void) => {
     setError(null);
     m.mutate({ action, data }, {
       onSuccess: (r) => { qc.invalidateQueries({ queryKey: getGetPeopleQueryKey() }); qc.invalidateQueries({ queryKey: getGetMeQueryKey() }); after?.(r as Record<string, unknown>); },
@@ -107,7 +108,8 @@ function ProgramBlock({ p, coaches }: { p: Program; coaches: People['coaches'] }
       <ul className="members">
         {p.members.map((m) => (
           <li key={m.id}><b>{m.name}</b> <span className="small">{[m.sex, age(m) !== null ? `${age(m)} y` : null, m.units, m.hasPassword ? 'can sign in' : 'no sign-in yet'].filter(Boolean).join(' · ')}</span>{' '}
-            <Link href={`/today?a=${m.id}`}>Today</Link> · <Link href={`/history?a=${m.id}`}>History</Link> · <Link href={`/fitness?a=${m.id}`}>Fitness</Link></li>
+            <Link href={`/today?a=${m.id}`}>Today</Link> · <Link href={`/history?a=${m.id}`}>History</Link> · <Link href={`/fitness?a=${m.id}`}>Fitness</Link>
+            {!p.family ? <ImportHistory athleteId={m.id} name={m.name} /> : null}</li>
         ))}
       </ul>
       <h3 className="small">Locations</h3>
@@ -132,7 +134,7 @@ function LocationEditor({ programId, loc, units }: { programId: string; loc?: Lo
         const note = String(f.get(`note.${k}`) ?? '').trim();
         return { implement: k, quantity: Math.max(1, Number(f.get(`qty.${k}`)) || 1), ...(loads ? { loads } : {}), ...(note ? { note } : {}) };
       });
-      run('saveLocation', { programId, locationId: loc?.id ?? '', name: String(f.get('name') ?? ''), items: JSON.stringify(items) }, () => setOpen(false));
+      run('saveLocation', { programId, locationId: loc?.id ?? '', name: String(f.get('name') ?? ''), items: JSON.stringify(items), limits: f.getAll('limits').map(String) }, () => setOpen(false));
     }}>
       <label>Location name <input name="name" defaultValue={loc?.name ?? ''} placeholder="e.g. Building gym" required /></label>
       <table className="equip"><thead><tr><th>Equipment</th><th>How many</th><th>Weights / notes</th></tr></thead><tbody>
@@ -149,6 +151,9 @@ function LocationEditor({ programId, loc, units }: { programId: string; loc?: Lo
         })}
       </tbody></table>
       <p className="small">Weights: list them separated by commas, with lb or kg; dumbbells count as pairs unless you add "x1".</p>
+      <fieldset className="stack"><legend className="small">What this place can't do</legend>
+        {LOCATION_LIMITS.map((l) => <label key={l.key} className="small"><input type="checkbox" name="limits" value={l.key} defaultChecked={!!loc?.limits?.includes(l.key)} /> {l.label}</label>)}
+      </fieldset>
       <div className="row"><button type="submit" className="btn sm" disabled={pending}>Save location</button><button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>Cancel</button></div>
       {error ? <p className="warn">{error}</p> : null}
     </form>
@@ -192,5 +197,31 @@ function AddAthlete({ programs, coaches }: { programs: Program[]; coaches: Peopl
         {done ? <p className="ok">{done} added.</p> : null}
       </form>
     </section>
+  );
+}
+
+/** Upload a client's BTWB export CSV (or rows in the same columns) into their history. Re-uploading skips duplicates. */
+function ImportHistory({ athleteId, name }: { athleteId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const [report, setReport] = useState<string | null>(null);
+  const { run, error, pending } = useAct();
+  if (!open) return <> · <button type="button" className="btn ghost sm" onClick={() => setOpen(true)}>Import history</button></>;
+  return (
+    <div className="stack loc">
+      <p className="small">Import {name}'s BTWB history: the CSV from BTWB's "export my data" (columns Date, Formatted Result, Result, Performed, Workout, Description, Notes). Results already there are skipped.</p>
+      <input type="file" accept=".csv,text/csv,text/plain" disabled={pending} onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setReport(null);
+        run('importHistory', { athleteId, csv: await file.text() }, (r) => {
+          const x = r as { imported?: number; duplicates?: number; skipped?: { date: string; workout: string; why: string }[]; from?: string; to?: string };
+          setReport(`${x.imported ?? 0} results imported${x.from ? ` (${x.from} to ${x.to})` : ''}; ${x.duplicates ?? 0} already there; ${x.skipped?.length ?? 0} skipped${x.skipped?.length ? `: ${x.skipped.slice(0, 8).map((s) => `${s.date} ${s.workout} (${s.why})`).join('; ')}` : ''}.`);
+        });
+      }} />
+      {pending ? <p className="small">Importing…</p> : null}
+      {report ? <p className="ok">{report}</p> : null}
+      {error ? <p className="warn">{error}</p> : null}
+      <button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>Close</button>
+    </div>
   );
 }

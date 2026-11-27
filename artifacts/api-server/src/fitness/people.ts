@@ -3,8 +3,8 @@
  * programming settings: the family's program, and one for each client (or a small group of clients). Each athlete
  * trains in one program; Today, the planner and Individual Rx follow it.
  */
-import { sql } from '@workspace/fitness-db';
-import type { EquipmentItem } from '@workspace/fitness-core';
+import { sql, savePolicy, importAthleteHistory } from '@workspace/fitness-db';
+import { DEFAULT_POLICY, LOCATION_LIMITS, type EquipmentItem } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import type { User } from './accounts';
 import { programsFor, GROUP_ID } from './data';
@@ -38,7 +38,7 @@ export async function getPeople(user: User) {
     sql`SELECT id, training_days, default_equipment_id FROM groups WHERE id IN ${sql(ids)}`,
     sql`SELECT gm.group_id, a.id, a.name, a.sex, a.units, a.birth_year, a.birth_date::text AS birth_date, a.is_coach, (a.password_hash IS NOT NULL) AS has_password
         FROM group_members gm JOIN athletes a ON a.id = gm.athlete_id WHERE gm.group_id IN ${sql(ids)} ORDER BY a.is_coach DESC, a.birth_year NULLS FIRST, a.name`,
-    sql`SELECT id, group_id, name, items FROM equipment_profiles WHERE group_id IN ${sql(ids)} ORDER BY name`,
+    sql`SELECT id, group_id, name, items, limits FROM equipment_profiles WHERE group_id IN ${sql(ids)} ORDER BY name`,
     // Who can coach a program: the family's adults (the head coach, and family members who log for others).
     sql`SELECT a.id, a.name FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id AND gm.group_id = ${GROUP_ID} WHERE a.is_coach OR a.can_log_for_others ORDER BY a.is_coach DESC, a.name`,
   ]);
@@ -50,7 +50,7 @@ export async function getPeople(user: User) {
         id: p.id, name: p.name, coachId: p.coachId, family: p.id === GROUP_ID,
         trainingDays: g.training_days as number[], defaultLocation: (g.default_equipment_id as string | null) ?? null,
         members: members.filter((m) => m.group_id === p.id).map((m) => ({ id: m.id, name: m.name, sex: m.sex, units: m.units, birthYear: m.birth_year, birthDate: m.birth_date, isCoach: m.is_coach, hasPassword: m.has_password })),
-        locations: locations.filter((l) => l.group_id === p.id).map((l) => ({ id: l.id, name: l.name, items: l.items })),
+        locations: locations.filter((l) => l.group_id === p.id).map((l) => ({ id: l.id, name: l.name, items: l.items, limits: l.limits ?? [] })),
       };
     }),
   };
@@ -75,6 +75,8 @@ async function addAthlete(user: User, f: Record<string, unknown>) {
       const coach = user.isCoach && str(f, 'coachId') ? str(f, 'coachId') : user.id;
       const days = trainingDays(f.trainingDays);
       await tx`INSERT INTO groups (id, name, training_days, coach_id) VALUES (${groupId}, ${name}, ${days.length ? days : [1, 2, 4, 5]}, ${coach})`;
+      // A program of one: no shared stations to stagger (the planner's group size).
+      await tx`INSERT INTO programming_policy (group_id, policy) VALUES (${groupId}, ${tx.json({ ...structuredClone(DEFAULT_POLICY), rules: { ...DEFAULT_POLICY.rules, groupSize: 1 } } as never)})`;
     }
     await tx`INSERT INTO athletes (id, name, birth_year, birth_date, sex, units, is_coach, can_log_for_others)
       VALUES (${id}, ${name}, ${birthYear}, ${birthDate || null}, ${sex}, ${units}, false, false)`;
@@ -130,20 +132,33 @@ async function saveLocation(user: User, f: Record<string, unknown>) {
     ...(Array.isArray(i.loads) && i.loads.length ? { loads: i.loads.filter((l) => Number(l.value) > 0 && Number(l.qty) > 0).map((l) => ({ value: Number(l.value), unit: l.unit === 'kg' ? 'kg' : 'lb', qty: Math.round(Number(l.qty)) })) } : {}),
     ...(i.note ? { note: String(i.note).slice(0, 200) } : {}),
   }));
+  const known = new Set(LOCATION_LIMITS.map((l) => l.key as string));
+  const limits = (Array.isArray(f.limits) ? f.limits : typeof f.limits === 'string' && f.limits ? [f.limits] : []).map(String).filter((k) => known.has(k));
   let id = str(f, 'locationId');
   if (id) {
     const [l] = await sql`SELECT group_id FROM equipment_profiles WHERE id = ${id}`;
     if (!l || l.group_id !== groupId) throw new InputError('Unknown location.', 404);
-    await sql`UPDATE equipment_profiles SET name = ${name}, items = ${sql.json(clean as never)} WHERE id = ${id}`;
+    await sql`UPDATE equipment_profiles SET name = ${name}, items = ${sql.json(clean as never)}, limits = ${sql.json(limits)} WHERE id = ${id}`;
   } else {
     id = await newId('equipment_profiles', `${groupId}-${name}`);
-    await sql`INSERT INTO equipment_profiles (id, group_id, name, items) VALUES (${id}, ${groupId}, ${name}, ${sql.json(clean as never)})`;
+    await sql`INSERT INTO equipment_profiles (id, group_id, name, items, limits) VALUES (${id}, ${groupId}, ${name}, ${sql.json(clean as never)}, ${sql.json(limits)})`;
     await sql`UPDATE groups SET default_equipment_id = ${id} WHERE id = ${groupId} AND default_equipment_id IS NULL`;
   }
   return { ok: true, locationId: id };
 }
 
-export const PEOPLE_ACTIONS = { addAthlete, editAthlete, editProgram, saveLocation } as const;
+/** Import an athlete's BTWB history (CSV with BTWB's export columns). Up to 2 MB. */
+async function importHistory(user: User, f: Record<string, unknown>) {
+  const id = str(f, 'athleteId'), csv = typeof f.csv === 'string' ? f.csv : '';
+  const [m] = await sql`SELECT group_id FROM group_members WHERE athlete_id = ${id}`;
+  if (!m) throw new InputError('Unknown athlete.', 404);
+  await mayCoach(user, m.group_id as string);
+  if (!/^\uFEFF?"?Date"?,/.test(csv)) throw new InputError('Use a BTWB export CSV (first column "Date").');
+  if (csv.length > 2_000_000) throw new InputError('The file is too large (2 MB at most).');
+  return { ok: true, ...(await importAthleteHistory(id, csv, user.id)) };
+}
+
+export const PEOPLE_ACTIONS = { addAthlete, editAthlete, editProgram, saveLocation, importHistory } as const;
 export async function peopleAction(user: User, action: string, f: Record<string, unknown>) {
   const fn = PEOPLE_ACTIONS[action as keyof typeof PEOPLE_ACTIONS];
   if (!fn) throw new InputError('Unknown action.', 404);

@@ -94,19 +94,22 @@ export function doneReps(r: Pick<Result, 'performed' | 'score' | 'completed'>): 
   return undefined;
 }
 
-export interface UsualVolume { most: Map<string, number>; lastDate?: string }
+/** `seen`: movement families done in the 12 months (any workout kind, including max-load tests). */
+export interface UsualVolume { most: Map<string, number>; lastDate?: string; seen?: Set<string> }
 /** Each movement's most reps in one workout over the 12 months before `asOf`, and the person's last training date. */
 export function usualVolume(results: (Pick<Result, 'performed' | 'score' | 'completed'> & { date: string })[], asOf: string): UsualVolume {
   const from = new Date(Date.parse(asOf) - 365 * 86400000).toISOString().slice(0, 10);
   const most = new Map<string, number>();
+  const seen = new Set<string>();
   let lastDate: string | undefined;
   for (const r of results) {
     if (r.date >= asOf) continue;
     if (!lastDate || r.date > lastDate) lastDate = r.date;
     if (r.date < from) continue;
+    for (const m of r.performed.movements) seen.add(m.movement.family);
     for (const [k, n] of doneReps(r) ?? []) most.set(k, Math.max(most.get(k) ?? 0, n));
   }
-  return { most, lastDate };
+  return { most, lastDate, seen };
 }
 
 export interface VolumeRules { factor: number; minReps: number; layoffDays: number }
