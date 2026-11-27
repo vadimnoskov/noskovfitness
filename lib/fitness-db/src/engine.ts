@@ -120,6 +120,19 @@ export async function groupPicture(groupId: string, asOf: string): Promise<{ wea
   return { weaknessCells: plannerWeakness(grids), usualVolumes };
 }
 
+/** For each published workout, the workouts published 1–3 days after it (any date it appeared on). */
+let publishedNextCache: { at: number; map: Map<string, Set<string>> } | undefined;
+export async function loadPublishedNext(): Promise<Map<string, Set<string>>> {
+  if (publishedNextCache && Date.now() - publishedNextCache.at < 10 * 60 * 1000) return publishedNextCache.map;
+  const rows = await sql`SELECT DISTINCT a.workout_id AS a, b.workout_id AS b FROM workout_sources a
+    JOIN workout_sources b ON b.source = a.source AND b.source_date > a.source_date AND b.source_date <= a.source_date + 3 AND b.workout_id <> a.workout_id
+    WHERE a.source = 'published'`;
+  const map = new Map<string, Set<string>>();
+  for (const r of rows) { const set = map.get(r.a) ?? new Set<string>(); set.add(r.b); map.set(r.a, set); }
+  publishedNextCache = { at: Date.now(), map };
+  return map;
+}
+
 export async function planRange(groupId: string, from: string, to: string, opts: { extraDates?: string[]; policy?: ProgrammingPolicy } = {}) {
   const [saved, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   const policy = opts.policy ?? saved;
@@ -134,8 +147,8 @@ export async function planRange(groupId: string, from: string, to: string, opts:
   const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...proposedDates, ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
-  const { weaknessCells, usualVolumes } = await groupPicture(groupId, from);
-  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, alternatives: 4 });
+  const [{ weaknessCells, usualVolumes }, publishedNext] = await Promise.all([groupPicture(groupId, from), loadPublishedNext()]);
+  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, publishedNext, alternatives: 4 });
   return { proposals, policy, dates, profileFor, candidates };
 }
 
@@ -149,8 +162,8 @@ export async function refreshAlternatives(groupId: string, dayId: string) {
   const [policy, profiles, candidates] = await Promise.all([getPolicy(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(day.date, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from: day.date, to: day.date });
   const profile = profiles.find((p) => p.id === day.equipment_profile_id) ?? profiles[0]!;
-  const { weaknessCells, usualVolumes } = await groupPicture(groupId, day.date);
-  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, alternatives: 5 });
+  const [{ weaknessCells, usualVolumes }, publishedNext] = await Promise.all([groupPicture(groupId, day.date), loadPublishedNext()]);
+  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, publishedNext, alternatives: 5 });
   if (!p) return;
   const options = [{ candidateId: p.candidateId, score: p.score }, ...p.alternatives].filter((a) => a.candidateId !== day.main_workout_id).slice(0, 4);
   await sql`UPDATE program_days SET alternatives = ${sql.json(options as never)}, updated_at = now() WHERE id = ${dayId}`;
@@ -171,7 +184,7 @@ export async function checkPlannedDays(groupId: string, from: string, to: string
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     WHERE d.group_id = ${groupId} AND d.status IN ('proposed','approved') AND d.date BETWEEN ${from} AND ${to}`;
   if (!days.length) return out;
-  const { history } = await loadPicture(groupId, addDays(from, -policy.windowDays));
+  const [{ history }, publishedNext] = await Promise.all([loadPicture(groupId, addDays(from, -policy.windowDays)), loadPublishedNext()]);
   const byDate = new Map(history.map((h) => [h.date, h]));
   const defaultProfile = profiles.find((p) => p.id === group?.default_equipment_id) ?? profiles[0]!;
   for (const d of days) {
@@ -179,7 +192,7 @@ export async function checkPlannedDays(groupId: string, from: string, to: string
     const window = history.filter((h) => h.date < d.date && h.date >= addDays(d.date, -policy.windowDays));
     const near = (n: number) => byDate.get(addDays(d.date, n));
     const profile = profiles.find((p) => p.id === d.equipment_profile_id) ?? defaultProfile;
-    const reason = blocked(c, d.date, { dates: [], history, candidates: [], policy, equipmentFor: () => profile, lastWorkoutDate: new Map(), lastMovementDate: new Map() }, window, near(-1), near(1));
+    const reason = blocked(c, d.date, { dates: [], history, candidates: [], policy, equipmentFor: () => profile, lastWorkoutDate: new Map(), lastMovementDate: new Map(), publishedNext }, window, near(-1), near(1));
     if (reason && reason !== 'too long' && reason !== 'repeat not due yet') out.set(d.id, reason);
   }
   return out;

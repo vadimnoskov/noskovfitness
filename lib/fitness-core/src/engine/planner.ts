@@ -24,6 +24,22 @@ export interface Candidate {
   repeat?: { everyDays: number; until?: string } | null;
 }
 
+/**
+ * How many days in a row would follow the published order if this candidate is picked: 1 = no link, 2 = it was published
+ * right after the previous training day's workout, 3 = after the previous two as well (a copied stretch).
+ */
+export function publishedChain(c: Candidate, date: string, input: Pick<PlanInput, 'publishedNext'>, window: PastDay[]): number {
+  const next = input.publishedNext;
+  if (!next?.size) return 1;
+  const before = window.filter((d) => d.date < date).slice(-2);
+  const prev = before.at(-1), prev2 = before.length > 1 ? before[0] : undefined;
+  if (!prev || days(prev.date, date) > 4) return 1;
+  const linked = prev.workoutIds.filter((p) => next.get(p)?.has(c.id));
+  if (!linked.length) return 1;
+  if (prev2 && days(prev2.date, prev.date) <= 4 && prev2.workoutIds.some((q) => linked.some((p) => next.get(q)?.has(p)))) return 3;
+  return 2;
+}
+
 const repsCache = new WeakMap<Candidate, Map<string, number> | null>();
 /**
  * How many family members a candidate would ask for a volume jump: more than volumeJumpFactor × their most reps of a
@@ -87,6 +103,8 @@ export interface PlanInput {
   weaknessCells?: Map<string, number>;
   /** Each family member's usual volume (most reps of each movement in one workout, last 12 months): see usualVolume. */
   usualVolumes?: UsualVolume[];
+  /** For each workout, the workouts published 1–3 days after it (anti-copy: see publishedChain). */
+  publishedNext?: Map<string, Set<string>>;
   /** Most recent date a workout longer than rules.longMinutes was done or planned (set by plan()). */
   lastLongDate?: string;
   /** Week outline slots by date (see weekOutline); computed from the open dates when absent. */
@@ -187,6 +205,7 @@ export function explain(c: Candidate, date: string, input: PlanInput, window: Pa
   if (c.benchmark && !isLiftTest(c)) rules.push(`within ${policy.rules.maxBenchmarksPerWeek} benchmark${policy.rules.maxBenchmarksPerWeek === 1 ? '' : 's'} a week`);
   if (isLiftTest(c)) rules.push(`no other lift test within ${policy.rules.minDaysBetweenLiftTests} days`);
   rules.push(`equipment checked for ${policy.rules.groupSize} people at ${input.equipmentFor(date).name}`);
+  if (input.publishedNext?.size) rules.push(publishedChain(c, date, input, window) === 2 ? 'follows the published order of the previous day (two in a row is allowed; three is not)' : 'does not continue a stretch of the published programming');
   const slot = input.outline?.get(date);
   if (slot) rules.push(`week outline (soft): this day's slot is ${slot.label}; ${slotFit(slot, c.tags, c.workout.structure.kind) >= 0.99 ? 'it fits' : 'it does not fit, the mix needed something else'}`);
   return {
@@ -259,7 +278,9 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
 
   // Soft penalties.
   let penalty = 0;
-  // Volume-aware: a big jump over their usual for at least half the family (L1: increase volume gradually).
+  // Two days in the published order: allowed (it can be chance) but nudged away from.
+  if (publishedChain(c, date, input, window) === 2) { penalty += 0.1; notes.push('follows the published order of the previous day'); }
+    // Volume-aware: a big jump over their usual for at least half the family (L1: increase volume gradually).
   const jump = volumeJumpFor(c, input);
   if (jump) { penalty += 0.4; notes.push(`big volume jump for ${jump.people} of ${jump.of} (${jump.what})`); }
   if (yesterday) {
@@ -321,6 +342,8 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
   if (repeating && !repeatDue(c, date, lw)) return 'repeat not due yet';
   if (lw && days(lw, date) < rules.noRepeatWorkoutDays && !due && !repeating) return 'done recently';
   if (c.minutes && c.minutes > rules.maxMinutes) return 'too long';
+  // Never reproduce a stretch of the published programming: three days in the published order.
+  if (publishedChain(c, date, input, window) >= 3) return 'would copy three days in a row from the published programming';
   // Long workouts (over 40 minutes by default) only once in a while (coach, 2026-11-28).
   const longMin = rules.longMinutes ?? 40, longEvery = rules.longEveryDays ?? 90;
   if (c.minutes && c.minutes > longMin && input.lastLongDate && days(input.lastLongDate, date) < longEvery && days(input.lastLongDate, date) > -longEvery)

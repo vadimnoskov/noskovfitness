@@ -192,7 +192,7 @@ What it's for: the weeks ahead.
 For each open training day, in date order:
 
 1. **Candidates**: every programmable workout in the library and history.
-2. **Hard filters**: not repeated within the window (unless a due benchmark or coach repeat), not longer than the maximum, equipment exists at the location (fixed weights within one step), benchmark and lift-test limits, and the back-to-back rules when their exception was already used inside its window.
+2. **Hard filters**: not repeated within the window (unless a due benchmark or coach repeat), not longer than the maximum (and over 40 minutes only once in 90 days), never a third day in a row in the order the workouts were published (the library supplies single workouts, not weeks; two in a row costs a small penalty), equipment exists at the location (fixed weights within one step), benchmark and lift-test limits, and the back-to-back rules when their exception was already used inside its window.
 3. **Score**: how much the workout closes the gaps between the recent mix and the targets (variety), how long since its movements were done (freshness), weakness focus, benchmark or lift test due. Weakness focus favours workouts in a cell flagged Declining or Rarely trained on the Fitness grid, averaged over the family, at most once in any 7 days so balance stays first; the day's note says "works a declining or rarely trained area".
 4. **Penalties**: a big volume jump for at least half of the family (more than the volume-warning multiple of their most reps of a movement in one workout in 12 months; strong, noted on the day as "big volume jump for N of M"), same modality mix as yesterday, back-to-back exceptions (allowed rarely, noted on the day), crowded equipment (fewer than half the group can work at once), Turkish get-ups in a metcon (small, or strong if one was done in the last 4 weeks).
 5. **Week outline** (soft): the CrossFit Template describes weeks of single elements, couplets and triplets, but calls itself "as much descriptive as prescriptive", and routine is the enemy, so there is no fixed sequence of day types. The outline only makes sure each week has a **heavy day** and an **interval or single monostructural day**, on open days that change week to week (never the same weekday as the week before; the choice is stable when you re-plan). The other days are free: single elements, couplets, triplets and chippers come from the targets. A workout that fits its day gets a bonus set by the "Week outline" weight in Settings (default 20; 0 turns it off). A non-heavy pick on the heavy day costs a penalty, and so does a second heavy day in a week that already has one ("this week's heavy day is …"). Weeks that already have an approved or done heavy day get no heavy slot.
@@ -297,6 +297,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 6: never reproduces a stretch of the published programming. Phase 6 complete. |
 | 2026-11-28 | Planner v2 step 5: warm-up complexes (L2), 5-week skill blocks (handstand; muscle-up / pull-up strength) and a weekly light-day skill practice. |
 | 2026-11-28 | Heavy days need a load (weighted pull-ups/dips count, unweighted don't); workouts over 40 minutes at most once in 90 days. |
 | 2026-11-28 | Planner v2 step 4: Stimulus on Today (intent, completion window, set breaks, checkpoints). |
@@ -320,4 +321,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: Phase 5 (the athlete picture) is built: Fitness page, weakness grid, volume-jump warnings, conditioning level and readiness. Next: Phase 6, planner v2. Later: a smoothed fitness curve with the area shaded, and a 3D health view.
+See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: Phases 5 (the athlete picture) and 6 (planner v2) are built. Next: Phase 7, Individual Rx. Later: a smoothed fitness curve with the area shaded, and a 3D health view.
