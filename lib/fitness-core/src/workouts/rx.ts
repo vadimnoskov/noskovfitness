@@ -119,7 +119,8 @@ export function individualRx(version: Workout, tags: WorkoutTags | undefined, pa
         const lighter = scaleLoads(w, 0.85);
         if (lighter) {
           const e2 = (estimateMinutes(lighter.workout) ?? est) * pace;
-          if (e2 < after - 0.2) { w = lighter.workout; after = Math.round(e2 * 10) / 10; out.changes.push({ kind: 'load', text: `${lighter.text}: lighter so the reps keep moving (predicted ${before} min, window ${min}–${max})` }); }
+          // Only worth it when lighter loads close at least half of the gap; otherwise the reps go, not the Rx weights.
+          if (after - e2 >= (after - max) / 2) { w = lighter.workout; after = Math.round(e2 * 10) / 10; out.changes.push({ kind: 'load', text: `${lighter.text}: lighter so the reps keep moving (predicted ${before} min, window ${min}–${max})` }); }
         }
         if (after > max * 1.1) {
           const f = Math.max(0.5, max / after);
