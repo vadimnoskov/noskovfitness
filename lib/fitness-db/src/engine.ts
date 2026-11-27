@@ -23,7 +23,7 @@ export async function getGroup(groupId: string) {
 }
 
 export async function getEquipmentProfiles(groupId: string): Promise<EquipmentProfile[]> {
-  return (await sql`SELECT id, name, items FROM equipment_profiles WHERE group_id = ${groupId} ORDER BY name`) as unknown as EquipmentProfile[];
+  return (await sql`SELECT id, name, items, limits FROM equipment_profiles WHERE group_id = ${groupId} ORDER BY name`) as unknown as EquipmentProfile[];
 }
 
 /** Every workout in the library that the engine may propose. */
@@ -43,12 +43,13 @@ export async function loadCandidates(): Promise<Candidate[]> {
   });
 }
 
-/** Group history (all athletes' results, one entry per date) plus planned days, from `from` on. */
+/** The program's history (its members' results, one entry per date) plus its planned days, from `from` on. */
 async function loadPicture(groupId: string, from: string, exclude?: { from: string; to: string }) {
   const res = await sql`
     SELECT r.date::text AS date, w.id, w.tags, w.benchmark, array_agg(DISTINCT wm.movement_key) AS keys
     FROM results r JOIN workouts w ON w.id = r.workout_id JOIN workout_movements wm ON wm.workout_id = w.id
-    WHERE r.date >= ${from} GROUP BY r.date, w.id`;
+    WHERE r.date >= ${from} AND r.athlete_id IN (SELECT athlete_id FROM group_members WHERE group_id = ${groupId})
+    GROUP BY r.date, w.id`;
   const planned = await sql`
     SELECT d.date::text AS date, w.id, w.tags, w.benchmark, array_agg(DISTINCT wm.movement_key) AS keys
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id JOIN workout_movements wm ON wm.workout_id = w.id

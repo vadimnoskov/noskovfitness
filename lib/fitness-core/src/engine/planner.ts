@@ -5,7 +5,10 @@
  * It only proposes; the coach approves or edits.
  */
 import { cellKey, gridColumn, GRID_COL_LABEL } from '../workouts/weakness';
-import { plannedReps, volumeLabel, type UsualVolume } from '../workouts/volume';
+import { plannedReps, volumeLabel, volumeKey, type UsualVolume } from '../workouts/volume';
+import { MOVEMENT_FACTS } from '../knowledge/movements';
+import { isSingleRepMax } from '../workouts/rx';
+const SKILL_FACTS = new Map(MOVEMENT_FACTS.map((f) => [f.key, f]));
 import type { EquipmentProfile, WorkoutTags, Workout } from '../model/types';
 import { keyOf } from '../movements/resolver';
 import { FAMILY_BY_ID } from '../movements/catalog';
@@ -59,8 +62,25 @@ export function volumeJumpFor(c: Candidate, input: Pick<PlanInput, 'usualVolumes
     const known = usual.filter((u) => (u.most.get(k) ?? 0) > 0);
     const jumped = known.filter((u) => n > factor * u.most.get(k)!);
     if (known.length && jumped.length * 2 >= known.length && (!worst || jumped.length > worst.people)) worst = { people: jumped.length, of: known.length, what: `${n} ${volumeLabel(k)}` };
+    // Nobody has done this movement in the last 12 months (a new client, or a long gap): a lot of it is a jump too
+    // (L1: increase volume slowly), from twice the usual threshold.
+    else if (!known.length && n >= 2 * min && (!worst || usual.length > worst.people)) worst = { people: usual.length, of: usual.length, what: `${n} ${volumeLabel(k)}, none logged in 12 months` };
   }
   return worst;
+}
+
+/** High-skill movements (movement facts) in the workout that no member has logged in the last 12 months. */
+export function unfamiliarSkills(c: Candidate, input: Pick<PlanInput, 'usualVolumes'>): string[] {
+  const usual = input.usualVolumes;
+  if (!usual?.length) return [];
+  const out: string[] = [];
+  for (const m of c.workout.movements) {
+    const f = SKILL_FACTS.get(m.movement.family);
+    if (f?.skill !== 'high' || out.includes(f.name)) continue;
+    const key = volumeKey(m);
+    if (!usual.some((u) => (u.most.get(key) ?? 0) > 0 || u.seen?.has(m.movement.family) || [...u.most.keys()].some((k) => k.split(':')[0] === m.movement.family))) out.push(f.name);
+  }
+  return out;
 }
 
 /** A coach-set repeat that is active on this date and due (never done, or at least everyDays since last time). */
@@ -283,6 +303,15 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
     // Volume-aware: a big jump over their usual for at least half the family (L1: increase volume gradually).
   const jump = volumeJumpFor(c, input);
   if (jump) { penalty += 0.4; notes.push(`big volume jump for ${jump.people} of ${jump.of} (${jump.what})`); }
+  // High-skill movements nobody in the program has done in 12 months: mechanics first (L1), so strongly avoided.
+  // A 1-rep max of a lift nobody here has done in 12 months (a new client): heavy sets of 3-5 first (mechanics,
+  // consistency, then intensity, L1), so strongly avoided.
+  if (isSingleRepMax(c.workout) && c.workout.movements.length === 1 && input.usualVolumes?.length
+    && !input.usualVolumes.some((u) => u.seen?.has(c.workout.movements[0]!.movement.family) || [...u.most.keys()].some((k) => k.split(':')[0] === c.workout.movements[0]!.movement.family))) {
+    penalty += 0.35; notes.push('1-rep max of a lift nobody here has done in 12 months: build up with heavy 3-5s first');
+  }
+  const unfamiliar = unfamiliarSkills(c, input);
+  if (unfamiliar.length) { penalty += Math.min(0.4, 0.2 * unfamiliar.length); notes.push(`high-skill movement nobody here has logged in 12 months (${unfamiliar.join(', ')}): mechanics first`); }
   if (yesterday) {
     const ym = new Set(yesterday.tags.flatMap((t) => [...new Set(t.modalityPattern)].sort().join('')));
     if (ym.has([...new Set(mp)].sort().join(''))) { penalty += 0.08; notes.push('same modality mix as previous day'); }

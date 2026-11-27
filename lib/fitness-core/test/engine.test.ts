@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseBtwbRow, deriveTags, plan, blocked, checkEquipment, maxBarbellLb, DEFAULT_POLICY, withDefaults, toPastDay,
-  trainingDates, pushForward, skipDay, insertDay, type Candidate, type EquipmentProfile, type PlanInput,
+  trainingDates, pushForward, skipDay, insertDay, volumeJumpFor, unfamiliarSkills, type Candidate, type EquipmentProfile, type PlanInput, type Workout,
 } from '../src/index';
 
 const mk = (id: string, name: string, desc: string, result: string, bench?: number): Candidate => {
@@ -30,7 +30,7 @@ const garage: EquipmentProfile = { id: 'garage', name: 'Home garage', items: [
   { implement: 'rower', quantity: 1 }, { implement: 'barbell', quantity: 2, loads: [{ value: 45, unit: 'lb', qty: 1 }, { value: 35, unit: 'lb', qty: 1 }] },
   { implement: 'plate', quantity: 20, loads: [{ value: 45, unit: 'lb', qty: 4 }, { value: 25, unit: 'lb', qty: 2 }] },
   { implement: 'kettlebell', quantity: 26, loads: [{ value: 24, unit: 'kg', qty: 2 }] }, { implement: 'rack', quantity: 1 }, { implement: 'bar', quantity: 2 },
-  { implement: 'jump-rope', quantity: 4 }, { implement: 'medball', quantity: 4, loads: [{ value: 20, unit: 'lb', qty: 1 }] }, { implement: 'wall', quantity: 1 },
+  { implement: 'jump-rope', quantity: 4 }, { implement: 'medball', quantity: 4, loads: [{ value: 20, unit: 'lb', qty: 1 }] }, { implement: 'wall', quantity: 1 }, { implement: 'none', quantity: 9, note: 'running route' },
 ] };
 
 const input = (over: Partial<PlanInput> = {}): PlanInput => ({
@@ -288,5 +288,32 @@ describe('no copying the published programming', () => {
     expect(p[0]!.alternatives.map((x) => x.candidateId)).not.toContain(c2);
     const two = plan(input({ dates: ['2026-12-05'], history: hist.slice(1), candidates: [C[2]!], publishedNext: next }));
     expect(two[0]!.score.notes.join(' ')).toMatch(/published order/);
+  });
+});
+
+describe('location limits and new athletes', () => {
+  const building: EquipmentProfile = { id: 'b', name: 'Building gym', limits: ['no-barbell-overhead', 'strict-only'], items: [
+    { implement: 'barbell', quantity: 1 }, { implement: 'plate', quantity: 10 }, { implement: 'rack', quantity: 1 }, { implement: 'bench', quantity: 1 },
+    { implement: 'dumbbell', quantity: 10 }, { implement: 'rower', quantity: 1 }, { implement: 'bar', quantity: 1 }, { implement: 'p-bars', quantity: 1 }] };
+  const w = (...ms: Workout['movements']): Workout => ({ id: 'x', structure: { kind: 'for-time' }, scoreType: 'time', movements: ms });
+  it('blocks barbell overhead work but not dumbbell overhead or cleans', () => {
+    expect(checkEquipment(w({ movement: { family: 'thruster', implement: 'barbell' }, reps: 21 }), building, 1).ok).toBe(false);
+    expect(checkEquipment(w({ movement: { family: 'thruster', implement: 'dumbbell' }, reps: 21 }), building, 1).ok).toBe(true);
+    expect(checkEquipment(w({ movement: { family: 'clean', implement: 'barbell' }, reps: 10 }), building, 1).ok).toBe(true);
+  });
+  it('needs a running route; step-ups use the bench; strict only on the bar', () => {
+    expect(checkEquipment(w({ movement: { family: 'run' }, distanceM: 400 }), building, 1).ok).toBe(false);
+    expect(checkEquipment(w({ movement: { family: 'swim' }, distanceM: 400 }), building, 1).ok).toBe(false);
+    const su = checkEquipment(w({ movement: { family: 'step-up' }, reps: 30, heightIn: { male: 24, female: 20 } }), building, 1);
+    expect(su.ok).toBe(true);
+    expect(su.warnings.join()).toMatch(/bench/);
+    expect(checkEquipment(w({ movement: { family: 'muscle-up', implement: 'bar' }, reps: 5 }), building, 1).ok).toBe(false);
+    expect(checkEquipment(w({ movement: { family: 'pull-up' }, reps: 10 }), building, 1).warnings.join()).toMatch(/strict/);
+  });
+  it('treats a lot of a movement nobody has done in 12 months as a volume jump, and flags unfamiliar high skills', () => {
+    const c = { id: 'c', workout: w({ movement: { family: 'air-squat' }, reps: 300 }, { movement: { family: 'muscle-up', implement: 'rings' }, reps: 5 }), tags: deriveTags(w({ movement: { family: 'air-squat' }, reps: 300 })) } as never;
+    const usual = [{ most: new Map([['pull-up', 10]]) }];
+    expect(volumeJumpFor(c, { usualVolumes: usual, policy: DEFAULT_POLICY } as never)?.what).toMatch(/none logged/);
+    expect(unfamiliarSkills(c, { usualVolumes: usual } as never)).toEqual(['Muscle-up']);
   });
 });
