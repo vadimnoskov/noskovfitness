@@ -10,6 +10,13 @@ import { FAMILY_BY_ID, type Modality } from '../movements/catalog';
 import { keyOf } from '../movements/resolver';
 import type { Workout, WorkoutTags, TimeDomain, MovementPrescription } from '../model/types';
 
+/**
+ * Version of the tag derivation (this file, estimate.ts and their tables). Bump it whenever a change can move a stored
+ * tag: the server recomputes stored tags once on start when the stored version differs.
+ * 2: expanded round-by-round movement lists no longer multiplied by the scheme in time estimates.
+ */
+export const TAGS_VERSION = 2;
+
 export const TAG_POLICY = {
   timeDomainMin: { short: 4, medium: 12, long: 20 }, // upper bounds; above long = endurance
   volumeReps: { low: 50, medium: 150 }, // upper bounds of total reps; above = high
