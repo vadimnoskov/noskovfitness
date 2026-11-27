@@ -5,6 +5,7 @@
  * It only proposes; the coach approves or edits.
  */
 import { cellKey, gridColumn, GRID_COL_LABEL } from '../workouts/weakness';
+import { plannedReps, volumeLabel, type UsualVolume } from '../workouts/volume';
 import type { EquipmentProfile, WorkoutTags, Workout } from '../model/types';
 import { keyOf } from '../movements/resolver';
 import type { ProgrammingPolicy } from './policy';
@@ -19,6 +20,29 @@ export interface Candidate {
   minutes?: number;
   /** Coach exception: may repeat every N days (until a date), overriding the general no-repeat rule. */
   repeat?: { everyDays: number; until?: string } | null;
+}
+
+const repsCache = new WeakMap<Candidate, Map<string, number> | null>();
+/**
+ * How many family members a candidate would ask for a volume jump: more than volumeJumpFactor × their most reps of a
+ * movement in one workout in 12 months (from volumeJumpMinReps up). Undefined unless that is at least half of the people
+ * with history of that movement.
+ */
+export function volumeJumpFor(c: Candidate, input: Pick<PlanInput, 'usualVolumes' | 'policy'>): { people: number; of: number; what: string } | undefined {
+  const usual = input.usualVolumes;
+  if (!usual?.length) return undefined;
+  if (!repsCache.has(c)) repsCache.set(c, plannedReps(c.workout)?.reps ?? null);
+  const reps = repsCache.get(c);
+  if (!reps) return undefined;
+  const factor = input.policy.rules.volumeJumpFactor ?? 2, min = input.policy.rules.volumeJumpMinReps ?? 30;
+  let worst: { people: number; of: number; what: string } | undefined;
+  for (const [k, n] of reps) {
+    if (n < min) continue;
+    const known = usual.filter((u) => (u.most.get(k) ?? 0) > 0);
+    const jumped = known.filter((u) => n > factor * u.most.get(k)!);
+    if (known.length && jumped.length * 2 >= known.length && (!worst || jumped.length > worst.people)) worst = { people: jumped.length, of: known.length, what: `${n} ${volumeLabel(k)}` };
+  }
+  return worst;
 }
 
 /** A coach-set repeat that is active on this date and due (never done, or at least everyDays since last time). */
@@ -46,6 +70,8 @@ export interface PlanInput {
   weakness?: Map<string, number>;
   /** Weakness-grid cells to favour (key "row|col", e.g. "long|G"), 0–1: see plannerWeakness. */
   weaknessCells?: Map<string, number>;
+  /** Each family member's usual volume (most reps of each movement in one workout, last 12 months): see usualVolume. */
+  usualVolumes?: UsualVolume[];
   alternatives?: number;
   /** Last date each lift was tested, any rep max ("Back Squat" → date). Filled by plan() from lastWorkoutDate when absent. */
   lastLiftTest?: Map<string, string>;
@@ -166,6 +192,9 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
 
   // Soft penalties.
   let penalty = 0;
+  // Volume-aware: a big jump over their usual for at least half the family (L1: increase volume gradually).
+  const jump = volumeJumpFor(c, input);
+  if (jump) { penalty += 0.4; notes.push(`big volume jump for ${jump.people} of ${jump.of} (${jump.what})`); }
   if (yesterday) {
     const ym = new Set(yesterday.tags.flatMap((t) => [...new Set(t.modalityPattern)].sort().join('')));
     if (ym.has([...new Set(mp)].sort().join(''))) { penalty += 0.08; notes.push('same modality mix as previous day'); }

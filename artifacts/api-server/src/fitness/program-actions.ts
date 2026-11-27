@@ -101,6 +101,15 @@ export async function neverPropose(f: FormData) {
   done();
 }
 
+/** One-tap fix for a day that breaks a rule where it now sits: re-plan it (an approved day goes back to proposed first). */
+export async function fixDay(f: FormData) {
+  const id = str(f, 'id');
+  const [d] = await sql`UPDATE program_days SET status = 'proposed', updated_at = now() WHERE id = ${id} AND group_id = ${GROUP_ID} AND status IN ('proposed','approved')
+    RETURNING date::text AS date`;
+  if (d) await proposeRange(GROUP_ID, d.date, d.date);
+  done();
+}
+
 export async function replan(f: FormData) {
   await proposeRange(GROUP_ID, str(f, 'from'), str(f, 'to'));
   done();
