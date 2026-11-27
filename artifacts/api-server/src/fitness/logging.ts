@@ -3,9 +3,9 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { volumeWarningsFor } from './volume';
-import { rxContext, forgetRxContext } from './rx-context';
+import { rxContext, forgetRxContext, weaknessContext } from './rx-context';
 import { lightDays, implementsOf } from './warmups';
-import { stimulusFor, individualRx, isSingleRepMax } from '@workspace/fitness-core';
+import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesToday } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -74,6 +74,8 @@ export async function getToday(date: string, athleteId: string) {
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
       warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up, { date, implementsAvailable: implementsOf(v.day.items), longPractice: light.has(date) }),
       rx: v.rx,
+      // Personal weakness work (L2: in the warm-up, without pre-fatigue); not on done days.
+      weaknessWork: v.day.status === 'done' ? null : weaknessWork(await weaknessContext(athleteId), v.version, date, skillFamiliesToday(v.standard, date)) ?? null,
       stimulus: stimulusFor(v.version, v.day.tags, {
         bestSec: history.filter((h) => h.completed && h.score.timeSec).reduce<number | undefined>((a, h) => (a === undefined || h.score.timeSec! < a ? h.score.timeSec : a), undefined),
         lastSec: history.find((h) => h.completed && h.score.timeSec)?.score.timeSec,

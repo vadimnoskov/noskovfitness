@@ -387,6 +387,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/weaknesses:
+    post:
+      operationId: setWeaknesses
+      summary: Coach - a person's list of skill weaknesses for warm-up weakness work
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WeaknessesInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/knowledge/movement:
     get:
       operationId: getKnowledgeMovement
@@ -548,6 +563,12 @@ components:
       properties:
         athleteId: { type: string }
         prior: { type: number, minimum: 0, maximum: 1, nullable: true }
+    WeaknessesInput:
+      type: object
+      required: [athleteId, keys]
+      properties:
+        athleteId: { type: string }
+        keys: { type: array, items: { type: string }, maxItems: 8 }
     WeightImportInput:
       type: object
       required: [athleteId, csv]

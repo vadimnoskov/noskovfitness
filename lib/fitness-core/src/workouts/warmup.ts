@@ -160,7 +160,8 @@ export function skillBlock(date: string): { skill: SkillKey; week: number } {
   return { skill: block % 2 === 0 ? 'handstand' : 'muscleUp', week: weekNo % BLOCK_WEEKS };
 }
 
-function skillSegment(w: Workout, date: string, long: boolean): { title: string; lines: string[]; practice?: string[] } {
+/** The skill practised in today's warm-up: the block's, or the other one when the workout already works the block's. */
+function skillOfDay(w: Workout, date: string) {
   const fams = new Set(w.movements.map((m) => m.movement.family));
   const b = skillBlock(date);
   // No pre-fatigue (L1): if today's workout already works this skill, practise the other one today.
@@ -168,6 +169,13 @@ function skillSegment(w: Workout, date: string, long: boolean): { title: string;
   const usesBlock = SKILLS[b.skill].uses.some((f) => fams.has(f));
   const usesOther = SKILLS[other].uses.some((f) => fams.has(f));
   const key: SkillKey = usesBlock && !usesOther ? other : b.skill;
+  return { b, key, usesBlock, usesOther };
+}
+/** Movement families the family-wide skill segment works today (a person's weakness work skips these). */
+export const skillFamiliesToday = (w: Workout, date: string): string[] => [...SKILLS[skillOfDay(w, date).key].uses];
+
+function skillSegment(w: Workout, date: string, long: boolean): { title: string; lines: string[]; practice?: string[] } {
+  const { b, key, usesBlock, usesOther } = skillOfDay(w, date);
   const sk = SKILLS[key];
   const focus = sk.weeks[b.week]!;
   const light = usesBlock && usesOther;

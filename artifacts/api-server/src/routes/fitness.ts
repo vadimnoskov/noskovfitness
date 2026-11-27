@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody, SaveMeasurementsBody, ImportWeightsBody, SaveCheckInBody, SetConditioningPriorBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody, SaveMeasurementsBody, ImportWeightsBody, SaveCheckInBody, SetConditioningPriorBody, SetWeaknessesBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -300,6 +300,14 @@ router.post('/fitness/conditioning-prior', wrap(async (req, res) => {
   const body = SetConditioningPriorBody.safeParse(req.body);
   if (!body.success) throw new logging.InputError('Use a number from 0 to 1.');
   return picture.setConditioningPrior(user, body.data);
+}));
+
+router.post('/fitness/weaknesses', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  const body = SetWeaknessesBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Choose movements from the list.');
+  return picture.setWeaknesses(user, body.data);
 }));
 
 router.get('/fitness/knowledge/movements', wrap(async (_req, res) => {

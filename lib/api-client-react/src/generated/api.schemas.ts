@@ -52,6 +52,12 @@ export interface ConditioningPriorInput {
   prior?: number | null;
 }
 
+export interface WeaknessesInput {
+  athleteId: string;
+  /** @maxItems 8 */
+  keys: string[];
+}
+
 export interface WeightImportInput {
   athleteId: string;
   /** @maxLength 1500000 */

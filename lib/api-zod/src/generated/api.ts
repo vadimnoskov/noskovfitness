@@ -329,6 +329,21 @@ export const SetConditioningPriorResponse = zod.record(zod.string(), zod.unknown
 
 
 /**
+ * @summary Coach - a person's list of skill weaknesses for warm-up weakness work
+ */
+export const setWeaknessesBodyKeysMax = 8;
+
+
+
+export const SetWeaknessesBody = zod.object({
+  "athleteId": zod.string(),
+  "keys": zod.array(zod.string()).max(setWeaknessesBodyKeysMax)
+})
+
+export const SetWeaknessesResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Coach - one movement's facts, points of performance, versions and workouts
  */
 export const GetKnowledgeMovementQueryParams = zod.object({
