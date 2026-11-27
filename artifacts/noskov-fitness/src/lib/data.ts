@@ -38,4 +38,5 @@ export interface PlannedDay {
   workout: Workout; tags: WorkoutTags; origin: { by: string; score?: ScoreBreakdown };
   alternatives: { candidateId: string; score: ScoreBreakdown; name?: string | null; tags?: WorkoutTags; workout?: Workout }[];
   warnings: string[];
+  volume?: { athleteId: string; name: string; warnings: string[] }[];
 }

@@ -2,6 +2,7 @@
  * Result logging and personal history. Prescription and performance stay separate: the workout is never edited;
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
+import { volumeWarningsFor } from './volume';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -61,6 +62,7 @@ export async function getToday(date: string, athleteId: string) {
       totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
       warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up),
+      volumeWarnings: v.day.status === 'done' ? [] : (await volumeWarningsFor([{ id: athleteId, name: v.person.name }], [{ date, workout: v.version }], date)).get(`${athleteId}|${date}`) ?? [],
     });
   }
   const results = await myResults(athleteId, sql`r.date = ${date}`);
