@@ -40,6 +40,10 @@ export interface ProgrammingPolicy {
     maxBenchmarksPerWeek: number;
     /** Longest workout the engine proposes on a normal day, minutes. */
     maxMinutes: number;
+    /** Workouts longer than this (minutes) are rare… */
+    longMinutes: number;
+    /** …at most one in this many days. */
+    longEveryDays: number;
     /** Movements on a fixed-equipment station (e.g. 1 rower) shared by more people than this count as a warning. */
     groupSize: number;
   };
@@ -56,7 +60,7 @@ export const DEFAULT_POLICY: ProgrammingPolicy = {
     modality: { G: 44, W: 39, M: 17 },
   },
   weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15, outline: 20 },
-  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14, volumeJumpFactor: 2, volumeJumpMinReps: 30, returnAfterDays: 30 },
+  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, longMinutes: 40, longEveryDays: 90, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14, volumeJumpFactor: 2, volumeJumpMinReps: 30, returnAfterDays: 30 },
 };
 
 /** Fill any missing fields from the defaults (older saved policies keep working when new settings are added). */

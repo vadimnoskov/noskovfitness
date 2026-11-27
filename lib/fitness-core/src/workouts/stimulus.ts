@@ -37,6 +37,7 @@ export function splitReps(n: number, k: number): number[] {
 
 function intentOf(tags: WorkoutTags | undefined, w: Workout): string {
   const td = tags?.timeDomain;
+  if (td !== 'heavy' && (w.structure.kind === 'sets' || w.structure.kind === 'max')) return 'Sets of a bodyweight movement: quality reps with full range, rest between sets as needed, end a set when the form breaks. Not a heavy day unless the movement is weighted.';
   if (td === 'heavy') return 'Heavy day, strength: 3–5 warm-up sets building up, then working sets of 1–5 reps at about 80–85% of your max or more. Rest as long as you need, 2–5 minutes. End the set when the form breaks.';
   if (w.structure.kind === 'intervals' || w.structure.kind === 'tabata') return 'Intervals: every work piece hard and about the same pace; the rest is part of the workout, so keep it as written.';
   switch (td) {
@@ -65,7 +66,8 @@ export function stimulusFor(w: Workout, tags: WorkoutTags | undefined, prior?: {
   const sources = ['L1: three metabolic pathways', 'L1 lesson plan: Fran'];
   const s = w.structure;
   const out: Stimulus = { intent: intentOf(tags, w), window: null, rounds: null, breaks: [], checkpoints: [], sources };
-  if (tags?.timeDomain === 'heavy' || s.kind === 'sets' || s.kind === 'max') { out.sources = ['L2: heavy days']; return out; }
+  if (tags?.timeDomain === 'heavy') { out.sources = ['L2: heavy days']; return out; }
+  if (s.kind === 'sets' || s.kind === 'max') { out.sources = ['L1: points of performance and threshold training']; return out; }
 
   // Window: the person's own times if any, else the calibrated estimate.
   const est = estimateMinutes(w);

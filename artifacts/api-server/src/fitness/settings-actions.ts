@@ -21,6 +21,8 @@ export async function savePolicyAction(f: FormData) {
       noConsecutiveHeavyDays: f.get('rules.noConsecutiveHeavyDays') === 'on',
       maxBenchmarksPerWeek: num(f, 'rules.maxBenchmarksPerWeek', cur.rules.maxBenchmarksPerWeek),
       maxMinutes: num(f, 'rules.maxMinutes', cur.rules.maxMinutes),
+      longMinutes: num(f, 'rules.longMinutes', cur.rules.longMinutes),
+      longEveryDays: num(f, 'rules.longEveryDays', cur.rules.longEveryDays),
       groupSize: num(f, 'rules.groupSize', cur.rules.groupSize),
       heavyExceptionDays: num(f, 'rules.heavyExceptionDays', cur.rules.heavyExceptionDays),
       movementExceptionDays: num(f, 'rules.movementExceptionDays', cur.rules.movementExceptionDays),

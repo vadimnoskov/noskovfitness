@@ -174,7 +174,7 @@ What it's for: the weeks ahead.
     - Don't repeat a workout within N days (default 180). Benchmarks and coach repeats follow their own schedules.
     - Max benchmarks per week (default 1).
     - Days between lift tests (default 14).
-    - Longest workout (default 60 minutes).
+    - Longest workout, ever (default 60 minutes); and workouts longer than 40 minutes at most once every 90 days (both numbers are settings), so the large majority stay within 40 minutes.
     - People training together (default 4; used for the equipment check).
     - Avoid the same movement on two consecutive days, but allow it once every N days (default 28).
     - Avoid heavy days back to back, but allow it once every N days (default 28). The two are separate settings.
@@ -192,7 +192,7 @@ For each open training day, in date order:
 5. **Week outline** (soft): the CrossFit Template describes weeks of single elements, couplets and triplets, but calls itself "as much descriptive as prescriptive", and routine is the enemy, so there is no fixed sequence of day types. The outline only makes sure each week has a **heavy day** and an **interval or single monostructural day**, on open days that change week to week (never the same weekday as the week before; the choice is stable when you re-plan). The other days are free: single elements, couplets, triplets and chippers come from the targets. A workout that fits its day gets a bonus set by the "Week outline" weight in Settings (default 20; 0 turns it off). A non-heavy pick on the heavy day costs a penalty, and so does a second heavy day in a week that already has one ("this week's heavy day is …"). Weeks that already have an approved or done heavy day get no heavy slot.
 5. The best scorer is proposed; the next four are its alternatives. The choice becomes part of the picture for the next day.
 
-**Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max; the rest by estimated or logged minutes), task or time priority, load, volume.
+**Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max lift, with a load; sets of unweighted pull-ups or dips are not a heavy day; the rest by estimated or logged minutes), task or time priority, load, volume.
 
 **Time estimates**: workouts nobody has logged get an estimated duration from per-rep and pace tables, calibrated on the coach's logged results (75% within 1.5× of the real time, 70% in the right time domain). Imported workouts that list every round and also keep the rep scheme are no longer counted ten times over.
 
@@ -291,6 +291,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Heavy days need a load (weighted pull-ups/dips count, unweighted don't); workouts over 40 minutes at most once in 90 days. |
 | 2026-11-28 | Planner v2 step 4: Stimulus on Today (intent, completion window, set breaks, checkpoints). |
 | 2026-11-28 | Planner v2 step 3: soft week outline: one heavy day and one interval day a week, on changing weekdays (no fixed sequence), with a new weight. |
 | 2026-11-28 | Planner v2 step 2: "Why this workout" card on every planned day. |

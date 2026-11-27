@@ -15,8 +15,9 @@ import type { Workout, WorkoutTags, TimeDomain, MovementPrescription } from '../
  * tag: the server recomputes stored tags once on start when the stored version differs.
  * 2: expanded round-by-round movement lists no longer multiplied by the scheme in time estimates.
  * 3: ESTIMATE_SCALE recalibrated after that fix (1.26 → 1.21).
+ * 4: unweighted sets (pull-ups, dips) are no longer a heavy day.
  */
-export const TAGS_VERSION = 3;
+export const TAGS_VERSION = 4;
 
 export const TAG_POLICY = {
   timeDomainMin: { short: 4, medium: 12, long: 20 }, // upper bounds; above long = endurance
@@ -87,8 +88,19 @@ export function totalReps(w: Workout, amrapRounds?: number): number {
   return perPass * rounds(w);
 }
 
+/**
+ * Strength work: sets (1–5 style) or a max lift, with an external load: a barbell, dumbbell or kettlebell lift, or added
+ * weight. Sets of unweighted pull-ups or dips are not a heavy day (coach, 2026-11-28).
+ */
+export function isStrengthWork(w: Workout): boolean {
+  const s = w.structure;
+  if (s.kind === 'max' && s.what === 'load') return true;
+  if (s.kind !== 'sets') return false;
+  return w.movements.some((m) => !!m.load || movementModality(m) === 'W');
+}
+
 export function loadBand(w: Workout, sex: 'male' | 'female' = 'male'): WorkoutTags['load'] {
-  if (w.structure.kind === 'sets' || (w.structure.kind === 'max' && w.structure.what === 'load')) return 'heavy';
+  if (isStrengthWork(w)) return 'heavy';
   let best: WorkoutTags['load'] = 'bodyweight';
   const k = sex === 'female' ? TAG_POLICY.femaleRatio : 1;
   for (const m of w.movements) {
@@ -134,7 +146,7 @@ export function deriveTags(w: Workout, opts: { resultSec?: number; amrapRounds?:
   const minutes = workMinutes(w, opts.resultSec);
   const reps = totalReps(w, opts.amrapRounds);
   const v = TAG_POLICY.volumeReps;
-  const strength = s.kind === 'sets' || (s.kind === 'max' && s.what === 'load');
+  const strength = isStrengthWork(w);
   const priority: WorkoutTags['priority'] = ['amrap', 'emom', 'tabata'].includes(s.kind) || (s.kind === 'intervals' && s.scored !== 'time') || (s.kind === 'max' && !!s.minutes) ? 'time' : 'task';
   const td: TimeDomain = strength ? 'heavy' : timeDomainOf(minutes) ?? 'medium';
   const pathway: WorkoutTags['pathway'] = strength || (minutes !== undefined && minutes < 2) ? 'phosphagen' : td === 'short' || td === 'medium' ? 'glycolytic' : 'oxidative';
