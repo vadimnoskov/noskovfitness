@@ -235,3 +235,5 @@ details.card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;m
 /* Check-in and conditioning */
 .checkin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.checkin .seg button{min-width:40px}
 .bignum{font-size:28px;font-weight:700;line-height:1.1}
+/* Why this workout */
+details.why{margin:6px 0;border-top:1px dashed var(--line);padding-top:4px}details.why summary{cursor:pointer;color:var(--mute)}details.why ul{margin:2px 0 6px;padding-left:18px}details.why p{margin:4px 0}

@@ -241,3 +241,19 @@ describe('exception settings', () => {
     expect((p.rules as Record<string, unknown>).rareExceptionDays).toBeUndefined();
   });
 });
+
+describe('why this workout', () => {
+  it('explains the pick: mix against targets, movement freshness and the rules it passed', async () => {
+    const { plan, DEFAULT_POLICY } = await import('../src');
+    const w = (id: string, fam: string, td: 'short' | 'medium') => ({ id, workout: { id, structure: { kind: 'for-time' as const }, scoreType: 'time' as const, movements: [{ movement: { family: fam }, reps: 30 }] },
+      tags: { modalityPattern: ['G' as const], movementCount: 1, load: 'bodyweight' as const, volume: 'low' as const, timeDomain: td, priority: 'task' as const, pathway: 'glycolytic' as const }, minutes: td === 'short' ? 3 : 8 });
+    const [p] = plan({ dates: ['2026-12-01'], history: [], candidates: [w('a', 'pull-up', 'short'), w('b', 'push-up', 'medium')], policy: DEFAULT_POLICY,
+      equipmentFor: () => ({ id: 'gym', name: 'Gym', items: [{ implement: 'bar', quantity: 4 }] }), lastWorkoutDate: new Map(), lastMovementDate: new Map([['push-up', '2026-11-20']]) });
+    const why = p!.score.why!;
+    expect(why.mix[0]!.label).toBe('time domain');
+    expect(why.mix.some((m) => m.label === 'modality' && m.bucket === 'gymnastics')).toBe(true);
+    expect(why.rules.some((r) => /not done before/.test(r))).toBe(true);
+    expect(why.rules.some((r) => /equipment checked for 4 people at Gym/.test(r))).toBe(true);
+    expect(why.movements.length).toBe(1);
+  });
+});

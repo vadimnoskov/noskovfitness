@@ -8,6 +8,7 @@ import { cellKey, gridColumn, GRID_COL_LABEL } from '../workouts/weakness';
 import { plannedReps, volumeLabel, type UsualVolume } from '../workouts/volume';
 import type { EquipmentProfile, WorkoutTags, Workout } from '../model/types';
 import { keyOf } from '../movements/resolver';
+import { FAMILY_BY_ID } from '../movements/catalog';
 import type { ProgrammingPolicy } from './policy';
 import { checkEquipment } from './equipment';
 
@@ -54,7 +55,20 @@ export function repeatDue(c: Candidate, date: string, last: string | undefined):
 /** A day already in the picture: done in history or planned. */
 export interface PastDay { date: string; workoutIds: string[]; tags: WorkoutTags[]; movementKeys: string[]; heavy: boolean; benchmarkCount: number; liftTestCount?: number }
 
-export interface ScoreBreakdown { variety: number; freshness: number; weakness: number; benchmark: number; penalty: number; total: number; notes: string[] }
+export interface ScoreBreakdown { variety: number; freshness: number; weakness: number; benchmark: number; penalty: number; total: number; notes: string[]; why?: Why }
+/** The facts behind a pick, for the "why this workout" card. Only the chosen workout carries it. */
+export interface Why {
+  /** Each part of the mix this workout belongs to: its share of the recent window against the target (%). */
+  mix: { label: string; bucket: string; recent: number; target: number }[];
+  windowDays: number; windowWorkouts: number;
+  /** Its movements and how many days since each was last done (null = not within lookbackDays). */
+  movements: { name: string; daysSince: number | null }[];
+  lookbackDays: number;
+  /** When this workout was last done or planned (null = never). */
+  lastDone: string | null;
+  /** Rules it was checked against, in plain words. */
+  rules: string[];
+}
 export interface Proposal { date: string; candidateId: string; score: ScoreBreakdown; alternatives: { candidateId: string; score: ScoreBreakdown }[]; warnings: string[] }
 
 export interface PlanInput {
@@ -128,6 +142,50 @@ export function candidateMovementKeys(c: Candidate): string[] {
   return [...new Set(c.workout.movements.map((m) => keyOf(m.movement)))];
 }
 const familyOf = (key: string) => key.split('|')[0]!;
+const MIX_LABEL: Record<string, string> = { movementCount: 'movements per workout', timeDomain: 'time domain', priority: 'task or time priority', load: 'load', modality: 'modality' };
+const BUCKET_LABEL: Record<string, string> = { '1': 'single movement', '2-3': 'couplet or triplet', '4+': 'four or more', heavy: 'heavy day', task: 'for time (task priority)', time: 'AMRAP/EMOM (time priority)',
+  G: 'gymnastics', W: 'weightlifting', M: 'monostructural', bodyweight: 'bodyweight' };
+
+/** The "why" for a chosen workout: where it sits in the mix, how fresh its movements are, and the rules it passed. */
+export function explain(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay, tomorrow?: PastDay): Why {
+  const { policy } = input;
+  const sh = windowShares(window);
+  const r = (x: number | undefined) => Math.round(x ?? 0);
+  const b = (k: string) => BUCKET_LABEL[k] ?? k;
+  const mix: Why['mix'] = [
+    { label: MIX_LABEL.timeDomain!, bucket: b(c.tags.timeDomain), recent: r(sh.timeDomain.get(c.tags.timeDomain)), target: policy.targets.timeDomain[c.tags.timeDomain] },
+    { label: MIX_LABEL.movementCount!, bucket: b(mcBucket(c.tags.movementCount)), recent: r(sh.movementCount.get(mcBucket(c.tags.movementCount))), target: policy.targets.movementCount[mcBucket(c.tags.movementCount)] },
+    { label: MIX_LABEL.priority!, bucket: b(c.tags.priority), recent: r(sh.priority.get(c.tags.priority)), target: policy.targets.priority[c.tags.priority] },
+    { label: MIX_LABEL.load!, bucket: b(c.tags.load), recent: r(sh.load.get(c.tags.load)), target: policy.targets.load[c.tags.load] },
+    ...[...new Set(c.tags.modalityPattern)].map((m) => ({ label: MIX_LABEL.modality!, bucket: b(m), recent: r(sh.modality.get(m)), target: policy.targets.modality[m] })),
+  ];
+  const byFam = new Map<string, number | null>();
+  for (const k of candidateMovementKeys(c)) {
+    const l = input.lastMovementDate.get(k), d = l ? days(l, date) : null, f = familyOf(k);
+    const prev = byFam.get(f);
+    byFam.set(f, prev === undefined ? d : prev === null ? d : d === null ? prev : Math.min(prev, d));
+  }
+  const rules: string[] = [];
+  const lw = input.lastWorkoutDate.get(c.id);
+  const repeating = c.repeat && (!c.repeat.until || date <= c.repeat.until);
+  if (repeating) rules.push(`coach repeat: every ${c.repeat!.everyDays} days`);
+  else if (c.benchmark && benchmarkDue(c, date, input)) rules.push(`${isLiftTest(c) ? 'lift test' : 'benchmark'} due again (every ${c.benchmark.retestEveryDays} days)`);
+  else rules.push(lw ? `not done in the last ${policy.rules.noRepeatWorkoutDays} days (last ${lw})` : `not done before (the no-repeat window is ${policy.rules.noRepeatWorkoutDays} days)`);
+  if (c.minutes) rules.push(`about ${Math.round(c.minutes)} min, within the ${policy.rules.maxMinutes}-minute limit`);
+  const conflicts = [yesterday, tomorrow].flatMap((nb) => (nb ? conflictsWith(c, nb, policy.rules) : []));
+  if (conflicts.includes('heavy')) rules.push(`next to another heavy day: the once-every-${policy.rules.heavyExceptionDays}-days exception`);
+  else if (isHeavyDay(c.tags)) rules.push('no heavy day next to it');
+  if (conflicts.includes('movement')) rules.push(`shares a movement with the next or previous day: the once-every-${policy.rules.movementExceptionDays}-days exception`);
+  else rules.push('no movement shared with the day before or after');
+  if (c.benchmark && !isLiftTest(c)) rules.push(`within ${policy.rules.maxBenchmarksPerWeek} benchmark${policy.rules.maxBenchmarksPerWeek === 1 ? '' : 's'} a week`);
+  if (isLiftTest(c)) rules.push(`no other lift test within ${policy.rules.minDaysBetweenLiftTests} days`);
+  rules.push(`equipment checked for ${policy.rules.groupSize} people at ${input.equipmentFor(date).name}`);
+  return {
+    mix, windowDays: policy.windowDays, windowWorkouts: sh.n,
+    movements: [...byFam].map(([f, d]) => ({ name: FAMILY_BY_ID[f]?.name ?? f, daysSince: d })),
+    lastDone: lw ?? null, rules, lookbackDays: Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays),
+  };
+}
 
 /** Shares (0..100) of each bucket in the window. */
 function windowShares(window: PastDay[]) {
@@ -297,7 +355,7 @@ export function plan(input: PlanInput): Proposal[] {
     const best = ranked[0];
     if (!best) continue;
     const eq = checkEquipment(best.c.workout, input.equipmentFor(date), input.policy.rules.groupSize);
-    out.push({ date, candidateId: best.c.id, score: best.s, warnings: [...eq.crowded, ...eq.warnings],
+    out.push({ date, candidateId: best.c.id, score: { ...best.s, why: explain(best.c, date, local, window, yesterday, tomorrow) }, warnings: [...eq.crowded, ...eq.warnings],
       alternatives: ranked.slice(1, 1 + (input.alternatives ?? 4)).map((r) => ({ candidateId: r.c.id, score: r.s })) });
     timeline.push(toPastDay(date, [best.c]));
     lastW.set(best.c.id, date);

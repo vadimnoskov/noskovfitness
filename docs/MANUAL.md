@@ -155,6 +155,7 @@ What it's for: the weeks ahead.
 - **Skip → drop**: only that day is skipped; the rest of the plan keeps its dates.
 - **Skip → push forward**: that day's workout and every later proposed or approved workout move one training day later, in order. The day you pushed from is left empty and the plan ends one training day later. Nothing is re-planned; instead every day is re-checked where it now sits (see below).
 - **+ Add** fills a rest day; the planner checks the days before and after it.
+- **Why this workout** (on each proposed or approved day, tap to open): the deciding points (gaps it fills, benchmark or lift test due, a declining or rarely trained area, any penalty); the mix over the planner's window (time domain, movements per workout, task or time priority, load, modality), each as its recent share against your target; how many days since each of its movements was last done; and the rules it was checked against (not repeated within the window or due again, the time limit, heavy-day and same-movement neighbours, benchmarks per week, lift-test spacing, equipment for the group at that location). Days you picked yourself say so; days proposed before this feature ask you to re-plan to get an explanation.
 - **Rule check**: every proposed and approved day from today on is re-checked against the planner's rules where it now sits (after Push forward, a drag, a swap or an added day): back-to-back heavy days or the same movement two days running beyond their once-every-N-days exception, too many benchmarks in a week, lift tests too close together, the same workout two days running, missing equipment at the day's location. A day that breaks one shows "Breaks a rule here: …" and a one-tap fix, **Re-plan this day** (for an approved day, **Unapprove and re-plan this day**).
 - **Volume warnings**: proposed and approved days from today on show who would face a volume jump (tap to see the details at normal zoom; listed in full at the largest zoom). The same warning appears on that person's Today.
 
@@ -288,6 +289,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 2: "Why this workout" card on every planned day. |
 | 2026-11-28 | Planner v2 step 1: volume-aware picks; every planned day re-checked against the rules where it sits, with a one-tap re-plan. |
 | 2026-11-28 | Conditioning level and readiness on Fitness; one-tap check-in on Today. |
 | 2026-11-28 | Volume-jump warnings on Program and Today, with three new settings. |
