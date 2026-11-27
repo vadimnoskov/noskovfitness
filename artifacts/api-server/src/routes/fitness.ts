@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody, SaveMeasurementsBody, ImportWeightsBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody, SaveMeasurementsBody, ImportWeightsBody, SaveCheckInBody, SetConditioningPriorBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -285,6 +285,21 @@ router.post('/fitness/measurements/import', wrap(async (req, res) => {
   const body = ImportWeightsBody.safeParse(req.body);
   if (!body.success) throw new logging.InputError('Choose a BTWB export file.');
   return picture.importWeights(user, body.data);
+}));
+
+router.post('/fitness/checkin', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  const body = SaveCheckInBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Choose 1 to 5.');
+  return picture.saveCheckIn(user, body.data);
+}));
+router.post('/fitness/conditioning-prior', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  const body = SetConditioningPriorBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Use a number from 0 to 1.');
+  return picture.setConditioningPrior(user, body.data);
 }));
 
 router.get('/fitness/knowledge/movements', wrap(async (_req, res) => {

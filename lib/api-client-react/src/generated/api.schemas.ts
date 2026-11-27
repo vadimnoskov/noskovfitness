@@ -32,6 +32,26 @@ export interface KnowledgeQuestionInput {
   question: string;
 }
 
+export interface CheckInInput {
+  athleteId: string;
+  date: string;
+  /**
+     * @minimum 0
+     * @maximum 5
+     */
+  feeling: number;
+}
+
+export interface ConditioningPriorInput {
+  athleteId: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  prior?: number | null;
+}
+
 export interface WeightImportInput {
   athleteId: string;
   /** @maxLength 1500000 */

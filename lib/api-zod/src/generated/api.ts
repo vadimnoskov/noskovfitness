@@ -295,6 +295,39 @@ export const ImportWeightsResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary One-tap readiness check-in (How do you feel today? 1-5), for self or (coach) anyone; feeling 0 removes it
+ */
+export const saveCheckInBodyFeelingMin = 0;
+export const saveCheckInBodyFeelingMax = 5;
+
+
+
+export const SaveCheckInBody = zod.object({
+  "athleteId": zod.string(),
+  "date": zod.string(),
+  "feeling": zod.int().min(saveCheckInBodyFeelingMin).max(saveCheckInBodyFeelingMax)
+})
+
+export const SaveCheckInResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - a person's starting conditioning estimate (0-1), or null to clear it
+ */
+export const setConditioningPriorBodyPriorMin = 0;
+export const setConditioningPriorBodyPriorMax = 1;
+
+
+
+export const SetConditioningPriorBody = zod.object({
+  "athleteId": zod.string(),
+  "prior": zod.number().min(setConditioningPriorBodyPriorMin).max(setConditioningPriorBodyPriorMax).nullish()
+})
+
+export const SetConditioningPriorResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Coach - one movement's facts, points of performance, versions and workouts
  */
 export const GetKnowledgeMovementQueryParams = zod.object({

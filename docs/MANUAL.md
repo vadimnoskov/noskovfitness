@@ -58,7 +58,8 @@ The rules are enforced by the server, not only hidden in the menu.
 
 | Table | Holds |
 |---|---|
-| `athletes`, `groups`, `group_members`, `sessions` | People, the family group, sign-in sessions. |
+| `athletes`, `groups`, `group_members`, `sessions` | People (with the coach's starting conditioning estimate), the family group, sign-in sessions. |
+| `check_ins` | One-tap readiness check-ins (1–5), one per person per day. |
 | `workouts`, `workout_movements`, `movements`, `workout_sources` | Every workout (history, library, coach-made), its movements, and where and when it was published. |
 | `results` | Every logged result: who, when, the workout as performed, score, Rx or scaled, notes. Imported history is never edited. |
 | `program_days` | The plan: date, workout, status (proposed, approved, done, skipped), location, warm-up, the planner's score and notes, alternatives. |
@@ -100,6 +101,7 @@ What it's for: the day's workout and everything a person needs to do it.
 - **The workout**, as the coach approved it, and **your version** of it: your loads for the standard Rx, snapped to the weights that exist at the day's location (e.g. 45 lb dumbbells become 40 or 50 lb by person). The coach can override a person's version for a day.
 - **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have a general part, a rehearsal of today's movements at low volume, and a short primer only before short hard workouts. On heavy lifting days the build-up sets are the warm-up. Everyone gets the same warm-up.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
+- **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
 - **Volume warning** (when it applies): the workout asks for far more of a movement than this person's usual (more than the set multiple of their most reps of it in one workout in the last 12 months), or for a movement they haven't done in 12 months, or they have logged nothing for a month (scale volume for the first two weeks back). Jumping pull-ups and GHD sit-ups warn sooner. Source: L1, mitigating rhabdo risk (pp. 151–152): increase volume gradually; the guide gives no exact numbers, so the thresholds are settings.
 - **Your earlier results** on this workout.
 - **Log your result** (below).
@@ -131,6 +133,11 @@ What it's for: seeing each person's fitness as numbers, using CrossFit's own def
 - **Which movements count**: each counted movement has a rule (Fitness → "How each movement's work is counted", and the sheet "Chalkboard – Work formula rules" in Drive, 03). Rules are marked *as in the source*, *derived* (the same rule from the five heights) or *assumed* (needs a stated simplification; for the coach to review). Single-unders, toes-to-bar, carries, swimming and a few others have no rule, so a result that includes them gets no number rather than a guessed one. Multi-part and "every N minutes" workouts, ladder AMRAPs (their score can't be split into rounds), and anything above twice the best power in the Fran tables (676 ft-lb/s; for pure runs and rows, a 9.58 s 100 m) are left out as probably misread.
 - **Power over duration**: for each duration (1 to 60 minutes, log scale), the best average power held for at least that long: the all-time curve (dashed), the last three years in colour, older years in gray. Hover or tab to a point to see the workout behind it. Fitness is the area under this curve; health is the curve holding up over the years.
 - **By year**: results counted, the area (compared only over durations every year reached, so it's like for like), and power at 1, 4, 12 and 30 minutes.
+- **Conditioning and readiness**:
+    - **Conditioning level** (0–1): the person's results in the last 90 days (180 if fewer than 4) against their best 12 months in the last 5 years, each result compared with their usual power for that kind of workout and duration (as on the grid). The coach's starting estimate (set here, coach only) counts as 3 results' worth, so a few results move it part of the way and 10+ recent results mostly decide it. It will set how much volume and complexity each person's own version gets (Individual Rx, Phase 7).
+    - **Lately**: the last 3 weeks of results against the person's usual over the past year.
+    - **Training days per week**: the last 8 weeks against the 12 months before.
+    - **Check-in**: how many there are, how many fall on days with a result, and whether they are used yet. A check-in counts only once at least 10 match a result that day and they line up (correlation 0.2 or more); then today's answer shows what it suggests.
 - **Strengths and weaknesses** (time domain × modality grid, last 3 years): rows are short, medium, long and endurance; columns are gymnastics, weightlifting, run/row/bike and mixed. Each cell shows how that kind of workout compares with the person's usual power for the same modality at the same duration (one shared slope of power against duration, a level per modality), how many results it rests on, how often it was done in the last 12 months, and the trend (the last 12 months against the 2 years before). Tap a cell for the workouts behind it. The level is information only: within one modality it mixes the person with how the modality is measured. Cells are flagged only on what the data shows directly: **Declining** (10 points or more lower in the last 12 months than the 2 years before, 3+ results in each) and **Rarely trained** (at most once in the last 12 months, though it had 3+ results in the 3 years).
 - **Repeated workouts**: the same workout with the same loads, finished for time, done two or more times. The work is the same each time, so the change in power is the ratio of the times (L1 guide). Needs no measurements.
 
@@ -280,6 +287,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Conditioning level and readiness on Fitness; one-tap check-in on Today. |
 | 2026-11-28 | Volume-jump warnings on Program and Today, with three new settings. |
 | 2026-11-28 | Fitness: strengths and weaknesses grid (time domain × modality); the planner's weakness focus now uses it, at most once a week. |
 | 2026-11-27 | Time estimates: expanded round-by-round workouts fixed, scale recalibrated; stored tags recomputed on next start. |
@@ -296,4 +304,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page, the weakness grid and volume-jump warnings are built; next are conditioning level and readiness. Later: a smoothed fitness curve with the area shaded, and a 3D health view.
+See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: Phase 5 (the athlete picture) is built: Fitness page, weakness grid, volume-jump warnings, conditioning level and readiness. Next: Phase 6, planner v2. Later: a smoothed fitness curve with the area shaded, and a 3D health view.

@@ -26,6 +26,8 @@ import type {
 
 import type {
   AthleteVersionInput,
+  CheckInInput,
+  ConditioningPriorInput,
   FamilyCredentials,
   FitnessActionResult,
   FitnessForm,
@@ -2351,6 +2353,182 @@ export const useImportWeights = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getImportWeightsMutationOptions(options), queryClient);
+    }
+
+export const getSaveCheckInUrl = () => {
+
+
+
+
+  return `/api/fitness/checkin`
+}
+
+/**
+ * @summary One-tap readiness check-in (How do you feel today? 1-5), for self or (coach) anyone; feeling 0 removes it
+ */
+export const saveCheckIn = async (checkInInput: CheckInInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSaveCheckInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(checkInInput)
+  }
+);}
+
+
+
+
+
+export const getSaveCheckInMutationKey = () => ['saveCheckIn'] as const;
+
+export const getSaveCheckInMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCheckIn>>, TError,SaveCheckInMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveCheckIn>>, TError,SaveCheckInMutationVariables, TContext> => {
+
+const mutationKey = getSaveCheckInMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveCheckIn>>, SaveCheckInMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveCheckIn(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveCheckInMutationResult = NonNullable<Awaited<ReturnType<typeof saveCheckIn>>>
+    export type SaveCheckInMutationBody = BodyType<CheckInInput>
+    export type SaveCheckInMutationError = ErrorType<unknown>
+    export type SaveCheckInMutationVariables = {data: BodyType<CheckInInput>}
+
+    /**
+ * @summary One-tap readiness check-in (How do you feel today? 1-5), for self or (coach) anyone; feeling 0 removes it
+ */
+export const useSaveCheckIn = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCheckIn>>, TError,SaveCheckInMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveCheckIn>>,
+        TError,
+        SaveCheckInMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveCheckInMutationOptions(options), queryClient);
+    }
+
+export const getSetConditioningPriorUrl = () => {
+
+
+
+
+  return `/api/fitness/conditioning-prior`
+}
+
+/**
+ * @summary Coach - a person's starting conditioning estimate (0-1), or null to clear it
+ */
+export const setConditioningPrior = async (conditioningPriorInput: ConditioningPriorInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSetConditioningPriorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conditioningPriorInput)
+  }
+);}
+
+
+
+
+
+export const getSetConditioningPriorMutationKey = () => ['setConditioningPrior'] as const;
+
+export const getSetConditioningPriorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setConditioningPrior>>, TError,SetConditioningPriorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setConditioningPrior>>, TError,SetConditioningPriorMutationVariables, TContext> => {
+
+const mutationKey = getSetConditioningPriorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setConditioningPrior>>, SetConditioningPriorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  setConditioningPrior(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetConditioningPriorMutationResult = NonNullable<Awaited<ReturnType<typeof setConditioningPrior>>>
+    export type SetConditioningPriorMutationBody = BodyType<ConditioningPriorInput>
+    export type SetConditioningPriorMutationError = ErrorType<unknown>
+    export type SetConditioningPriorMutationVariables = {data: BodyType<ConditioningPriorInput>}
+
+    /**
+ * @summary Coach - a person's starting conditioning estimate (0-1), or null to clear it
+ */
+export const useSetConditioningPrior = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setConditioningPrior>>, TError,SetConditioningPriorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setConditioningPrior>>,
+        TError,
+        SetConditioningPriorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetConditioningPriorMutationOptions(options), queryClient);
     }
 
 export const getGetKnowledgeMovementUrl = (params: GetKnowledgeMovementParams,) => {

@@ -3,7 +3,7 @@
  * curve (all time and per year), and power changes on repeated workouts.
  */
 import { sql } from '@workspace/fitness-db';
-import { powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES } from '@workspace/fitness-core';
+import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import type { User } from './accounts';
 
@@ -60,10 +60,30 @@ export async function importWeights(user: User, input: { athleteId: string; csv:
   return { imported: rows.length, from: rows[0]!.date, to: rows[rows.length - 1]!.date };
 }
 
+/** One-tap check-in for a date; 0 removes it. */
+export async function saveCheckIn(user: User, input: { athleteId: string; date: string; feeling: number }) {
+  allowed(user, input.athleteId);
+  if (!/^\d{4}-\d\d-\d\d$/.test(input.date)) throw new InputError('Choose a valid date.');
+  if (!Number.isInteger(input.feeling) || input.feeling < 0 || input.feeling > 5) throw new InputError('Choose 1 to 5.');
+  if (input.feeling === 0) await sql`DELETE FROM check_ins WHERE athlete_id = ${input.athleteId} AND date = ${input.date}`;
+  else await sql`INSERT INTO check_ins (athlete_id, date, feeling) VALUES (${input.athleteId}, ${input.date}, ${input.feeling})
+    ON CONFLICT (athlete_id, date) DO UPDATE SET feeling = EXCLUDED.feeling, created_at = now()`;
+  return { ok: true };
+}
+
+/** Coach: the starting conditioning estimate (0–1) for a person, or null. */
+export async function setConditioningPrior(user: User, input: { athleteId: string; prior?: number | null }) {
+  if (!user.isCoach) throw new InputError('Only the coach can set this.', 403);
+  const v = input.prior ?? null;
+  if (v !== null && !(v >= 0 && v <= 1)) throw new InputError('Use a number from 0 to 1.');
+  await sql`UPDATE athletes SET conditioning_prior = ${v} WHERE id = ${input.athleteId}`;
+  return { ok: true };
+}
+
 export async function getAthletePicture(user: User, athleteId: string) {
   allowed(user, athleteId);
   const [[athlete], dims, results] = await Promise.all([
-    sql`SELECT id, name, sex FROM athletes WHERE id = ${athleteId}`,
+    sql`SELECT id, name, sex, conditioning_prior FROM athletes WHERE id = ${athleteId}`,
     sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId}`,
     sql`SELECT r.id, r.date::text AS date, r.workout_id, r.performed, r.score, r.completed, r.as_prescribed, r.tags, coalesce(w.name, r.performed->>'name', '') AS name,
           md5(r.performed::text) AS sig
@@ -74,6 +94,10 @@ export async function getAthletePicture(user: User, athleteId: string) {
   const hasDims = !!dimsAt(rows, '9999-12-31');
 
   const { points, timed, missing, paces } = powerPoints(results as never, athlete.sex, rows);
+  const today = new Date().toISOString().slice(0, 10);
+  const checks = await sql`SELECT date::text AS date, feeling FROM check_ins WHERE athlete_id = ${athleteId} ORDER BY date`;
+  const cond = conditioning(points, results.map((r) => r.date as string), today, athlete.conditioning_prior ?? null);
+  const ready = readiness(points, checks.map((c) => ({ date: c.date as string, feeling: c.feeling as number })), today);
   const grid = weaknessGrid(points, results.map((r) => ({ date: r.date as string, timeDomain: (r.tags as { timeDomain?: TimeDomain } | null)?.timeDomain,
     modalities: (r.tags as { modalityPattern?: Modality[] } | null)?.modalityPattern })), new Date().toISOString().slice(0, 10));
   const years = [...new Set(points.map((p) => p.date.slice(0, 4)))].sort();
@@ -113,6 +137,6 @@ export async function getAthletePicture(user: User, athleteId: string) {
       { family: 'double-under', basis: 'derived' as const, rule: `body × ${DOUBLE_UNDER_IN} in (matches BTWB)` },
       ...Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
     ],
-    paces, grid,
+    paces, grid, conditioning: cond, readiness: { ...ready, checkIns: checks.length },
   };
 }

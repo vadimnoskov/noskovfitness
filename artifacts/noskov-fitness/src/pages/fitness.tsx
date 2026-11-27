@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights } from '@workspace/api-client-react';
+import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior } from '@workspace/api-client-react';
 import { useMe, localToday } from '@/lib/session';
 import { AthletePicker } from '@/pages/today';
 
@@ -13,6 +13,8 @@ type Picture = {
   byYear: { year: string; curve: Curve; points: number; area: number | null }[]; commonMinutes: number[];
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
   grid: Grid;
+  conditioning: { level: number | null; fromData: number | null; recentN: number; recentDays: number; prior: number | null; best: { from: string; to: string; n: number } | null; perWeek8: number; perWeekUsual: number };
+  readiness: { recent: number | null; recentN: number; checkIns: number; checkIn: { pairs: number; correlation: number | null; used: boolean; today: number | null; suggests: number | null } };
   model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
 };
 type Cell = { row: string; col: string; n: number; vsCurve: number | null; recent: number | null; prior: number | null; done12m: number; share12m: number;
@@ -52,6 +54,7 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
       <p className="small">Work is force × distance: your bodyweight times how far your centre of mass travels, plus the load times how far it travels. Power is work divided by time. Fitness is the area under your best power across durations; health is that curve holding up over the years. These are the definitions in the CrossFit Level 1 guide.</p>
       <Measurements athleteId={athleteId} lengthUnit={lengthUnit} weightUnit={weightUnit} open={!p.hasDims} />
       {!p.hasDims ? <p className="kopen">Runs and rows are counted without measurements. Enter all six measurements above to count the other movements.</p> : null}
+      {p.conditioning ? <Condition p={p} athleteId={athleteId} /> : null}
       {p.grid ? <GridSection g={p.grid} /> : null}
       {p.coverage.counted ? <CurveSection p={p} /> : null}
       <Repeats p={p} />
@@ -257,6 +260,49 @@ function GridSection({ g }: { g: Grid }) {
           <p className="small">The planner leans a little toward declining and rarely trained cells (for the family, averaged over everyone) (the "weakness focus" weight in Settings); balance across the targets still comes first.</p>
         </>
       )}
+    </section>
+  );
+}
+
+/** Conditioning level (0–1) and readiness, with how each was worked out. */
+function Condition({ p, athleteId }: { p: Picture; athleteId: string }) {
+  const me = useMe();
+  const qc = useQueryClient();
+  const set = useSetConditioningPrior();
+  const [val, setVal] = useState('');
+  const c = p.conditioning, r = p.readiness;
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = val.trim() === '' ? null : Number(val);
+    set.mutate({ data: { athleteId, prior: v } }, { onSuccess: () => { setVal(''); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); } });
+  };
+  return (
+    <section>
+      <h2 className="sec">Conditioning and readiness</h2>
+      <div className="row wrap" style={{ gap: 24 }}>
+        <div><div className="small">Conditioning level</div><div className="bignum">{c.level === null ? '–' : c.level.toFixed(2)}</div></div>
+        <div><div className="small">Lately (last 3 weeks)</div><div className="bignum">{r.recent === null ? '–' : `${r.recent > 0 ? '+' : ''}${r.recent}%`}</div></div>
+        <div><div className="small">Training days per week</div><div className="bignum">{c.perWeek8.toFixed(1)}</div><div className="small">usual {c.perWeekUsual.toFixed(1)}</div></div>
+      </div>
+      <ul className="small">
+        <li><b>Conditioning level</b> (0–1): {c.fromData !== null && c.best
+          ? <>your results in the last {c.recentDays} days ({c.recentN}) are at {pct(c.fromData)} of your best 12 months ({c.best.from} to {c.best.to}, {c.best.n} results), each compared with your usual power for that kind of workout and duration.</>
+          : <>not enough recent results with a power number to measure it.</>}
+          {c.prior !== null ? <> The coach's starting estimate, {c.prior.toFixed(2)}, counts as 3 results{c.fromData !== null ? `; with ${Math.min(c.recentN, 10)} recent results the blend is ${c.level?.toFixed(2)}` : ''}.</> : null}
+          {' '}It will set how much volume and complexity your own version of each workout gets (Individual Rx, Phase 7).</li>
+        <li><b>Lately</b>: your last 3 weeks of results ({r.recentN}) against your usual over the past year{r.recent === null ? ' (needs at least 2 results)' : ''}.</li>
+        <li><b>Check-in</b> ("How do you feel today?" on Today): {r.checkIns} so far; {r.checkIn.pairs} on days with a result.{' '}
+          {r.checkIn.used
+            ? <>It predicts your results (correlation {r.checkIn.correlation}), so it is used{r.checkIn.suggests !== null ? `: today's answer suggests about ${r.checkIn.suggests > 0 ? '+' : ''}${r.checkIn.suggests}% vs your usual` : ''}.</>
+            : <>Not used yet: it counts once at least 10 check-ins match a result that day and they line up (correlation 0.2 or more{r.checkIn.correlation !== null ? `; now ${r.checkIn.correlation}` : ''}).</>}</li>
+      </ul>
+      {me?.user.isCoach ? (
+        <form className="row wrap" onSubmit={save}>
+          <label className="small">Coach's starting estimate (0–1){c.prior !== null ? `, now ${c.prior.toFixed(2)}` : ''}: <input type="number" min={0} max={1} step={0.05} value={val} onChange={(e) => setVal(e.target.value)} placeholder={c.prior === null ? 'e.g. 0.75' : String(c.prior)} style={{ width: 90 }} /></label>
+          <button type="submit" className="btn sm" disabled={set.isPending}>{val.trim() === '' && c.prior !== null ? 'Clear' : 'Save'}</button>
+        </form>
+      ) : null}
     </section>
   );
 }

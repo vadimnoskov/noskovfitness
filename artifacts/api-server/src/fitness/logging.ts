@@ -66,7 +66,8 @@ export async function getToday(date: string, athleteId: string) {
     });
   }
   const results = await myResults(athleteId, sql`r.date = ${date}`);
-  return { date, planned, results };
+  const [c] = await sql`SELECT feeling FROM check_ins WHERE athlete_id = ${athleteId} AND date = ${date}`;
+  return { date, planned, results, checkIn: (c?.feeling as number | undefined) ?? null };
 }
 
 /** The AI-written plan for one person on one program day (null when AI notes are off or the call failed). */
