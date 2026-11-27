@@ -60,3 +60,17 @@ describe('Individual Rx: load step only when it helps', () => {
     expect(rx.changes.some((c) => c.kind === 'volume')).toBe(true);
   });
 });
+
+describe('Individual Rx: rounds only when close to the cut needed', () => {
+  const w5: Workout = { id: 'c5', structure: { kind: 'for-time', rounds: 5 }, scoreType: 'time', movements: [
+    { movement: { family: 'carry' }, distanceM: 400 }, { movement: { family: 'push-press', implement: 'barbell' }, reps: 12, load: { male: 135, unit: 'lb' } }, { movement: { family: 'box-jump' }, reps: 12 }] };
+  it('trims reps and distance for a small cut', () => {
+    const v = scaleVolume(w5, 0.89)!;
+    expect(v.workout.structure).toMatchObject({ rounds: 5 });
+    expect(v.text).toMatch(/Carry 400 m → 350 m/);
+    expect(v.workout.movements[1]!.load).toEqual({ male: 135, unit: 'lb' });
+  });
+  it('drops whole rounds when that matches the cut', () => {
+    expect(scaleVolume(w5, 0.8)!.text).toBe('5 rounds → 4');
+  });
+});
