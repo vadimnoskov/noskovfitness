@@ -257,3 +257,20 @@ describe('why this workout', () => {
     expect(why.movements.length).toBe(1);
   });
 });
+
+describe('coach rules 2026-11-28', () => {
+  it('unweighted pull-up sets are not a heavy day; weighted ones are', async () => {
+    const { deriveTags } = await import('../src');
+    const sets = { kind: 'sets' as const, scheme: [5, 5, 5, 5, 5] };
+    expect(deriveTags({ id: 'a', structure: sets, scoreType: 'reps', movements: [{ movement: { family: 'pull-up' } }] }).timeDomain).not.toBe('heavy');
+    expect(deriveTags({ id: 'b', structure: sets, scoreType: 'load', movements: [{ movement: { family: 'pull-up' }, load: { male: 25, unit: 'lb' } }] }).timeDomain).toBe('heavy');
+    expect(deriveTags({ id: 'c', structure: sets, scoreType: 'load', movements: [{ movement: { family: 'back-squat', implement: 'barbell' } }] }).timeDomain).toBe('heavy');
+  });
+  it('allows a workout over 40 minutes only once in 90 days', () => {
+    const long = { ...C[0]!, id: 'long1', minutes: 50 };
+    const long2 = { ...C[0]!, id: 'long2', minutes: 55 };
+    const p = plan(input({ dates: ['2026-12-07', '2026-12-14'], candidates: [long, long2, ...C.slice(1)], policy: { ...DEFAULT_POLICY, weights: { variety: 0, freshness: 0, weakness: 0, benchmark: 0, outline: 0 } } }));
+    const picks = p.map((x) => x.candidateId).filter((id) => id.startsWith('long'));
+    expect(picks.length).toBeLessThanOrEqual(1);
+  });
+});

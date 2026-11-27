@@ -3,6 +3,7 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { volumeWarningsFor } from './volume';
+import { lightDays, implementsOf } from './warmups';
 import { stimulusFor } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
@@ -55,6 +56,7 @@ export async function getToday(date: string, athleteId: string) {
     SELECT d.id FROM program_days d
     WHERE d.group_id = ${GROUP_ID} AND d.date = ${date} AND d.status IN ('proposed','approved','done') ORDER BY d.seq`;
   const planned = [];
+  const light = days.length ? await lightDays(GROUP_ID, date, date) : new Set<string>();
   for (const d of days) {
     const v = await versionFor(d.id, athleteId);
     const history = await previousOn(v.standard.id, athleteId, date);
@@ -62,7 +64,7 @@ export async function getToday(date: string, athleteId: string) {
       dayId: d.id, status: v.day.status, workout: v.version, standard: v.standard, changes: v.changes, override: v.override, location: v.location, tags: v.day.tags,
       totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
-      warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up),
+      warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up, { date, implementsAvailable: implementsOf(v.day.items), longPractice: light.has(date) }),
       stimulus: stimulusFor(v.version, v.day.tags, {
         bestSec: history.filter((h) => h.completed && h.score.timeSec).reduce<number | undefined>((a, h) => (a === undefined || h.score.timeSec! < a ? h.score.timeSec : a), undefined),
         lastSec: history.find((h) => h.completed && h.score.timeSec)?.score.timeSec,

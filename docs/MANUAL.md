@@ -99,7 +99,13 @@ The rules are enforced by the server, not only hidden in the menu.
 What it's for: the day's workout and everything a person needs to do it.
 
 - **The workout**, as the coach approved it, and **your version** of it: your loads for the standard Rx, snapped to the weights that exist at the day's location (e.g. 45 lb dumbbells become 40 or 50 lb by person). The coach can override a person's version for a day.
-- **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have a general part, a rehearsal of today's movements at low volume, and a short primer only before short hard workouts. On heavy lifting days the build-up sets are the warm-up. Everyone gets the same warm-up.
+- **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have:
+    - **General**: easy cardio and a few bodyweight basics.
+    - **Complex** (L2, "Example Warm-Ups to Address Weaknesses"): 2–3 progressive rounds of 5–15 reps, chosen against the day's workout: a barbell, dumbbell or kettlebell complex on gymnastics days, a rings or parallettes routine on weightlifting days, Basic Body Weight rounds otherwise. The implement rotates and only equipment at the day's location is used. None on heavy days (the build-up sets are the warm-up).
+    - **Skill** (about 5 minutes): from the current 5-week skill block, alternating handstands and muscle-up / pull-up strength, with a different focus each week and three levels to pick from (building, wall/strict, free/transitions). If the day's workout already works the block's skill, the other one is practised that day, so the warm-up never tires the workout.
+    - **Specific**: a rehearsal of today's movements at low volume, and a short primer only before short hard workouts.
+    - **Skill practice** (10–15 minutes, the week's lightest day only): on the non-heavy day with the shortest workout, if it is 12 minutes or less. Weeks without such a day have none.
+    Everyone gets the same warm-up; the levels let each person choose.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
 - **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
 - **Stimulus**: the intended effort, from the time domain (sprint under 4 minutes, hard and fast 4–12, sustained 12–20, long 20+, intervals, or a heavy day with sets of 1–5 at about 80–85%+ and long rests); a completion window (from your own earlier times on this workout, ±10%, else the calibrated estimate) with when to scale; expected rounds for an AMRAP; suggested set breaks on demanding movements (at most about one break per 7 reps, as in the L1 Fran lesson plan: 21 → 3, 15 → 2, 9 → 1, with an example split); and checkpoints per round or per set. Easy movements (air squats, sit-ups, rowing…) get no break advice.
@@ -174,7 +180,7 @@ What it's for: the weeks ahead.
     - Don't repeat a workout within N days (default 180). Benchmarks and coach repeats follow their own schedules.
     - Max benchmarks per week (default 1).
     - Days between lift tests (default 14).
-    - Longest workout (default 60 minutes).
+    - Longest workout, ever (default 60 minutes); and workouts longer than 40 minutes at most once every 90 days (both numbers are settings), so the large majority stay within 40 minutes.
     - People training together (default 4; used for the equipment check).
     - Avoid the same movement on two consecutive days, but allow it once every N days (default 28).
     - Avoid heavy days back to back, but allow it once every N days (default 28). The two are separate settings.
@@ -192,7 +198,7 @@ For each open training day, in date order:
 5. **Week outline** (soft): the CrossFit Template describes weeks of single elements, couplets and triplets, but calls itself "as much descriptive as prescriptive", and routine is the enemy, so there is no fixed sequence of day types. The outline only makes sure each week has a **heavy day** and an **interval or single monostructural day**, on open days that change week to week (never the same weekday as the week before; the choice is stable when you re-plan). The other days are free: single elements, couplets, triplets and chippers come from the targets. A workout that fits its day gets a bonus set by the "Week outline" weight in Settings (default 20; 0 turns it off). A non-heavy pick on the heavy day costs a penalty, and so does a second heavy day in a week that already has one ("this week's heavy day is …"). Weeks that already have an approved or done heavy day get no heavy slot.
 5. The best scorer is proposed; the next four are its alternatives. The choice becomes part of the picture for the next day.
 
-**Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max; the rest by estimated or logged minutes), task or time priority, load, volume.
+**Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max lift, with a load; sets of unweighted pull-ups or dips are not a heavy day; the rest by estimated or logged minutes), task or time priority, load, volume.
 
 **Time estimates**: workouts nobody has logged get an estimated duration from per-rep and pace tables, calibrated on the coach's logged results (75% within 1.5× of the real time, 70% in the right time domain). Imported workouts that list every round and also keep the rep scheme are no longer counted ten times over.
 
@@ -291,6 +297,8 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 5: warm-up complexes (L2), 5-week skill blocks (handstand; muscle-up / pull-up strength) and a weekly light-day skill practice. |
+| 2026-11-28 | Heavy days need a load (weighted pull-ups/dips count, unweighted don't); workouts over 40 minutes at most once in 90 days. |
 | 2026-11-28 | Planner v2 step 4: Stimulus on Today (intent, completion window, set breaks, checkpoints). |
 | 2026-11-28 | Planner v2 step 3: soft week outline: one heavy day and one interval day a week, on changing weekdays (no fixed sequence), with a new weight. |
 | 2026-11-28 | Planner v2 step 2: "Why this workout" card on every planned day. |

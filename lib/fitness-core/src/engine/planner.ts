@@ -87,6 +87,8 @@ export interface PlanInput {
   weaknessCells?: Map<string, number>;
   /** Each family member's usual volume (most reps of each movement in one workout, last 12 months): see usualVolume. */
   usualVolumes?: UsualVolume[];
+  /** Most recent date a workout longer than rules.longMinutes was done or planned (set by plan()). */
+  lastLongDate?: string;
   /** Week outline slots by date (see weekOutline); computed from the open dates when absent. */
   outline?: Map<string, Slot>;
   alternatives?: number;
@@ -174,7 +176,9 @@ export function explain(c: Candidate, date: string, input: PlanInput, window: Pa
   if (repeating) rules.push(`coach repeat: every ${c.repeat!.everyDays} days`);
   else if (c.benchmark && benchmarkDue(c, date, input)) rules.push(`${isLiftTest(c) ? 'lift test' : 'benchmark'} due again (every ${c.benchmark.retestEveryDays} days)`);
   else rules.push(lw ? `not done in the last ${policy.rules.noRepeatWorkoutDays} days (last ${lw})` : `not done before (the no-repeat window is ${policy.rules.noRepeatWorkoutDays} days)`);
-  if (c.minutes) rules.push(`about ${Math.round(c.minutes)} min, within the ${policy.rules.maxMinutes}-minute limit`);
+  if (c.minutes) rules.push(c.minutes > (policy.rules.longMinutes ?? 40)
+    ? `about ${Math.round(c.minutes)} min: a long one, allowed once in ${policy.rules.longEveryDays ?? 90} days (none in that time)`
+    : `about ${Math.round(c.minutes)} min, within ${policy.rules.longMinutes ?? 40} minutes`);
   const conflicts = [yesterday, tomorrow].flatMap((nb) => (nb ? conflictsWith(c, nb, policy.rules) : []));
   if (conflicts.includes('heavy')) rules.push(`next to another heavy day: the once-every-${policy.rules.heavyExceptionDays}-days exception`);
   else if (isHeavyDay(c.tags)) rules.push('no heavy day next to it');
@@ -317,6 +321,10 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
   if (repeating && !repeatDue(c, date, lw)) return 'repeat not due yet';
   if (lw && days(lw, date) < rules.noRepeatWorkoutDays && !due && !repeating) return 'done recently';
   if (c.minutes && c.minutes > rules.maxMinutes) return 'too long';
+  // Long workouts (over 40 minutes by default) only once in a while (coach, 2026-11-28).
+  const longMin = rules.longMinutes ?? 40, longEvery = rules.longEveryDays ?? 90;
+  if (c.minutes && c.minutes > longMin && input.lastLongDate && days(input.lastLongDate, date) < longEvery && days(input.lastLongDate, date) > -longEvery)
+    return `a workout over ${longMin} minutes within ${longEvery} days`;
   // Neighbouring days in both directions: a day inserted between planned days must respect the next day too.
   for (const [nb, when] of [[yesterday, 'yesterday'], [tomorrow, 'tomorrow']] as const) {
     if (!nb) continue;
@@ -361,7 +369,11 @@ export function plan(input: PlanInput): Proposal[] {
     if (d && (lastL.get(liftOf(c)) ?? '') < d) lastL.set(liftOf(c), d);
   }
   const heavyWeeks = new Set(timeline.filter((d) => d.heavy).map((d) => mondayOf(d.date)));
-  const local = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM, lastLiftTest: lastL, outline: input.outline ?? weekOutline(input.dates, heavyWeeks) };
+  const minutesById = new Map(input.candidates.map((c) => [c.id, c.minutes]));
+  const longMin = input.policy.rules.longMinutes ?? 40;
+  const isLong = (id: string) => (minutesById.get(id) ?? 0) > longMin;
+  const lastLong = input.lastLongDate ?? timeline.filter((d) => d.workoutIds.some(isLong)).at(-1)?.date;
+  const local: PlanInput = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM, lastLiftTest: lastL, outline: input.outline ?? weekOutline(input.dates, heavyWeeks), lastLongDate: lastLong };
   for (const date of [...input.dates].sort()) {
     const window = timeline.filter((d) => d.date < date && days(d.date, date) <= input.policy.windowDays);
     const prevDay = timeline.filter((d) => d.date < date).at(-1);
@@ -378,6 +390,7 @@ export function plan(input: PlanInput): Proposal[] {
       alternatives: ranked.slice(1, 1 + (input.alternatives ?? 4)).map((r) => ({ candidateId: r.c.id, score: r.s })) });
     timeline.push(toPastDay(date, [best.c]));
     lastW.set(best.c.id, date);
+    if (isLong(best.c.id)) local.lastLongDate = date;
     if (isLiftTest(best.c)) lastL.set(liftOf(best.c), date);
     for (const k of candidateMovementKeys(best.c)) lastM.set(k, date);
   }

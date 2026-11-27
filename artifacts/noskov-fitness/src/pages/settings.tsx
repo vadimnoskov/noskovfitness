@@ -64,7 +64,9 @@ export default function Settings() {
           <label>…from this many reps up (half for jumping pull-ups and GHD sit-ups) <input type="number" name="rules.volumeJumpMinReps" min={0} max={500} defaultValue={policy.rules.volumeJumpMinReps} /></label>
           <label>Warn to scale volume for two weeks after this many days without training <input type="number" name="rules.returnAfterDays" min={7} max={365} defaultValue={policy.rules.returnAfterDays} /></label>
           <p className="small">Each lift comes due for a re-test 90 days after it was last tested (any rep max). Tests only fall on heavy days, so this spacing keeps most heavy days as regular heavy work.</p>
-          <label>Longest workout (minutes) <input type="number" name="rules.maxMinutes" min={5} max={120} defaultValue={policy.rules.maxMinutes} /></label>
+          <label>Longest workout, ever (minutes) <input type="number" name="rules.maxMinutes" min={5} max={120} defaultValue={policy.rules.maxMinutes} /></label>
+          <label>Workouts longer than (minutes)… <input type="number" name="rules.longMinutes" min={5} max={120} defaultValue={policy.rules.longMinutes} /></label>
+          <label>…at most once every (days) <input type="number" name="rules.longEveryDays" min={0} max={365} defaultValue={policy.rules.longEveryDays} /></label>
           <label>People training together <input type="number" name="rules.groupSize" min={1} max={30} defaultValue={policy.rules.groupSize} /></label>
           <label className="check"><input type="checkbox" name="rules.noSameMovementConsecutiveDays" defaultChecked={policy.rules.noSameMovementConsecutiveDays} /> Avoid the same movement on two consecutive days</label>
           <label>…but allow it once every (days) <input type="number" name="rules.movementExceptionDays" min={0} max={365} defaultValue={policy.rules.movementExceptionDays} /></label>

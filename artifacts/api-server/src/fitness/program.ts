@@ -1,6 +1,6 @@
 import { sql, checkPlannedDays } from '@workspace/fitness-db';
 import { withCap, type Workout, type WorkoutTags, type ScoreBreakdown } from '@workspace/fitness-core';
-import { resolveWarmUp, type DayWarmUp } from './warmups';
+import { resolveWarmUp, lightDays, implementsOf, type DayWarmUp } from './warmups';
 import { volumeWarningsFor } from './volume';
 
 export interface PlannedDay {
@@ -27,6 +27,10 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
   const altIds = [...new Set(rows.flatMap((r) => (r.alternatives as { candidateId: string }[]).map((a) => a.candidateId)))];
   const alts = altIds.length ? await sql`SELECT id, name, structure, movements, score_type, tags FROM workouts WHERE id = ANY(${altIds})` : [];
   const altById = new Map(alts.map((a) => [a.id as string, a]));
+  const light = await lightDays(groupId, from, to);
+  const profs = await sql`SELECT e.id, e.items, g.default_equipment_id FROM equipment_profiles e JOIN groups g ON g.id = ${groupId} WHERE e.group_id = ${groupId}`;
+  const profileItems = new Map(profs.map((p) => [p.id as string, p.items]));
+  const defaultItems = profs.find((p) => p.id === p.default_equipment_id)?.items;
   const members = await sql`SELECT a.id, a.name FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id WHERE gm.group_id = ${groupId} ORDER BY a.name`;
   const today = new Date().toISOString().slice(0, 10);
   const issues = await checkPlannedDays(groupId, from < today ? today : from, to);
@@ -37,7 +41,7 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
     return {
     id: r.id, date: r.date, seq: r.seq, status: r.status, equipmentId: r.equipment_profile_id, workoutId: r.wid, name: r.name, benchmark: r.benchmark,
     workout, tags: r.tags, origin: r.origin,
-    warmUp: resolveWarmUp(workout, r.tags, r.day_warm_up, r.workout_warm_up),
+    warmUp: resolveWarmUp(workout, r.tags, r.day_warm_up, r.workout_warm_up, { date: r.date, implementsAvailable: implementsOf(profileItems.get(r.equipment_profile_id) ?? defaultItems), longPractice: light.has(r.date) }),
     repeat: r.repeat_every_days ? { everyDays: r.repeat_every_days, until: r.repeat_until } : null,
     warnings: r.warnings,
     ruleIssue: issues.get(r.id) ?? null,
