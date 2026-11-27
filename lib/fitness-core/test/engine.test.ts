@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseBtwbRow, deriveTags, plan, blocked, checkEquipment, maxBarbellLb, DEFAULT_POLICY, withDefaults, toPastDay,
-  trainingDates, pushForward, skipDay, insertDay, volumeJumpFor, unfamiliarSkills, type Candidate, type EquipmentProfile, type PlanInput, type Workout,
+  trainingDates, pushForward, skipDay, insertDay, volumeJumpFor, unfamiliarSkills, amountsMissing, type Candidate, type EquipmentProfile, type PlanInput, type Workout,
 } from '../src/index';
 
 const mk = (id: string, name: string, desc: string, result: string, bench?: number): Candidate => {
@@ -309,6 +309,14 @@ describe('location limits and new athletes', () => {
     expect(su.warnings.join()).toMatch(/bench/);
     expect(checkEquipment(w({ movement: { family: 'muscle-up', implement: 'bar' }, reps: 5 }), building, 1).ok).toBe(false);
     expect(checkEquipment(w({ movement: { family: 'pull-up' }, reps: 10 }), building, 1).warnings.join()).toMatch(/strict/);
+  });
+  it('small rooms: no long carries; bare machine pieces are never proposed', () => {
+    const small = { ...building, limits: ['small-space' as const] };
+    expect(checkEquipment(w({ movement: { family: 'carry', implement: 'dumbbell' }, distanceM: 350 }), small, 1).ok).toBe(false);
+    expect(checkEquipment(w({ movement: { family: 'carry', implement: 'dumbbell' }, distanceM: 20 }), small, 1).ok).toBe(true);
+    expect(checkEquipment(w({ movement: { family: 'row' }, distanceM: 2000 }), small, 1).ok).toBe(true);
+    expect(amountsMissing({ ...w({ movement: { family: 'bike' } }), structure: { kind: 'for-time', rounds: 5 } })).toHaveLength(1);
+    expect(amountsMissing({ ...w({ movement: { family: 'thruster' } }, { movement: { family: 'pull-up' } }), structure: { kind: 'for-time', scheme: [21, 15, 9] } })).toHaveLength(0);
   });
   it('treats a lot of a movement nobody has done in 12 months as a volume jump, and flags unfamiliar high skills', () => {
     const c = { id: 'c', workout: w({ movement: { family: 'air-squat' }, reps: 300 }, { movement: { family: 'muscle-up', implement: 'rings' }, reps: 5 }), tags: deriveTags(w({ movement: { family: 'air-squat' }, reps: 300 })) } as never;

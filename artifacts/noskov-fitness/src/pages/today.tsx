@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
-import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion, useSaveCheckIn } from '@workspace/api-client-react';
-import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags, type Stimulus } from '@workspace/fitness-core';
-import { useMe, localToday, type Person } from '@/lib/session';
+import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion, useSaveCheckIn, usePeopleAction } from '@workspace/api-client-react';
+import { parseBtwbRow, structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags, type Stimulus } from '@workspace/fitness-core';
+import { useMe, localToday, isCoaching, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
 import { LogForm, rxFor, type Comparison } from '@/components/LogForm';
@@ -18,6 +18,64 @@ type Planned = { dayId: string; status: string; workout: Workout; standard: Work
   rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; teenMax?: boolean; pace: number; paceN: number; level: number | null };
   weaknessWork?: { title: string; lines: string[]; why: string; source: string } | null };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
+
+/** "12:34" or "1:02:03" → BTWB's "12 mins 34 secs"; other results unchanged. */
+export function btwbResult(r: string): string {
+  const t = r.trim();
+  const m = /^(?:(\d+):)?(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return /^\d+(\.\d+)?$/.test(t) ? `${t} reps` : t;
+  const mins = Number(m[1] ?? 0) * 60 + Number(m[2]), secs = Number(m[3]);
+  return `${mins} mins ${secs} secs`;
+}
+const csvCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+
+/**
+ * Coach: write in a workout and result from a paper journal (any date). The text is read the same way as BTWB posts;
+ * "Read as" shows exactly what the app understood before it is saved, so the text can be fixed first.
+ */
+function JournalEntry({ athleteId, name, sex, date }: { athleteId: string; name: string; sex: 'male' | 'female'; date: string }) {
+  const qc = useQueryClient();
+  const m = usePeopleAction();
+  const [f, setF] = useState({ date, title: '', text: '', result: '', rx: true, notes: '' });
+  const [msg, setMsg] = useState<string | null>(null);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const row = { Date: f.date, Workout: f.title || f.text.split('\n')[0]!.slice(0, 80), Description: f.text, 'Formatted Result': btwbResult(f.result), Result: '', Performed: f.rx ? 'prescribed' : 'modified', Notes: f.notes };
+  const p = f.text.trim() && f.result.trim() ? parseBtwbRow(row, sex) : null;
+  const read = p ? `${structureLabel(p.workout.structure)}: ${p.workout.movements.map((x) => movementLine(x)).join('; ') || 'no movements read'} · result ${JSON.stringify(p.result.score)}` : '';
+  const save = () => {
+    const csv = ['Date,Formatted Result,Result,Performed,Workout,Description,Notes', [row.Date, row['Formatted Result'], '', row.Performed, row.Workout, row.Description, row.Notes].map(csvCell).join(',')].join('\n');
+    setMsg(null);
+    m.mutate({ action: 'importHistory', data: { athleteId, csv } }, {
+      onSuccess: (r) => { const x = r as { imported?: number; duplicates?: number; skipped?: { why: string }[] }; setMsg(x.imported ? 'Saved.' : x.duplicates ? 'Already there (same date and workout).' : `Not saved: ${x.skipped?.[0]?.why ?? 'not read'}.`); if (x.imported) { setF({ ...f, title: '', text: '', result: '', notes: '' }); qc.invalidateQueries(); } },
+      onError: (e) => setMsg((e as { data?: { error?: string } }).data?.error ?? 'Could not save.'),
+    });
+  };
+  return (
+    <details className="otherlog">
+      <summary>Write in a workout (journal)</summary>
+      <p className="small">For {name}: a workout that isn't in the app, with its result, on any date. Write it the way you would on a whiteboard, one movement per line with reps, distance or load, e.g. "5 rounds for time of:" then "10 strict pull-ups", "Row, 500 m", "12 dumbbell thrusters, 35 lbs". For a lift, write the sets, e.g. "5 Back Squats 185 lbs".</p>
+      <label>Date<input type="date" value={f.date} onChange={set('date')} /></label>
+      <label>Name (optional)<input value={f.title} onChange={set('title')} placeholder="e.g. Back Squat : 5 Rep Max" /></label>
+      <label>Workout<textarea rows={6} value={f.text} onChange={set('text')} /></label>
+      <label>Result<input value={f.result} onChange={set('result')} placeholder="12:34 · 6 rounds + 4 reps · 185 lbs · 7 reps" /></label>
+      <label className="small"><input type="checkbox" checked={f.rx} onChange={(e) => setF({ ...f, rx: e.target.checked })} /> As prescribed (Rx)</label>
+      <label>Notes<input value={f.notes} onChange={set('notes')} /></label>
+      {p ? <p className="small"><b>Read as:</b> {read}</p> : null}
+      <button type="button" className="btn" disabled={!p || !p.workout.movements.length || m.isPending} onClick={save}>Save to {name}'s history</button>
+      {msg ? <p className={msg === 'Saved.' ? 'ok' : 'warn'}>{msg}</p> : null}
+    </details>
+  );
+}
+
+/** Shown when some amounts were not read from the workout's text: the workout exactly as written. */
+export function AsWritten({ text }: { text: string }) {
+  return (
+    <details className="aswritten" open>
+      <summary className="small"><b>As written</b> (some amounts were not read; follow this text)</summary>
+      <pre>{text}</pre>
+    </details>
+  );
+}
 
 /** Whose page this is: a dropdown of everyone you may see, grouped by program. */
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -42,6 +100,7 @@ export function WorkoutCard({ workout, tags, sex, children }: { workout: Workout
       {tags ? <Chips mods={tags.modalityPattern} load={tags.load} volume={tags.volume} priority={tags.priority} /> : null}
       <h2>{bm ? <span className="bm">★ </span> : null}<Link href={`/workout/${workout.id}`}>{workoutTitle(workout)}</Link></h2>
       <div className="small">{structureLabel(workout.structure)}{workout.structure.kind === 'for-time' && workout.structure.capMin ? <b className="cap"> · Time cap {workout.structure.capMin}:00</b> : null}</div>
+      {workout.originalText ? <AsWritten text={workout.originalText} /> : null}
       <ul className="mv">{workout.movements.map((m, i) => {
         // Show this person's Rx; where only the other sex's Rx is written, show an estimate and say so.
         const r = rxFor(m, sex);
@@ -255,6 +314,7 @@ export default function Today() {
               </>
             )}
           </details>
+          {isCoaching(me) ? <JournalEntry athleteId={athlete.id} name={athlete.name} sex={athlete.sex} date={date} /> : null}
         </>
       )}
     </div>

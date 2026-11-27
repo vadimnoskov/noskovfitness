@@ -354,7 +354,9 @@ router.post('/fitness/knowledge/ask', wrap(async (req, res) => {
   if (!user?.isCoach) throw new logging.InputError('Only the coach can ask Chalkboard (for now).', 403);
   const body = AskKnowledgeBody.safeParse(req.body);
   if (!body.success) throw new logging.InputError('Write a question.');
-  return knowledgeAsk.ask(body.data.question, user.id);
+  const g = await data.programFor(user, req.get('x-program')).catch(() => data.GROUP_ID);
+  const today = body.data.today && /^\d{4}-\d\d-\d\d$/.test(body.data.today) ? body.data.today : undefined;
+  return knowledgeAsk.ask(body.data.question, user.id, g, today);
 }));
 
 router.post('/fitness/knowledge/teach', wrap(async (req, res) => {

@@ -8,6 +8,7 @@ import { cellKey, gridColumn, GRID_COL_LABEL } from '../workouts/weakness';
 import { plannedReps, volumeLabel, volumeKey, type UsualVolume } from '../workouts/volume';
 import { MOVEMENT_FACTS } from '../knowledge/movements';
 import { isSingleRepMax } from '../workouts/rx';
+import { amountsMissing } from '../workouts/tags';
 const SKILL_FACTS = new Map(MOVEMENT_FACTS.map((f) => [f.key, f]));
 import type { EquipmentProfile, WorkoutTags, Workout } from '../model/types';
 import { keyOf } from '../movements/resolver';
@@ -310,6 +311,9 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
     && !input.usualVolumes.some((u) => u.seen?.has(c.workout.movements[0]!.movement.family) || [...u.most.keys()].some((k) => k.split(':')[0] === c.workout.movements[0]!.movement.family))) {
     penalty += 0.35; notes.push('1-rep max of a lift nobody here has done in 12 months: build up with heavy 3-5s first');
   }
+  // Some amounts not read from the text: workable from the original text, but avoided.
+  const noAmount = amountsMissing(c.workout);
+  if (noAmount.length) { penalty += 0.3; notes.push(`amounts not read for ${[...new Set(noAmount.map((m) => FAMILY_BY_ID[m.movement.family]?.name ?? m.movement.family))].join(', ')}: check the workout as written`); }
   const unfamiliar = unfamiliarSkills(c, input);
   if (unfamiliar.length) { penalty += Math.min(0.4, 0.2 * unfamiliar.length); notes.push(`high-skill movement nobody here has logged in 12 months (${unfamiliar.join(', ')}): mechanics first`); }
   if (yesterday) {
@@ -365,6 +369,9 @@ const inMetcon = (w: Candidate['workout']) => w.scoreType !== 'load' && w.scoreT
 export function blocked(c: Candidate, date: string, input: PlanInput, window: PastDay[], yesterday?: PastDay, tomorrow?: PastDay): string | undefined {
   const { rules } = input.policy;
   if (!c.workout.movements.length) return 'no movements';
+  // Machine or running pieces with no amount read (a bike "sprint" with no time, distance or calories) make no workout.
+  const missing = amountsMissing(c.workout);
+  if (missing.length && missing.every((m) => FAMILY_BY_ID[m.movement.family]?.modality === 'M')) return 'amounts not read from the text';
   const lw = input.lastWorkoutDate.get(c.id);
   const due = benchmarkDue(c, date, input);
   const repeating = c.repeat && (!c.repeat.until || date <= c.repeat.until);

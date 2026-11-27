@@ -128,6 +128,8 @@ What it's for: the day's workout and everything a person needs to do it.
 - Mark Rx or scaled; for scaled, note the weights used.
 - A time over the time cap is rejected; enter reps at the cap instead.
 - After saving, Today shows how it compares with last time and your best.
+- **Write in a workout (journal)** (coach, on Today under "Log a different workout"): a workout that isn't in the app, with its result, on any date, for the athlete shown, e.g. from a paper journal. Write it as on a whiteboard, one movement per line with its reps, distance or load ("5 rounds for time of:", "10 strict pull-ups", "Row, 500 m", "12 dumbbell thrusters, 35 lbs"; a lift as its sets, "5 Back Squats 185 lbs"). The result can be "12:34", "6 rounds + 4 reps", "185 lbs" or "7 reps". **Read as** shows what the app understood before saving; the same workout and date can't be saved twice.
+- **As written**: when some amounts of a workout weren't read from its text (a bare "Air Bike" line), Today and Program show the workout exactly as written. The planner never proposes a workout whose machine or running pieces have no amount at all, and avoids the others.
 - Results logged in the app can be deleted by whoever entered them; imported history can't be changed.
 
 ### 3.4 History, workout pages and benchmarks
@@ -249,7 +251,7 @@ What it's for: seeing everything Chalkboard works from.
 
 What it's for: asking why the plan looks the way it does, or what Chalkboard knows about something.
 
-- Type a question in plain words. The answer comes **only** from the most related cards, your settings and the plan two weeks back and ahead, and links the cards it used.
+- Type a question in plain words. The answer comes **only** from the most related cards, your settings and the selected program's plan two weeks back and ahead (each day with the workout as the app reads it and as written), and links the cards it used. Your own date is sent, so "tomorrow" means your tomorrow.
 - If nothing covers the question, it says so plainly, gives a short title for the missing knowledge, and the question appears on the Map under "Questions Chalkboard couldn't answer".
 - It points out when a question assumes something the cards contradict.
 - Uses Claude Sonnet; about a cent per question. No names or personal results are sent.
@@ -315,6 +317,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Journal entries on Today (coach); "As written" shown when amounts weren't read, bare machine pieces never proposed; small-room location limit; Ask reads the selected program, the workout text and the coach's date. |
 | 2026-11-28 | New clients: location limits (no barbell overhead, strict only, no running route), runs need a route and swims a pool, step-ups onto a bench; planner avoids unfamiliar high skills, first-time 1-rep maxes and big first-time volumes; history import from a BTWB CSV; each program's planning history is its own members' (was everyone's). |
 | 2026-11-28 | Athletes and programs: each client gets their own program (coach, days, locations, settings); Athlete dropdown instead of name tabs; Program dropdown on coach pages; access by program. |
 | 2026-11-28 | Phone menu folded into ☰ (top right), "Account" instead of your name, warm-up closed by default, today's workout on a grey background. |

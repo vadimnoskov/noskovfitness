@@ -252,7 +252,8 @@ export const SetKnowledgeCardResponse = zod.record(zod.string(), zod.unknown())
  * @summary Coach - ask Chalkboard a question; answered only from its knowledge and the plan
  */
 export const AskKnowledgeBody = zod.object({
-  "question": zod.string()
+  "question": zod.string(),
+  "today": zod.string().optional().describe('The coach\'s local date (YYYY-MM-DD), for \'today\' and \'tomorrow\'')
 })
 
 export const AskKnowledgeResponse = zod.record(zod.string(), zod.unknown())

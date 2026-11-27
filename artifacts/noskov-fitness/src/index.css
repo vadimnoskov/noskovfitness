@@ -266,3 +266,4 @@ section.program{border-top:1px solid var(--line);padding-top:6px}
 .equip{border-collapse:collapse;font-size:14px}.equip td,.equip th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .equip input[name^="loads"],.equip input[name^="note"]{width:min(260px,40vw);margin:1px 0}
 .stack{display:grid;gap:8px;max-width:720px}
+.aswritten{border:1px dashed var(--line);border-radius:8px;padding:6px 10px}.aswritten pre{white-space:pre-wrap;font:inherit;font-size:14px;margin:6px 0 0}

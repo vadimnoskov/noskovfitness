@@ -39,6 +39,7 @@ export const LOCATION_LIMITS: { key: import('../model/types').LocationLimit; lab
   { key: 'no-barbell-overhead', label: 'No barbell overhead (fixed rack or low ceiling): no barbell snatch, jerk, press, push press, thruster, overhead squat' },
   { key: 'strict-only', label: 'Strict only on the bar (no kipping): pull-ups, toes-to-bar strict; no bar muscle-ups' },
   { key: 'no-running', label: 'No running route' },
+  { key: 'small-space', label: 'Small room: no carries, walking lunges, crawls, handstand walks or sled pushes over 25 m in one go' },
 ];
 
 /** Heaviest barbell load buildable from the profile's bars and plates (plates must be loaded in pairs). */
@@ -90,6 +91,9 @@ export function checkEquipment(w: Workout, profile: EquipmentProfile, groupSize:
     if (f.id === 'run' && (limits.includes('no-running') || !profile.items.some((i) => i.implement === 'none'))) problems.push(`${nameOf(m.movement)}: no running route at ${profile.name}`);
     if (imp === 'barbell' && limits.includes('no-barbell-overhead') && BARBELL_OVERHEAD.has(f.id) && !(f.id === 'press' && m.movement.variant === 'seated'))
       problems.push(`${nameOf(m.movement)}: the barbell can't go overhead at ${profile.name}`);
+    // A small room: travelling movements only in short pieces (machines and runs have their own rules).
+    if (limits.includes('small-space') && m.distanceM && m.distanceM > 25 && FAMILY_BY_ID[f.id]?.modality !== 'M')
+      problems.push(`${nameOf(m.movement)} ${m.distanceM} m: too far for the room at ${profile.name}`);
     if (limits.includes('strict-only')) {
       if (f.id === 'muscle-up' && imp === 'bar') problems.push(`${nameOf(m.movement)}: no kipping at ${profile.name}`);
       else if (KIPPING.has(f.id) && m.movement.style !== 'strict') warnings.push(`${nameOf(m.movement)}: strict at ${profile.name} (no kipping)`);
