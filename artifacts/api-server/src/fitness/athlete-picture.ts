@@ -3,7 +3,7 @@
  * curve (all time and per year), and power changes on repeated workouts.
  */
 import { sql } from '@workspace/fitness-db';
-import { parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, monoSpeed, resultWork, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, type PowerPoint } from '@workspace/fitness-core';
+import { powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import type { User } from './accounts';
 
@@ -65,7 +65,7 @@ export async function getAthletePicture(user: User, athleteId: string) {
   const [[athlete], dims, results] = await Promise.all([
     sql`SELECT id, name, sex FROM athletes WHERE id = ${athleteId}`,
     sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId}`,
-    sql`SELECT r.id, r.date::text AS date, r.workout_id, r.performed, r.score, r.completed, r.as_prescribed, coalesce(w.name, r.performed->>'name', '') AS name,
+    sql`SELECT r.id, r.date::text AS date, r.workout_id, r.performed, r.score, r.completed, r.as_prescribed, r.tags, coalesce(w.name, r.performed->>'name', '') AS name,
           md5(r.performed::text) AS sig
         FROM results r LEFT JOIN workouts w ON w.id = r.workout_id WHERE r.athlete_id = ${athleteId} ORDER BY r.date`,
   ]);
@@ -73,34 +73,9 @@ export async function getAthletePicture(user: User, athleteId: string) {
   const rows = dims.map((d) => ({ kind: d.kind as string, date: d.date as string, value: d.value as number, unit: d.unit as string }));
   const hasDims = !!dimsAt(rows, '9999-12-31');
 
-  // The person's usual speed for runs, rows, skis and bikes: the median of their pure pieces that year (all years if
-  // none that year). Used for the run or row inside a mixed workout, where only the total time is known.
-  // Pieces of a similar length (half to double) are preferred, since short sprints are much faster than a 1,000 m row.
-  const speeds = new Map<string, { year: string; v: number; metres: number }[]>();
-  for (const r of results) {
-    const m = monoSpeed(r as never);
-    if (m) speeds.set(m.family, [...(speeds.get(m.family) ?? []), { year: (r.date as string).slice(0, 4), v: m.speed, metres: m.metres }]);
-  }
-  const median = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)]! : undefined; };
-  const pacesFor = (date: string) => (family: string, metres?: number) => {
-    const list = speeds.get(family) ?? [];
-    const near = metres ? list.filter((x) => x.metres >= metres / 2 && x.metres <= metres * 2) : list;
-    const year = (l: typeof list) => l.filter((x) => x.year === date.slice(0, 4));
-    for (const l of [year(near), near, year(list), list]) { const v = median(l.map((x) => x.v)); if (v) return v; }
-    return undefined;
-  };
-
-  const points: PowerPoint[] = [];
-  const missing = new Map<string, number>();
-  let timed = 0;
-  for (const r of results) {
-    const kind = (r.performed as { structure: { kind: string } }).structure.kind;
-    if (kind !== 'for-time' && kind !== 'amrap') continue;
-    timed++;
-    const w = resultWork(r as never, athlete.sex, dimsAt(rows, r.date), pacesFor(r.date));
-    if (w.power && w.seconds) points.push({ minutes: Math.round((w.seconds / 60) * 10) / 10, power: w.power, date: r.date, id: r.workout_id ?? r.id, name: r.name || undefined });
-    else for (const m of w.missing) missing.set(m, (missing.get(m) ?? 0) + 1);
-  }
+  const { points, timed, missing, paces } = powerPoints(results as never, athlete.sex, rows);
+  const grid = weaknessGrid(points, results.map((r) => ({ date: r.date as string, timeDomain: (r.tags as { timeDomain?: TimeDomain } | null)?.timeDomain,
+    modalities: (r.tags as { modalityPattern?: Modality[] } | null)?.modalityPattern })), new Date().toISOString().slice(0, 10));
   const years = [...new Set(points.map((p) => p.date.slice(0, 4)))].sort();
   const byYear = years.map((y) => {
     const curve = powerCurve(points.filter((p) => p.date.startsWith(y)));
@@ -138,6 +113,6 @@ export async function getAthletePicture(user: User, athleteId: string) {
       { family: 'double-under', basis: 'derived' as const, rule: `body × ${DOUBLE_UNDER_IN} in (matches BTWB)` },
       ...Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
     ],
-    paces: Object.fromEntries([...speeds].map(([f, l]) => [f, { n: l.length, medianSec500: Math.round(500 / median(l.map((x) => x.v))!) }])),
+    paces, grid,
   };
 }
