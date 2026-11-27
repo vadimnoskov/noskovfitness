@@ -357,6 +357,36 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/checkin:
+    post:
+      operationId: saveCheckIn
+      summary: One-tap readiness check-in (How do you feel today? 1-5), for self or (coach) anyone; feeling 0 removes it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckInInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/conditioning-prior:
+    post:
+      operationId: setConditioningPrior
+      summary: Coach - a person's starting conditioning estimate (0-1), or null to clear it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConditioningPriorInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/knowledge/movement:
     get:
       operationId: getKnowledgeMovement
@@ -505,6 +535,19 @@ components:
       required: [question]
       properties:
         question: { type: string }
+    CheckInInput:
+      type: object
+      required: [athleteId, date, feeling]
+      properties:
+        athleteId: { type: string }
+        date: { type: string }
+        feeling: { type: integer, minimum: 0, maximum: 5 }
+    ConditioningPriorInput:
+      type: object
+      required: [athleteId]
+      properties:
+        athleteId: { type: string }
+        prior: { type: number, minimum: 0, maximum: 1, nullable: true }
     WeightImportInput:
       type: object
       required: [athleteId, csv]

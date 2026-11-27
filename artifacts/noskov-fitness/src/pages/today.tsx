@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
-import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion } from '@workspace/api-client-react';
+import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion, useSaveCheckIn } from '@workspace/api-client-react';
 import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
@@ -198,6 +198,7 @@ export default function Today() {
         <button className="btn" type="button" onClick={() => go(addDays(date, 1))} aria-label="Next day" disabled={date >= addDays(localToday(), 1)}>→</button>
       </div>
       <AthletePicker value={athlete.id} onChange={(a) => go(date, a)} />
+      {data && date <= localToday() ? <CheckIn date={date} athleteId={athlete.id} value={(data as { checkIn?: number | null }).checkIn ?? null} self={athlete.id === me.user.id} name={athlete.name} /> : null}
       {!data ? <PageStatus q={q} /> : (
         <>
           {data.planned.length === 0 ? <p className="empty">No workout planned for this day.</p> : null}
@@ -245,6 +246,22 @@ export default function Today() {
           </details>
         </>
       )}
+    </div>
+  );
+}
+
+/** One-tap readiness check-in: "How do you feel today?" 1–5. Tap the chosen one again to clear it. */
+function CheckIn({ date, athleteId, value, self, name }: { date: string; athleteId: string; value: number | null; self: boolean; name: string }) {
+  const qc = useQueryClient();
+  const m = useSaveCheckIn();
+  const pick = (n: number) => m.mutate({ data: { athleteId, date, feeling: n === value ? 0 : n } }, { onSuccess: () => qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).includes('/fitness/today') }) });
+  return (
+    <div className="checkin">
+      <span className="small">{self ? 'How do you feel today?' : `How does ${name} feel today?`}</span>
+      <div className="seg" role="group" aria-label="How do you feel today, 1 rough to 5 great">
+        {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" aria-pressed={value === n} disabled={m.isPending} onClick={() => pick(n)} title={n === 1 ? 'rough' : n === 5 ? 'great' : undefined}>{n}</button>)}
+      </div>
+      <span className="small">1 rough · 5 great</span>
     </div>
   );
 }

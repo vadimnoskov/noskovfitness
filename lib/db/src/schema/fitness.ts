@@ -1,6 +1,6 @@
 // The imported PostgreSQL schema, preserved for Replit's schema management.
 import { sql } from 'drizzle-orm';
-import { pgTable, text, char, integer, boolean, jsonb, uuid, date, timestamp, numeric, primaryKey, unique, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, text, char, integer, boolean, jsonb, uuid, date, timestamp, numeric, primaryKey, unique, index, check, real } from 'drizzle-orm/pg-core';
 
 export const movements = pgTable('movements', {
   key: text('key').primaryKey(), family: text('family').notNull(), name: text('name').notNull(),
@@ -15,6 +15,8 @@ export const athletes = pgTable('athletes', {
   passwordHash: text('password_hash'),
   /** Standing load setting: fraction of the standard Rx per kind of equipment, e.g. {"dumbbell":0.6}. Null = full Rx. */
   loadProfile: jsonb('load_profile'),
+  /** The coach's starting estimate of conditioning, 0–1 (blended with results; see fitness-core condition.ts). */
+  conditioningPrior: real('conditioning_prior'),
 }, t => [check('athletes_sex_check', sql`${t.sex} IN ('male','female')`), check('athletes_units_check', sql`${t.units} IN ('lb','kg')`)]);
 
 export const groups = pgTable('groups', {
@@ -80,6 +82,11 @@ export const programmingPolicy = pgTable('programming_policy', {
   groupId: text('group_id').primaryKey().references(() => groups.id, { onDelete: 'cascade' }), policy: jsonb('policy').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+/** One-tap readiness check-in: "How do you feel today?" 1–5, one per person per day. */
+export const checkIns = pgTable('check_ins', {
+  athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }), date: date('date', { mode: 'string' }).notNull(),
+  feeling: integer('feeling').notNull(), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.athleteId, t.date] }), check('check_ins_feeling_check', sql`${t.feeling} BETWEEN 1 AND 5`)]);
 /** Small app-wide values, e.g. tags_version (which tag derivation the stored tags were computed with). */
 export const appMeta = pgTable('app_meta', { key: text('key').primaryKey(), value: text('value').notNull() });
 export const schemaMigrations = pgTable('schema_migrations', {

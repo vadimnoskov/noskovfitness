@@ -8,6 +8,8 @@
 
 export * from './athleteVersionInput';
 export * from './athleteVersionInputLoadsItem';
+export * from './checkInInput';
+export * from './conditioningPriorInput';
 export * from './familyCredentials';
 export * from './fitnessActionResult';
 export * from './fitnessActionResultComparison';
