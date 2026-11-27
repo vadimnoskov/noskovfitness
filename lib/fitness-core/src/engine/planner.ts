@@ -11,6 +11,7 @@ import { keyOf } from '../movements/resolver';
 import { FAMILY_BY_ID } from '../movements/catalog';
 import type { ProgrammingPolicy } from './policy';
 import { checkEquipment } from './equipment';
+import { weekOutline, slotFit, mondayOf, type Slot } from './outline';
 
 export interface Candidate {
   id: string;
@@ -55,7 +56,7 @@ export function repeatDue(c: Candidate, date: string, last: string | undefined):
 /** A day already in the picture: done in history or planned. */
 export interface PastDay { date: string; workoutIds: string[]; tags: WorkoutTags[]; movementKeys: string[]; heavy: boolean; benchmarkCount: number; liftTestCount?: number }
 
-export interface ScoreBreakdown { variety: number; freshness: number; weakness: number; benchmark: number; penalty: number; total: number; notes: string[]; why?: Why }
+export interface ScoreBreakdown { variety: number; freshness: number; weakness: number; benchmark: number; outline?: number; penalty: number; total: number; notes: string[]; why?: Why }
 /** The facts behind a pick, for the "why this workout" card. Only the chosen workout carries it. */
 export interface Why {
   /** Each part of the mix this workout belongs to: its share of the recent window against the target (%). */
@@ -86,6 +87,8 @@ export interface PlanInput {
   weaknessCells?: Map<string, number>;
   /** Each family member's usual volume (most reps of each movement in one workout, last 12 months): see usualVolume. */
   usualVolumes?: UsualVolume[];
+  /** Week outline slots by date (see weekOutline); computed from the open dates when absent. */
+  outline?: Map<string, Slot>;
   alternatives?: number;
   /** Last date each lift was tested, any rep max ("Back Squat" → date). Filled by plan() from lastWorkoutDate when absent. */
   lastLiftTest?: Map<string, string>;
@@ -180,6 +183,8 @@ export function explain(c: Candidate, date: string, input: PlanInput, window: Pa
   if (c.benchmark && !isLiftTest(c)) rules.push(`within ${policy.rules.maxBenchmarksPerWeek} benchmark${policy.rules.maxBenchmarksPerWeek === 1 ? '' : 's'} a week`);
   if (isLiftTest(c)) rules.push(`no other lift test within ${policy.rules.minDaysBetweenLiftTests} days`);
   rules.push(`equipment checked for ${policy.rules.groupSize} people at ${input.equipmentFor(date).name}`);
+  const slot = input.outline?.get(date);
+  if (slot) rules.push(`week outline (soft): this day's slot is ${slot.label}; ${slotFit(slot, c.tags, c.workout.structure.kind) >= 0.99 ? 'it fits' : 'it does not fit, the mix needed something else'}`);
   return {
     mix, windowDays: policy.windowDays, windowWorkouts: sh.n,
     movements: [...byFam].map(([f, d]) => ({ name: FAMILY_BY_ID[f]?.name ?? f, daysSince: d })),
@@ -276,12 +281,17 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   }
 
   const w = policy.weights;
-  const wsum = w.variety + w.freshness + w.weakness + w.benchmark || 1;
+  // Week outline (soft): a bonus for fitting this day's slot.
+  const slot = input.outline?.get(date);
+  const outline = slot ? slotFit(slot, c.tags, c.workout.structure.kind) : 0;
+  if (slot && outline >= 0.99) notes.push(`fits the week outline: ${slot.label}`);
+  const wo = slot ? w.outline ?? 0 : 0;
+  const wsum = w.variety + w.freshness + w.weakness + w.benchmark + wo || 1;
   // A coach-set repeat that is due is an explicit instruction: it outranks the engine's own preferences.
   const coachPriority = repeatDue(c, date, lw) ? 0.5 : 0;
-  const total = (w.variety * variety + w.freshness * freshness + w.weakness * weakness + w.benchmark * benchmark) / wsum - penalty + coachPriority;
+  const total = (w.variety * variety + w.freshness * freshness + w.weakness * weakness + w.benchmark * benchmark + wo * outline) / wsum - penalty + coachPriority;
   const r = (x: number) => Math.round(x * 1000) / 1000;
-  return { variety: r(variety), freshness: r(freshness), weakness: r(weakness), benchmark: r(benchmark), penalty: r(penalty), total: r(total), notes };
+  return { variety: r(variety), freshness: r(freshness), weakness: r(weakness), benchmark: r(benchmark), outline: r(outline), penalty: r(penalty), total: r(total), notes };
 }
 
 /** Movements done slowly and controlled: mostly warm-up and practice material, in a metcon only occasionally. */
@@ -342,7 +352,8 @@ export function plan(input: PlanInput): Proposal[] {
     const d = isLiftTest(c) ? lastW.get(c.id) : undefined;
     if (d && (lastL.get(liftOf(c)) ?? '') < d) lastL.set(liftOf(c), d);
   }
-  const local = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM, lastLiftTest: lastL };
+  const heavyWeeks = new Set(timeline.filter((d) => d.heavy).map((d) => mondayOf(d.date)));
+  const local = { ...input, lastWorkoutDate: lastW, lastMovementDate: lastM, lastLiftTest: lastL, outline: input.outline ?? weekOutline(input.dates, heavyWeeks) };
   for (const date of [...input.dates].sort()) {
     const window = timeline.filter((d) => d.date < date && days(d.date, date) <= input.policy.windowDays);
     const prevDay = timeline.filter((d) => d.date < date).at(-1);

@@ -174,7 +174,7 @@ describe('planner', () => {
     const window = [toPastDay('2026-12-01', [C.find((c) => c.id === 'cindy')!])];
     expect(blocked(C.find((c) => c.id === 'cindy')!, '2026-12-07', recent, window)).toBe('done recently');
     expect(plan(recent)[0]!.score.notes.join(' ') + plan(recent)[0]!.candidateId).toBeTruthy();
-    const fran = plan({ ...recent, candidates: [C.find((c) => c.id === 'fran')!, C.find((c) => c.id === 'kbdu')!], policy: withDefaults({ weights: { variety: 10, freshness: 10, weakness: 0, benchmark: 80 } }) });
+    const fran = plan({ ...recent, candidates: [C.find((c) => c.id === 'fran')!, C.find((c) => c.id === 'kbdu')!], policy: withDefaults({ weights: { variety: 10, freshness: 10, weakness: 0, benchmark: 80, outline: 0 } }) });
     expect(fran[0]!.candidateId).toBe('fran');
     expect(fran[0]!.score.notes.some((n) => n.startsWith('benchmark due'))).toBe(true);
   });
@@ -182,7 +182,7 @@ describe('planner', () => {
   it('closes the biggest variety gap first', () => {
     // History full of short couplets → a long single-modality workout should rank above another couplet.
     const hist = Array.from({ length: 6 }, (_, i) => toPastDay(`2026-11-${String(10 + i * 3).padStart(2, '0')}`, [C.find((c) => c.id === 'kbdu')!]));
-    const p = plan(input({ dates: ['2026-12-07'], history: hist, candidates: [C.find((c) => c.id === 'fran')!, C.find((c) => c.id === 'run5k')!], policy: withDefaults({ weights: { variety: 100, freshness: 0, weakness: 0, benchmark: 0 } }) }));
+    const p = plan(input({ dates: ['2026-12-07'], history: hist, candidates: [C.find((c) => c.id === 'fran')!, C.find((c) => c.id === 'run5k')!], policy: withDefaults({ weights: { variety: 100, freshness: 0, weakness: 0, benchmark: 0, outline: 0 } }) }));
     expect(p[0]!.candidateId).toBe('run5k');
   });
 });

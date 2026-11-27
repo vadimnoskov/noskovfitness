@@ -9,7 +9,7 @@ const LABELS: Record<string, string> = {
   '1': '1 (single)', '2-3': '2–3 (couplet, triplet)', '4+': '4 or more', short: 'Short (< 4 min)', medium: 'Medium (4–12)', long: 'Long (12–20)', endurance: 'Endurance (20+)',
   'load.medium': 'Medium', 'load.light': 'Light', 'load.heavy': 'Heavy', 'timeDomain.heavy': 'Heavy day (sets of 1–5, max lifts)',
   task: 'Task priority (for time)', time: 'Time priority (AMRAP, EMOM)', bodyweight: 'Bodyweight', light: 'Light', heavy: 'Heavy',
-  G: 'Gymnastics', W: 'Weightlifting', M: 'Monostructural', variety: 'Variety gap', freshness: 'Movement freshness', weakness: 'Weakness focus', benchmark: 'Benchmark due',
+  G: 'Gymnastics', W: 'Weightlifting', M: 'Monostructural', variety: 'Variety gap', freshness: 'Movement freshness', weakness: 'Weakness focus', benchmark: 'Benchmark due', outline: 'Week outline (Template slots)',
 };
 
 type Profile = ProgrammingPolicy['targets'] & { workouts: number };
