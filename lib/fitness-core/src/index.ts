@@ -8,6 +8,7 @@ export * from './workouts/format';
 export * from './engine/policy';
 export * from './engine/equipment';
 export * from './engine/planner';
+export * from './engine/outline';
 export * from './engine/schedule';
 export * from './workouts/personalize';
 export * from './workouts/coaching';

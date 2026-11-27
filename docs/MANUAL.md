@@ -168,7 +168,7 @@ What it's for: the weeks ahead.
 
 - **Schedule**: training days (default Mon, Tue, Thu, Fri, Sat), default location, the variety window (how many days back the planner looks).
 - **Targets**: the share of workouts wanted in each bucket. Time domain: heavy day, short (under 4 min), medium (4–12), long (12–20), endurance (20+). Also movements per workout, task or time priority, load, modality. Next to each target is the share measured from the published programming (2005 on, first half of 2019 weighted to a quarter); "Use the published mix as my targets" adopts it.
-- **Weights**: how the planner ranks candidates (variety gap, movement freshness, weakness focus, benchmark due).
+- **Weights**: how the planner ranks candidates (variety gap, movement freshness, weakness focus, benchmark due, week outline).
 - **Rules**:
     - Don't repeat a workout within N days (default 180). Benchmarks and coach repeats follow their own schedules.
     - Max benchmarks per week (default 1).
@@ -188,6 +188,7 @@ For each open training day, in date order:
 2. **Hard filters**: not repeated within the window (unless a due benchmark or coach repeat), not longer than the maximum, equipment exists at the location (fixed weights within one step), benchmark and lift-test limits, and the back-to-back rules when their exception was already used inside its window.
 3. **Score**: how much the workout closes the gaps between the recent mix and the targets (variety), how long since its movements were done (freshness), weakness focus, benchmark or lift test due. Weakness focus favours workouts in a cell flagged Declining or Rarely trained on the Fitness grid, averaged over the family, at most once in any 7 days so balance stays first; the day's note says "works a declining or rarely trained area".
 4. **Penalties**: a big volume jump for at least half of the family (more than the volume-warning multiple of their most reps of a movement in one workout in 12 months; strong, noted on the day as "big volume jump for N of M"), same modality mix as yesterday, back-to-back exceptions (allowed rarely, noted on the day), crowded equipment (fewer than half the group can work at once), Turkish get-ups in a metcon (small, or strong if one was done in the last 4 weeks).
+5. **Week outline** (soft, the CrossFit Template): each open training day gets a slot. Over a 5-day week the slots run single element, couplet, triplet, couplet, single element, rotating monostructural, gymnastics and weightlifting over 3 weeks (week 1: M · GW · MGW · MG · W; week 2: G · WM · GWM · GW · M; week 3: W · MG · WMG · WM · G). A single-weightlifting day is the heavy day, a single-monostructural day prefers intervals or a short or medium piece, and every week gets a heavy slot unless it already has a heavy day. Weeks with fewer open days keep the shape (e.g. 3 days: single, triplet, single). A workout that fits its slot gets a bonus set by the "Week outline" weight in Settings (default 20; 0 turns it off); the targets still decide the overall mix. The day's note says "fits the week outline: …", and Why this workout names the slot.
 5. The best scorer is proposed; the next four are its alternatives. The choice becomes part of the picture for the next day.
 
 **Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max; the rest by estimated or logged minutes), task or time priority, load, volume.
@@ -289,6 +290,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 3: soft week outline from the CrossFit Template (heavy, interval, couplet and triplet slots), with a new weight. |
 | 2026-11-28 | Planner v2 step 2: "Why this workout" card on every planned day. |
 | 2026-11-28 | Planner v2 step 1: volume-aware picks; every planned day re-checked against the rules where it sits, with a one-tap re-plan. |
 | 2026-11-28 | Conditioning level and readiness on Fitness; one-tap check-in on Today. |

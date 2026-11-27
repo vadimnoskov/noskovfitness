@@ -17,7 +17,7 @@ export interface ProgrammingPolicy {
     /** Share of movements by modality across the window. */
     modality: Record<'G' | 'W' | 'M', number>;
   };
-  weights: { variety: number; freshness: number; weakness: number; benchmark: number };
+  weights: { variety: number; freshness: number; weakness: number; benchmark: number; outline: number };
   rules: {
     /** Do not repeat the same workout within this many days (a due benchmark is the exception). */
     noRepeatWorkoutDays: number;
@@ -55,7 +55,7 @@ export const DEFAULT_POLICY: ProgrammingPolicy = {
     load: { bodyweight: 42, light: 12, medium: 15, heavy: 31 },
     modality: { G: 44, W: 39, M: 17 },
   },
-  weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15 },
+  weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15, outline: 20 },
   rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14, volumeJumpFactor: 2, volumeJumpMinReps: 30, returnAfterDays: 30 },
 };
 
