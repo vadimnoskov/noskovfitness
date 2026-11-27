@@ -4,7 +4,7 @@
  */
 import {
   isHeavyDay, plan, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
-  type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags,
+  type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags, powerPoints, weaknessGrid, plannerWeakness,
 } from '@workspace/fitness-core';
 import { sql } from './client';
 
@@ -93,6 +93,26 @@ export async function proposeRange(groupId: string, from: string, to: string, op
  * What the planner would propose for the open days in [from, to] (nothing is saved). `policy` overrides the saved one,
  * e.g. to preview a setting change before the coach confirms it.
  */
+/**
+ * Weakness-grid cells the group's training should lean into a little (see plannerWeakness in fitness-core). Built from
+ * each member's own results and measurements; empty when nobody has enough data.
+ */
+export async function groupWeakness(groupId: string, asOf: string): Promise<Map<string, number>> {
+  const members = await sql`SELECT a.id, a.sex FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id WHERE gm.group_id = ${groupId}`;
+  const grids = [];
+  for (const m of members) {
+    const [results, dims] = await Promise.all([
+      sql`SELECT id, date::text AS date, workout_id, performed, score, completed, tags FROM results
+          WHERE athlete_id = ${m.id} AND date > ${asOf}::date - 1100 AND date <= ${asOf} ORDER BY date`,
+      sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${m.id}`,
+    ]);
+    const { points } = powerPoints(results as never, m.sex, dims as never);
+    const grid = weaknessGrid(points, results.map((r) => ({ date: r.date, timeDomain: r.tags?.timeDomain, modalities: r.tags?.modalityPattern })), asOf);
+    if (grid.fit) grids.push(grid);
+  }
+  return plannerWeakness(grids);
+}
+
 export async function planRange(groupId: string, from: string, to: string, opts: { extraDates?: string[]; policy?: ProgrammingPolicy } = {}) {
   const [saved, group, profiles, candidates] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   const policy = opts.policy ?? saved;
@@ -107,7 +127,8 @@ export async function planRange(groupId: string, from: string, to: string, opts:
   const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...proposedDates, ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
-  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 4 });
+  const weaknessCells = await groupWeakness(groupId, from);
+  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, alternatives: 4 });
   return { proposals, policy, dates, profileFor, candidates };
 }
 
@@ -121,7 +142,8 @@ export async function refreshAlternatives(groupId: string, dayId: string) {
   const [policy, profiles, candidates] = await Promise.all([getPolicy(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(day.date, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from: day.date, to: day.date });
   const profile = profiles.find((p) => p.id === day.equipment_profile_id) ?? profiles[0]!;
-  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, alternatives: 5 });
+  const weaknessCells = await groupWeakness(groupId, day.date);
+  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, alternatives: 5 });
   if (!p) return;
   const options = [{ candidateId: p.candidateId, score: p.score }, ...p.alternatives].filter((a) => a.candidateId !== day.main_workout_id).slice(0, 4);
   await sql`UPDATE program_days SET alternatives = ${sql.json(options as never)}, updated_at = now() WHERE id = ${dayId}`;

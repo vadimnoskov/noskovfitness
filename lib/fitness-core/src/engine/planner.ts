@@ -4,6 +4,7 @@
  * much they close the gaps. Hard rules filter first. Deterministic: same inputs → same plan.
  * It only proposes; the coach approves or edits.
  */
+import { cellKey, gridColumn, GRID_COL_LABEL } from '../workouts/weakness';
 import type { EquipmentProfile, WorkoutTags, Workout } from '../model/types';
 import { keyOf } from '../movements/resolver';
 import type { ProgrammingPolicy } from './policy';
@@ -43,6 +44,8 @@ export interface PlanInput {
   lastMovementDate: Map<string, string>;
   /** 0..1 per movement family: higher = group is weaker / less exposed there. Empty until fitness profiles exist. */
   weakness?: Map<string, number>;
+  /** Weakness-grid cells to favour (key "row|col", e.g. "long|G"), 0–1: see plannerWeakness. */
+  weaknessCells?: Map<string, number>;
   alternatives?: number;
   /** Last date each lift was tested, any rep max ("Back Squat" → date). Filled by plan() from lastWorkoutDate when absent. */
   lastLiftTest?: Map<string, string>;
@@ -137,7 +140,15 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
 
   // Weakness: average group weakness of the families involved (0 until profiles exist).
   const wk = input.weakness;
-  const weakness = wk && wk.size ? keys.reduce((a, k) => a + (wk.get(familyOf(k)) ?? 0), 0) / (keys.length || 1) : 0;
+  const famWeak = wk && wk.size ? keys.reduce((a, k) => a + (wk.get(familyOf(k)) ?? 0), 0) / (keys.length || 1) : 0;
+  // Weakness grid: the candidate's own time domain × modality cell (heavy days are not on the grid).
+  const td = c.tags.timeDomain;
+  // Gradual: at most one day in any 7 leans into a flagged cell, so balance across the targets stays first.
+  const inFlagged = (t: WorkoutTags) => t.timeDomain !== 'heavy' && (input.weaknessCells?.get(cellKey(t.timeDomain, gridColumn(t.modalityPattern))) ?? 0) > 0;
+  const leanedThisWeek = window.some((d) => days(d.date, date) < 7 && days(d.date, date) > -7 && d.tags.some(inFlagged));
+  const cellWeak = td !== 'heavy' && !leanedThisWeek ? input.weaknessCells?.get(cellKey(td, gridColumn(c.tags.modalityPattern))) ?? 0 : 0;
+  if (cellWeak > 0 && td !== 'heavy') notes.push(`works a declining or rarely trained area (${td}, ${GRID_COL_LABEL[gridColumn(c.tags.modalityPattern)].toLowerCase()})`);
+  const weakness = Math.max(famWeak, cellWeak);
 
   // Benchmark: due (or never done) benchmarks score up to 1 by how overdue they are.
   let benchmark = 0; // also used for coach-set repeats below

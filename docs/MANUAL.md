@@ -130,6 +130,7 @@ What it's for: seeing each person's fitness as numbers, using CrossFit's own def
 - **Which movements count**: each counted movement has a rule (Fitness → "How each movement's work is counted", and the sheet "Chalkboard – Work formula rules" in Drive, 03). Rules are marked *as in the source*, *derived* (the same rule from the five heights) or *assumed* (needs a stated simplification; for the coach to review). Single-unders, toes-to-bar, carries, swimming and a few others have no rule, so a result that includes them gets no number rather than a guessed one. Multi-part and "every N minutes" workouts, ladder AMRAPs (their score can't be split into rounds), and anything above twice the best power in the Fran tables (676 ft-lb/s; for pure runs and rows, a 9.58 s 100 m) are left out as probably misread.
 - **Power over duration**: for each duration (1 to 60 minutes, log scale), the best average power held for at least that long: the all-time curve (dashed), the last three years in colour, older years in gray. Hover or tab to a point to see the workout behind it. Fitness is the area under this curve; health is the curve holding up over the years.
 - **By year**: results counted, the area (compared only over durations every year reached, so it's like for like), and power at 1, 4, 12 and 30 minutes.
+- **Strengths and weaknesses** (time domain × modality grid, last 3 years): rows are short, medium, long and endurance; columns are gymnastics, weightlifting, run/row/bike and mixed. Each cell shows how that kind of workout compares with the person's usual power for the same modality at the same duration (one shared slope of power against duration, a level per modality), how many results it rests on, how often it was done in the last 12 months, and the trend (the last 12 months against the 2 years before). Tap a cell for the workouts behind it. The level is information only: within one modality it mixes the person with how the modality is measured. Cells are flagged only on what the data shows directly: **Declining** (10 points or more lower in the last 12 months than the 2 years before, 3+ results in each) and **Rarely trained** (at most once in the last 12 months, though it had 3+ results in the 3 years).
 - **Repeated workouts**: the same workout with the same loads, finished for time, done two or more times. The work is the same each time, so the change in power is the ratio of the times (L1 guide). Needs no measurements.
 
 ## 4. Planning (coach)
@@ -173,7 +174,7 @@ For each open training day, in date order:
 
 1. **Candidates**: every programmable workout in the library and history.
 2. **Hard filters**: not repeated within the window (unless a due benchmark or coach repeat), not longer than the maximum, equipment exists at the location (fixed weights within one step), benchmark and lift-test limits, and the back-to-back rules when their exception was already used inside its window.
-3. **Score**: how much the workout closes the gaps between the recent mix and the targets (variety), how long since its movements were done (freshness), weakness focus (inactive until weaknesses are measured), benchmark or lift test due.
+3. **Score**: how much the workout closes the gaps between the recent mix and the targets (variety), how long since its movements were done (freshness), weakness focus, benchmark or lift test due. Weakness focus favours workouts in a cell flagged Declining or Rarely trained on the Fitness grid, averaged over the family, at most once in any 7 days so balance stays first; the day's note says "works a declining or rarely trained area".
 4. **Penalties**: same modality mix as yesterday, back-to-back exceptions (allowed rarely, noted on the day), crowded equipment (fewer than half the group can work at once), Turkish get-ups in a metcon (small, or strong if one was done in the last 4 weeks).
 5. The best scorer is proposed; the next four are its alternatives. The choice becomes part of the picture for the next day.
 
@@ -276,6 +277,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Fitness: strengths and weaknesses grid (time domain × modality); the planner's weakness focus now uses it, at most once a week. |
 | 2026-11-27 | Time estimates: expanded round-by-round workouts fixed, scale recalibrated; stored tags recomputed on next start. |
 | 2026-11-27 | Fitness: burpees and lifts from the floor calibrated against BTWB. |
 | 2026-11-27 | Fitness: runs, rows, skis and bikes (Concept2 formula, matches BTWB), double-unders, BTWB interval logs, BTWB bodyweight import. |
@@ -290,4 +292,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page is built; next are weaknesses with evidence (time domain × modality), conditioning level and readiness, and volume-jump warnings.
+See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page and the weakness grid are built; next are volume-jump warnings, then conditioning level and readiness. Later: a smoothed fitness curve with the area shaded, and a 3D health view.

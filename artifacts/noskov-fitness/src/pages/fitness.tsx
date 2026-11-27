@@ -12,8 +12,12 @@ type Picture = {
   allTime: (Curve[number] & { from: { date: string; name?: string; id: string } | null })[];
   byYear: { year: string; curve: Curve; points: number; area: number | null }[]; commonMinutes: number[];
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
+  grid: Grid;
   model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
 };
+type Cell = { row: string; col: string; n: number; vsCurve: number | null; recent: number | null; prior: number | null; done12m: number; share12m: number;
+  confidence: 'good' | 'some' | 'too few'; flag: 'weak' | 'rare' | null; why?: string; examples: { id: string; name?: string; date: string; minutes: number; vsCurve: number }[] };
+type Grid = { from: string; to: string; fit: { a: number; b: number } | null; cells: Cell[]; counted: number; done12m: number };
 type Meas = { kinds: { kind: string; label: string; how: string }[]; latest: Record<string, { date: string; value: number; unit: string } | null>; counts?: Record<string, number>; range?: Record<string, string> };
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
@@ -48,6 +52,7 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
       <p className="small">Work is force × distance: your bodyweight times how far your centre of mass travels, plus the load times how far it travels. Power is work divided by time. Fitness is the area under your best power across durations; health is that curve holding up over the years. These are the definitions in the CrossFit Level 1 guide.</p>
       <Measurements athleteId={athleteId} lengthUnit={lengthUnit} weightUnit={weightUnit} open={!p.hasDims} />
       {!p.hasDims ? <p className="kopen">Runs and rows are counted without measurements. Enter all six measurements above to count the other movements.</p> : null}
+      {p.grid ? <GridSection g={p.grid} /> : null}
       {p.coverage.counted ? <CurveSection p={p} /> : null}
       <Repeats p={p} />
       <Model p={p} />
@@ -199,5 +204,59 @@ function Model({ p }: { p: Picture }) {
       <table className="ktable"><thead><tr><th>Movement</th><th>Rule</th><th>Basis</th></tr></thead>
         <tbody>{p.model.map((m) => <tr key={m.family}><td>{m.family}</td><td className="small">{m.rule}</td><td className="small">{BASIS[m.basis]}</td></tr>)}</tbody></table>
     </details>
+  );
+}
+
+const ROWS = [['short', 'Short', 'under 4 min'], ['medium', 'Medium', '4–12 min'], ['long', 'Long', '12–20 min'], ['endurance', 'Endurance', '20+ min']] as const;
+const COLS = [['G', 'Gymnastics'], ['W', 'Weightlifting'], ['M', 'Run, row, bike'], ['mixed', 'Mixed']] as const;
+const signed = (x: number) => `${x > 0 ? '+' : ''}${x}%`;
+/** Weaknesses with evidence: each cell compares results with the person's own usual power at that duration. */
+function GridSection({ g }: { g: Grid }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const cell = (r: string, c: string) => g.cells.find((x) => x.row === r && x.col === c)!;
+  const sel = open ? g.cells.find((x) => `${x.row}|${x.col}` === open) : undefined;
+  const flagged = g.cells.filter((c) => c.flag);
+  return (
+    <section>
+      <h2 className="sec">Strengths and weaknesses</h2>
+      <p className="small">Last 3 years ({g.from} to {g.to}), {g.counted} results with a power number. The big number compares that kind of workout with your usual power for the same modality at the same duration (+5% = 5% above your usual). It is for information only: within one modality it mixes you with how the modality is measured. Cells are flagged only on two things the data shows directly: <b>Declining</b>, 10 points or more lower in the last 12 months than in the 2 years before; and <b>Rarely trained</b>, done at most once in the last 12 months though it was part of your training before.</p>
+      {!g.fit ? <p className="kopen">Not enough results with a power number yet (8 needed).</p> : (
+        <>
+          <div className="gridwrap"><table className="wgrid">
+            <thead><tr><th></th>{COLS.map(([k, l]) => <th key={k}>{l}</th>)}</tr></thead>
+            <tbody>{ROWS.map(([r, label, sub]) => (
+              <tr key={r}><th scope="row">{label}<div className="small">{sub}</div></th>
+                {COLS.map(([c]) => {
+                  const x = cell(r, c);
+                  const k = `${r}|${c}`;
+                  return (
+                    <td key={c} className={`wc ${x.flag ? `w-${x.flag}` : ''} ${x.confidence === 'too few' ? 'w-thin' : ''}`}>
+                      <button type="button" aria-pressed={open === k} onClick={() => setOpen(open === k ? null : k)}
+                        aria-label={`${label} ${c}: ${x.vsCurve === null || x.confidence === 'too few' ? 'not enough data' : signed(x.vsCurve)}, ${x.n} results${x.flag ? `, ${x.flag === 'weak' ? 'declining' : 'rarely trained'}` : ''}`}>
+                        <b>{x.confidence === 'too few' || x.vsCurve === null ? '–' : signed(x.vsCurve)}</b>
+                        <span className="small">{x.n} result{x.n === 1 ? '' : 's'} · {x.done12m} in 12 mo</span>
+                        {x.recent !== null && x.prior !== null ? <span className="small">trend {signed(x.prior)} → {signed(x.recent)}</span> : null}
+                        {x.flag ? <span className={`wflag`}>{x.flag === 'weak' ? 'Declining' : 'Rarely trained'}</span> : null}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}</tbody>
+          </table></div>
+          {flagged.length ? (
+            <ul className="small">{flagged.map((c) => <li key={`${c.row}${c.col}`}><b>{ROWS.find((r) => r[0] === c.row)![1]} {COLS.find((x) => x[0] === c.col)![1].toLowerCase()}</b>: {c.flag === 'weak' ? 'declining' : 'rarely trained'}, {c.why}.</li>)}</ul>
+          ) : <p className="small">Nothing is declining or has dropped out of training.</p>}
+          {sel ? (
+            <div className="card">
+              <b>{ROWS.find((r) => r[0] === sel.row)![1]} · {COLS.find((x) => x[0] === sel.col)![1]}</b>
+              <span className="small"> — {sel.n} results, confidence: {sel.confidence}{sel.recent !== null ? `; last 12 months ${signed(sel.recent)}` : ''}{sel.prior !== null ? `, before ${signed(sel.prior)}` : ''}</span>
+              {sel.examples.length ? <ul className="small">{sel.examples.map((e) => <li key={e.id + e.date}><Link href={`/workout/${e.id}`}>{e.name ?? 'Workout'}</Link> · {e.date} · {e.minutes} min · {signed(e.vsCurve)}</li>)}</ul> : <p className="small">No results here in the last 3 years.</p>}
+            </div>
+          ) : <p className="small">Tap a cell to see the workouts behind it.</p>}
+          <p className="small">The planner leans a little toward declining and rarely trained cells (for the family, averaged over everyone) (the "weakness focus" weight in Settings); balance across the targets still comes first.</p>
+        </>
+      )}
+    </section>
   );
 }

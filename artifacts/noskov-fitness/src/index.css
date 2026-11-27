@@ -225,3 +225,10 @@ details.card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;m
 .measform{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;margin-top:8px}.measform label{display:flex;flex-direction:column;gap:3px}
 .measform .row{grid-column:1/-1}.chart{width:100%;height:auto;max-width:720px;display:block;margin:6px 0}.chart g:focus{outline:none}
 .chart g:focus circle{stroke:#257de0}
+/* Weakness grid */
+.gridwrap{overflow-x:auto}.wgrid{border-collapse:separate;border-spacing:4px;width:100%;min-width:520px;font-size:14px}
+.wgrid th{font-size:12px;color:var(--mute);font-weight:600;text-align:left;vertical-align:bottom}.wgrid th[scope=row]{vertical-align:middle;color:inherit;font-size:13px}
+.wc button{width:100%;min-height:64px;text-align:left;display:flex;flex-direction:column;gap:2px;padding:8px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit}
+.wc button[aria-pressed=true]{outline:2px solid #257de0;outline-offset:1px}.wc.w-thin button{opacity:.55}
+.wc.w-weak button{border-color:#c2410c;border-width:2px}.wc.w-rare button{border-style:dashed;border-color:#b45309}
+.wflag{font-size:11px;font-weight:700;color:#c2410c}.w-rare .wflag{color:#b45309}
