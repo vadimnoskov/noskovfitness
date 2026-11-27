@@ -55,9 +55,11 @@ const niceDist = (m: number) => (m >= 1000 ? Math.round(m / 100) * 100 : Math.ro
 export function scaleVolume(w: Workout, f: number): { workout: Workout; text: string } | undefined {
   if (f >= 0.97) return undefined;
   const s = w.structure;
+  // Rounds first, but only when dropping whole rounds lands close to the cut needed (5 rounds at 0.89 would be 4 = 0.8,
+  // far more than needed); otherwise the reps and distances are trimmed instead.
   if (s.kind === 'for-time' && s.rounds && s.rounds > 2) {
     const r = Math.max(1, Math.round(s.rounds * f));
-    if (r < s.rounds) return { workout: { ...w, structure: { ...s, rounds: r } }, text: `${s.rounds} rounds → ${r}` };
+    if (r < s.rounds && r / s.rounds >= f - 0.05) return { workout: { ...w, structure: { ...s, rounds: r } }, text: `${s.rounds} rounds → ${r}` };
   }
   if ((s.kind === 'amrap' || s.kind === 'emom') && s.minutes > 5) {
     const m = Math.max(5, Math.round(s.minutes * f));
