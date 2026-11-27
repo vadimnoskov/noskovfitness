@@ -280,6 +280,21 @@ export const SaveMeasurementsResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Import a BTWB body-measurement export (bodyweight by date) for one person (self, or coach for anyone)
+ */
+export const importWeightsBodyCsvMax = 500000;
+
+
+
+export const ImportWeightsBody = zod.object({
+  "athleteId": zod.string(),
+  "csv": zod.string().max(importWeightsBodyCsvMax)
+})
+
+export const ImportWeightsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Coach - one movement's facts, points of performance, versions and workouts
  */
 export const GetKnowledgeMovementQueryParams = zod.object({

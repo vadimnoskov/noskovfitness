@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements } from '@workspace/api-client-react';
+import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights } from '@workspace/api-client-react';
 import { useMe, localToday } from '@/lib/session';
 import { AthletePicker } from '@/pages/today';
 
@@ -12,7 +12,7 @@ type Picture = {
   allTime: (Curve[number] & { from: { date: string; name?: string; id: string } | null })[];
   byYear: { year: string; curve: Curve; points: number; area: number | null }[]; commonMinutes: number[];
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
-  model: { family: string; basis: 'source' | 'derived' | 'assumed'; rule: string }[];
+  model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
 };
 type Meas = { kinds: { kind: string; label: string; how: string }[]; latest: Record<string, { date: string; value: number; unit: string } | null> };
 
@@ -47,7 +47,8 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
     <>
       <p className="small">Work is force × distance: your bodyweight times how far your centre of mass travels, plus the load times how far it travels. Power is work divided by time. Fitness is the area under your best power across durations; health is that curve holding up over the years. These are the definitions in the CrossFit Level 1 guide.</p>
       <Measurements athleteId={athleteId} lengthUnit={lengthUnit} weightUnit={weightUnit} open={!p.hasDims} />
-      {p.hasDims ? <CurveSection p={p} /> : <p className="kopen">Enter all six measurements above to see the power curve. Repeated workouts below need no measurements.</p>}
+      {!p.hasDims ? <p className="kopen">Runs and rows are counted without measurements. Enter all six measurements above to count the other movements.</p> : null}
+      {p.coverage.counted ? <CurveSection p={p} /> : null}
       <Repeats p={p} />
       <Model p={p} />
     </>
@@ -57,6 +58,8 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
 function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: string; lengthUnit: 'in' | 'cm'; weightUnit: 'lb' | 'kg'; open: boolean }) {
   const q = useGetMeasurements({ athleteId }, { query: { queryKey: getGetMeasurementsQueryKey({ athleteId }) } });
   const save = useSaveMeasurements();
+  const imp = useImportWeights();
+  const [impMsg, setImpMsg] = useState<string | null>(null);
   const qc = useQueryClient();
   const [vals, setVals] = useState<Record<string, string>>({});
   const [date, setDate] = useState(localToday());
@@ -72,6 +75,14 @@ function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: 
       qc.invalidateQueries({ queryKey: getGetMeasurementsQueryKey({ athleteId }) });
       qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) });
     } });
+  };
+  const importFile = async (f: File | undefined) => {
+    if (!f) return;
+    setImpMsg(null);
+    imp.mutate({ data: { athleteId, csv: await f.text() } }, {
+      onSuccess: (r) => { const x = r as { imported: number; from: string; to: string }; setImpMsg(`Imported ${x.imported} weights, ${x.from} to ${x.to}.`); qc.invalidateQueries({ queryKey: getGetMeasurementsQueryKey({ athleteId }) }); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); },
+      onError: (e) => setImpMsg((e as { data?: { error?: string } }).data?.error ?? 'Could not import that file.'),
+    });
   };
   return (
     <details className="card" open={open}>
@@ -93,6 +104,10 @@ function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: 
         {err ? <p className="warn" role="alert">{err.data?.error ?? 'Could not save.'}</p> : null}
         {ok ? <p className="ok">Saved.</p> : null}
       </form>
+      <label className="small" style={{ display: 'block', marginTop: 10 }}>Or import bodyweight history from a BTWB measurements export (.csv):{' '}
+        <input type="file" accept=".csv,text/csv" disabled={imp.isPending} onChange={(e) => { void importFile(e.target.files?.[0]); e.target.value = ''; }} />
+      </label>
+      {impMsg ? <p className="small" role="status">{impMsg}</p> : null}
     </details>
   );
 }
@@ -172,12 +187,12 @@ function Repeats({ p }: { p: Picture }) {
   );
 }
 
-const BASIS = { source: 'as in the L1 / Fran tables', derived: 'same rule, from the five heights', assumed: 'needs an assumption (review)' } as const;
+const BASIS = { machine: 'Concept2’s published formula (BTWB uses it too)', source: 'as in the L1 / Fran tables', derived: 'same rule, from the five heights', assumed: 'needs an assumption (review)' } as const;
 function Model({ p }: { p: Picture }) {
   return (
     <details className="card">
       <summary><b>How each movement's work is counted</b></summary>
-      <p className="small">Movements not listed (running, rowing, biking, double-unders, toes-to-bar, carries…) have no distance rule, so a result that includes them gets no power number rather than a guessed one.</p>
+      <p className="small">Movements not listed (single-unders, toes-to-bar, carries, swimming…) have no distance rule, so a result that includes them gets no power number rather than a guessed one.</p>
       <table className="ktable"><thead><tr><th>Movement</th><th>Rule</th><th>Basis</th></tr></thead>
         <tbody>{p.model.map((m) => <tr key={m.family}><td>{m.family}</td><td className="small">{m.rule}</td><td className="small">{BASIS[m.basis]}</td></tr>)}</tbody></table>
     </details>

@@ -3,7 +3,7 @@
  * curve (all time and per year), and power changes on repeated workouts.
  */
 import { sql } from '@workspace/fitness-db';
-import { DIM_KINDS, DIM_LABELS, WORK_MODEL, resultWork, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, type PowerPoint } from '@workspace/fitness-core';
+import { parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, monoSpeed, resultWork, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, type PowerPoint } from '@workspace/fitness-core';
 import { InputError } from './logging';
 import type { User } from './accounts';
 
@@ -40,6 +40,20 @@ export async function saveMeasurements(user: User, input: { athleteId: string; d
   return { ok: true };
 }
 
+/** Bodyweight history from a BTWB export. Existing weights on the same dates are replaced; other dates are kept. */
+export async function importWeights(user: User, input: { athleteId: string; csv: string }) {
+  allowed(user, input.athleteId);
+  let rows;
+  try { rows = parseBtwbWeights(input.csv); } catch (e) { throw new InputError((e as Error).message); }
+  rows = rows.filter((r) => r.value > 0 && r.value < (r.unit === 'kg' ? 250 : 550));
+  if (!rows.length) throw new InputError('No weights found in that file.');
+  await sql.begin(async (tx) => {
+    for (const r of rows) await tx`INSERT INTO measurements (athlete_id, date, kind, value, unit) VALUES (${input.athleteId}, ${r.date}, 'weight', ${r.value}, ${r.unit})
+      ON CONFLICT (athlete_id, date, kind) DO UPDATE SET value = EXCLUDED.value, unit = EXCLUDED.unit`;
+  });
+  return { imported: rows.length, from: rows[0]!.date, to: rows[rows.length - 1]!.date };
+}
+
 export async function getAthletePicture(user: User, athleteId: string) {
   allowed(user, athleteId);
   const [[athlete], dims, results] = await Promise.all([
@@ -53,6 +67,23 @@ export async function getAthletePicture(user: User, athleteId: string) {
   const rows = dims.map((d) => ({ kind: d.kind as string, date: d.date as string, value: d.value as number, unit: d.unit as string }));
   const hasDims = !!dimsAt(rows, '9999-12-31');
 
+  // The person's usual speed for runs, rows, skis and bikes: the median of their pure pieces that year (all years if
+  // none that year). Used for the run or row inside a mixed workout, where only the total time is known.
+  // Pieces of a similar length (half to double) are preferred, since short sprints are much faster than a 1,000 m row.
+  const speeds = new Map<string, { year: string; v: number; metres: number }[]>();
+  for (const r of results) {
+    const m = monoSpeed(r as never);
+    if (m) speeds.set(m.family, [...(speeds.get(m.family) ?? []), { year: (r.date as string).slice(0, 4), v: m.speed, metres: m.metres }]);
+  }
+  const median = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)]! : undefined; };
+  const pacesFor = (date: string) => (family: string, metres?: number) => {
+    const list = speeds.get(family) ?? [];
+    const near = metres ? list.filter((x) => x.metres >= metres / 2 && x.metres <= metres * 2) : list;
+    const year = (l: typeof list) => l.filter((x) => x.year === date.slice(0, 4));
+    for (const l of [year(near), near, year(list), list]) { const v = median(l.map((x) => x.v)); if (v) return v; }
+    return undefined;
+  };
+
   const points: PowerPoint[] = [];
   const missing = new Map<string, number>();
   let timed = 0;
@@ -60,7 +91,7 @@ export async function getAthletePicture(user: User, athleteId: string) {
     const kind = (r.performed as { structure: { kind: string } }).structure.kind;
     if (kind !== 'for-time' && kind !== 'amrap') continue;
     timed++;
-    const w = resultWork(r as never, athlete.sex, dimsAt(rows, r.date));
+    const w = resultWork(r as never, athlete.sex, dimsAt(rows, r.date), pacesFor(r.date));
     if (w.power && w.seconds) points.push({ minutes: Math.round((w.seconds / 60) * 10) / 10, power: w.power, date: r.date, id: r.workout_id ?? r.id, name: r.name || undefined });
     else for (const m of w.missing) missing.set(m, (missing.get(m) ?? 0) + 1);
   }
@@ -96,6 +127,11 @@ export async function getAthletePicture(user: User, athleteId: string) {
     allTime: allTime.map((c) => ({ minutes: c.minutes, power: c.power, from: c.from ? { date: c.from.date, name: c.from.name, id: c.from.id } : null })),
     byYear: byYear.map((y) => ({ ...y, area: curveArea(y.curve, common) })), commonMinutes: common,
     points: points.slice(-400), repeats: repeats.slice(0, 40),
-    model: Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
+    model: [
+      { family: 'run, row, ski, bike', basis: 'machine' as const, rule: 'Concept2 formula: watts = 2.80 × speed³ (m/s); a piece inside a mixed workout uses your median speed that year from your pure pieces' },
+      { family: 'double-under', basis: 'derived' as const, rule: `body × ${DOUBLE_UNDER_IN} in (matches BTWB)` },
+      ...Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
+    ],
+    paces: Object.fromEntries([...speeds].map(([f, l]) => [f, { n: l.length, medianSec500: Math.round(500 / median(l.map((x) => x.v))!) }])),
   };
 }

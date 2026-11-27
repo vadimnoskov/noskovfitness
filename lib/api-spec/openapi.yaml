@@ -342,6 +342,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/measurements/import:
+    post:
+      operationId: importWeights
+      summary: Import a BTWB body-measurement export (bodyweight by date) for one person (self, or coach for anyone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WeightImportInput" }
+      responses:
+        "200":
+          description: Imported
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/knowledge/movement:
     get:
       operationId: getKnowledgeMovement
@@ -490,6 +505,12 @@ components:
       required: [question]
       properties:
         question: { type: string }
+    WeightImportInput:
+      type: object
+      required: [athleteId, csv]
+      properties:
+        athleteId: { type: string }
+        csv: { type: string, maxLength: 500000 }
     MeasurementsInput:
       type: object
       required: [athleteId, date, lengthUnit, weightUnit, values]

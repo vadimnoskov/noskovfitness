@@ -32,6 +32,12 @@ export interface KnowledgeQuestionInput {
   question: string;
 }
 
+export interface WeightImportInput {
+  athleteId: string;
+  /** @maxLength 500000 */
+  csv: string;
+}
+
 export type MeasurementsInputLengthUnit = typeof MeasurementsInputLengthUnit[keyof typeof MeasurementsInputLengthUnit];
 
 

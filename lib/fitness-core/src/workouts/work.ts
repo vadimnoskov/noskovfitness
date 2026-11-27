@@ -39,6 +39,8 @@ const sq = (d: BodyDims) => d.squatHigh - d.squatLow;
 const arm = (d: BodyDims) => d.overhead - d.shoulder;
 /** Box height for a box movement: the workout's, else the standard 24/20 in. */
 const boxIn = (m: MovementPrescription, sex: Sex) => (sex === 'female' ? m.heightIn?.female ?? m.heightIn?.male : m.heightIn?.male) ?? (sex === 'female' ? 20 : 24);
+/** The body rises from a hinge or squat: lifted from the floor (no hang start) or received in a squat. */
+const bodyRises = (m: MovementPrescription) => squatReceive(m) || !m.movement.start || m.movement.start === 'floor';
 const squatReceive = (m: MovementPrescription) => m.movement.receive === 'squat';
 
 /**
@@ -57,14 +59,14 @@ const MODEL: Record<string, { basis: 'source' | 'derived' | 'assumed'; perRep: P
   'push-press': { basis: 'derived', rule: 'load × shoulder-to-overhead', perRep: (d, l) => l * arm(d) },
   jerk: { basis: 'derived', rule: 'load × shoulder-to-overhead', perRep: (d, l) => l * arm(d) },
   'shoulder-to-overhead': { basis: 'derived', rule: 'load × shoulder-to-overhead', perRep: (d, l) => l * arm(d) },
-  deadlift: { basis: 'derived', rule: 'load × (knuckle height − bar height); body not counted', perRep: (d, l) => l * (d.knuckle - BAR_FROM_FLOOR_IN) },
+  deadlift: { basis: 'derived', rule: 'load × (knuckle height − bar height) + body × squat travel (the hips rise as in the pull of a clean)', perRep: (d, l) => l * (d.knuckle - BAR_FROM_FLOOR_IN) + d.weight * sq(d) },
   sdhp: { basis: 'derived', rule: 'load × (shoulder height − bar height)', perRep: (d, l) => l * (d.shoulder - BAR_FROM_FLOOR_IN) },
-  clean: { basis: 'derived', rule: 'load × (shoulder height − bar height), + body × squat travel when received in a squat',
-    perRep: (d, l, m) => l * (d.shoulder - BAR_FROM_FLOOR_IN) + (squatReceive(m) ? d.weight * sq(d) : 0) },
-  snatch: { basis: 'derived', rule: 'load × (overhead height − bar height), + body × squat travel when received in a squat',
-    perRep: (d, l, m) => l * (d.overhead - BAR_FROM_FLOOR_IN) + (squatReceive(m) ? d.weight * sq(d) : 0) },
+  clean: { basis: 'derived', rule: 'load × (shoulder height − bar height) + body × squat travel when lifted from the floor or received in a squat (matches BTWB within 3%)',
+    perRep: (d, l, m) => l * (d.shoulder - BAR_FROM_FLOOR_IN) + (bodyRises(m) ? d.weight * sq(d) : 0) },
+  snatch: { basis: 'derived', rule: 'load × (overhead height − bar height) + body × squat travel when lifted from the floor or received in a squat (matches BTWB within 3%)',
+    perRep: (d, l, m) => l * (d.overhead - BAR_FROM_FLOOR_IN) + (bodyRises(m) ? d.weight * sq(d) : 0) },
   'clean-and-jerk': { basis: 'derived', rule: 'clean + jerk',
-    perRep: (d, l, m) => l * (d.shoulder - BAR_FROM_FLOOR_IN) + (squatReceive(m) ? d.weight * sq(d) : 0) + l * arm(d) },
+    perRep: (d, l, m) => l * (d.shoulder - BAR_FROM_FLOOR_IN) + (bodyRises(m) ? d.weight * sq(d) : 0) + l * arm(d) },
   'ground-to-overhead': { basis: 'derived', rule: 'load × (overhead height − bar height)', perRep: (d, l) => l * (d.overhead - BAR_FROM_FLOOR_IN) },
   'wall-ball': { basis: 'derived', rule: 'body × squat travel + ball × (target − shoulder height in the squat)',
     perRep: (d, l, m, sex) => { const t = (sex === 'female' ? m.heightIn?.female : m.heightIn?.male) ?? (sex === 'female' ? 108 : 120); return d.weight * sq(d) + l * (t - (d.shoulder - sq(d))); } },
@@ -75,8 +77,8 @@ const MODEL: Record<string, { basis: 'source' | 'derived' | 'assumed'; perRep: P
   'kb-swing': { basis: 'derived', rule: 'load × (shoulder − knuckle height); American: load × (overhead − knuckle height); the hinge is not counted',
     perRep: (d, l, m) => l * ((m.movement.variant === 'american' ? d.overhead : d.shoulder) - d.knuckle) },
   // Assumed: the rule needs a stated fraction or simplification on top of the five heights (for the coach to review).
-  burpee: { basis: 'assumed', rule: 'body × squat high height (lying to standing; the centre of mass on the floor is taken as 0, the jump is not counted)',
-    perRep: (d) => d.weight * d.squatHigh },
+  burpee: { basis: 'derived', rule: `body × (squat high height + ${6} in jump): lying to standing, then the jump of a double-under (matches BTWB within 2%)`,
+    perRep: (d) => d.weight * (d.squatHigh + 6) },
   'push-up': { basis: 'assumed', rule: 'body × half of shoulder-to-overhead (the chest moves an arm’s length, the feet don’t move)', perRep: (d) => d.weight * arm(d) / 2 },
   dip: { basis: 'assumed', rule: 'body × half of shoulder-to-overhead', perRep: (d) => d.weight * arm(d) / 2 },
   hspu: { basis: 'assumed', rule: 'body × half of shoulder-to-overhead (head to lockout)', perRep: (d) => d.weight * arm(d) / 2 },
@@ -112,37 +114,87 @@ export interface WorkResult {
   derived: string[];
 }
 
-const MULTI_PART = /\b\d+\s*x\s*\d+:\d\d|\brest(ing)?\b[^.\n]{0,20}\b(between|in between|then)\b|-- ?then ?--|\bthen,? in the remaining time\b/i;
+/**
+ * Machines and running: Concept2's published relation between pace and power on its rowers, watts = 2.80 × speed³
+ * (speed in m/s), which BTWB also applies to running (checked against BTWB's own figures for logged runs and rows:
+ * identical). Work over a distance is then 2.80 × speed² × metres.
+ * Calories use Concept2's calorie formula, calories per hour = 4 × watts + 300.
+ */
+export const MONO = new Set(['run', 'row', 'ski', 'bike']);
+const J_PER_FTLB = 1.3558;
+const C2 = 2.8;
+export const monoPowerW = (metresPerSec: number) => C2 * metresPerSec ** 3;
+/** Speed (m/s) at which calories accrue at `calPerSec` on a Concept2 machine. */
+const speedForCalRate = (calPerSec: number) => Math.cbrt(Math.max(0, (calPerSec * 3600 - 300) / 4) / C2);
+/** Joules for a distance or calorie segment done at `v` m/s. */
+function monoJoules(m: MovementPrescription, v: number): number | undefined {
+  if (m.distanceM) return C2 * v * v * m.distanceM;
+  if (m.calories) { const watts = monoPowerW(v); return watts * ((m.calories * 3600) / (4 * watts + 300)); }
+  return undefined;
+}
+
+const MULTI_PART = /\b\d+\s*x\s*\d+:\d\d|\bevery \d+(:\d\d)? ?min|\b\d+\s*x\s*\d+\s*(m|cal)\b|\brest(ing)?\b[^.\n]{0,20}\b(between|in between|then)\b|-- ?then ?--|\bthen,? in the remaining time\b/i;
 /**
  * Twice the best average power in the Fran tables (338 ft-lb/s, an elite athlete at about 2:30). Anything above it is
- * almost certainly a workout read wrongly from its text, so it is left out rather than shown.
+ * almost certainly a workout read wrongly from its text, so it is left out rather than shown. Pure runs and rows use
+ * the power of a 9.58 s 100 m instead (about 2,350 ft-lb/s by the formula above).
  */
 export const MAX_PLAUSIBLE = 676;
+export const MAX_PLAUSIBLE_MONO = Math.round(monoPowerW(100 / 9.58) / J_PER_FTLB);
 
-/** One pass through the workout as a list of (movement, reps) in order. */
+const isMono = (m: MovementPrescription) => MONO.has(m.movement.family) && !!(m.distanceM || m.calories);
+const isDoubleUnder = (m: MovementPrescription) => m.movement.family === 'jump-rope' && m.movement.variant === 'double-under';
+/** Double-unders: bodyweight × 6 in per rep, which matches BTWB's figures on logged results. */
+export const DOUBLE_UNDER_IN = 6;
+
+/** One pass through the workout as a list of (movement, reps) in order. Distance and calorie pieces count as one rep. */
 function pass(w: Workout): { m: MovementPrescription; reps: number }[] | undefined {
   const s = w.structure;
   const scheme = 'scheme' in s && s.scheme ? s.scheme : undefined;
   const out: { m: MovementPrescription; reps: number }[] = [];
+  // Calories count as reps in an AMRAP score (as BTWB counts them); a distance counts as one.
+  const unit = (m: MovementPrescription) => (isMono(m) ? m.calories ?? 1 : m.reps);
   // A scheme (21-15-9) gives the reps of movements that have none; when every movement has its own reps the list is
   // already the full sequence (imports often expand "10-9-8…" into one entry per round).
-  if (scheme && w.movements.some((m) => m.reps === undefined)) { for (const n of scheme) for (const m of w.movements) out.push({ m, reps: m.reps ?? n }); }
-  else for (const m of w.movements) { if (m.reps === undefined) return undefined; out.push({ m, reps: m.reps }); }
+  if (scheme && w.movements.some((m) => unit(m) === undefined)) { for (const n of scheme) for (const m of w.movements) out.push({ m, reps: unit(m) ?? n }); }
+  else for (const m of w.movements) { const r = unit(m); if (r === undefined) return undefined; out.push({ m, reps: r }); }
   return out;
 }
 
-/** Work and average power for one result, given the person's dims at the time. */
-export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>, sex: Sex, d: BodyDims | undefined): WorkResult {
+/**
+ * Work and average power for one result, given the person's dims at the time. `paces` (m/s by family: run, row…) is
+ * the person's own usual speed, used for the run or row inside a mixed workout, where only the total time is known.
+ */
+export type PaceFor = (family: string, metres?: number) => number | undefined;
+export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>, sex: Sex, d: BodyDims | undefined, paces: Record<string, number> | PaceFor = {}): WorkResult {
+  const paceFor: PaceFor = typeof paces === 'function' ? paces : (f) => paces[f];
   const w = r.performed;
   const s = w.structure;
-  const missing = [...new Set(w.movements.filter((m) => !MODEL[m.movement.family] || m.distanceM || m.calories || (m.seconds && !m.reps)).map((m) => m.movement.family))];
-  const derived = [...new Set(w.movements.filter((m) => (MODEL[m.movement.family]?.basis ?? 'source') !== 'source').map((m) => m.movement.family))];
-  // Multi-part workouts ("5 × 3:00 AMRAP, rest 1 min", "-- then --") are stored as one part; their numbers would be wrong.
+  const counted = (m: MovementPrescription) => isMono(m) || isDoubleUnder(m) || (!!MODEL[m.movement.family] && !m.distanceM && !m.calories && !(m.seconds && !m.reps));
+  const missing = [...new Set(w.movements.filter((m) => !counted(m)).map((m) => m.movement.family))];
+  const derived = [...new Set(w.movements.filter((m) => !isMono(m) && (isDoubleUnder(m) || (MODEL[m.movement.family]?.basis ?? 'source') !== 'source')).map((m) => m.movement.family))];
   if (MULTI_PART.test(w.originalText ?? '')) return { missing: ['multi-part workout'], derived };
-  if (missing.length || !d) return { missing, derived };
+  if (missing.length) return { missing, derived };
+
+  // A run, row, ski or bike on its own: power straight from the pace, no measurements needed.
+  if (w.movements.length && w.movements.every((m) => isMono(m) && m.movement.family === w.movements[0]!.movement.family)) {
+    const pure = pureMono(r);
+    if (pure) return pure.power > MAX_PLAUSIBLE_MONO ? { missing: ['implausible (check how the workout was read)'], derived } : { ...pure, missing: [], derived };
+  }
+  if (!d) return { missing: [], derived };
   const seq = pass(w);
   if (!seq?.length) return { missing: ['reps not known'], derived };
-  const per = seq.map(({ m, reps }) => ({ reps, inLb: MODEL[m.movement.family]!.perRep(d, loadLb(m, sex), m, sex) }));
+  const lacking = new Set<string>();
+  const per = seq.map(({ m, reps }) => {
+    if (isMono(m)) {
+      const v = paceFor(m.movement.family, m.distanceM);
+      if (!v) { lacking.add(`${m.movement.family} pace`); return { reps, inLb: undefined }; }
+      return { reps, inLb: (monoJoules(m, v)! / J_PER_FTLB) * 12 / reps };
+    }
+    if (isDoubleUnder(m)) return { reps, inLb: d.weight * DOUBLE_UNDER_IN };
+    return { reps, inLb: MODEL[m.movement.family]!.perRep(d, loadLb(m, sex), m, sex) };
+  });
+  if (lacking.size) return { missing: [...lacking], derived };
   if (per.some((p) => p.inLb === undefined || !(p.inLb > 0))) return { missing: ['a load or height'], derived };
   const passWork = per.reduce((a, p) => a + p.reps * p.inLb!, 0);
   const passReps = per.reduce((a, p) => a + p.reps, 0);
@@ -159,6 +211,9 @@ export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>,
     if (r.completed && r.score.timeSec) { inLb = passWork * rounds; seconds = r.score.timeSec; }
     else if (!r.completed && s.capMin && r.score.reps !== undefined) { inLb = workForReps(r.score.reps); seconds = s.capMin * 60; }
   } else if (s.kind === 'amrap' && s.minutes) {
+    // A ladder AMRAP (the same movements again with more reps each rung) has no fixed round, so its score is ambiguous.
+    const fams = w.movements.map((m) => m.movement.family);
+    if (new Set(fams).size < fams.length) return { missing: ['ladder AMRAP'], derived };
     const reps = (r.score.rounds ?? 0) * passReps + (r.score.reps ?? 0);
     if (reps > 0) { inLb = workForReps(reps); seconds = s.minutes * 60; }
   }
@@ -166,6 +221,59 @@ export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>,
   const work = inLb / 12;
   if (work / seconds > MAX_PLAUSIBLE) return { missing: ['implausible (check how the workout was read)'], derived };
   return { work: Math.round(work), seconds, power: Math.round((work / seconds) * 10) / 10, missing: [], derived };
+}
+
+/** A single run, row, ski or bike piece (one or more rounds): its time, distance or calories give the pace directly. */
+function pureMono(r: Pick<Result, 'performed' | 'score' | 'completed'>): { work: number; seconds: number; power: number; speed: number } | undefined {
+  const w = r.performed, s = w.structure;
+  // BTWB interval logs list every piece with its own time ("Row, 500 m | 1:30"); use them, dropping pieces logged as 0:00.
+  const pieces = intervalPieces(w.originalText);
+  if (pieces) {
+    let joules = 0, secs = 0;
+    for (const p of pieces) { const v = p.metres / p.sec; joules += C2 * v * v * p.metres; secs += p.sec; }
+    const power = joules / secs / J_PER_FTLB;
+    return { work: Math.round(power * secs), seconds: Math.round(secs * 10) / 10, power: Math.round(power * 10) / 10, speed: Math.cbrt(joules / secs / C2) };
+  }
+  const rounds = s.kind === 'for-time' ? s.rounds ?? 1 : 1;
+  const metres = w.movements.reduce((a, m) => a + (m.distanceM ?? 0), 0) * rounds;
+  const cals = w.movements.reduce((a, m) => a + (m.calories ?? 0), 0) * rounds;
+  let seconds: number | undefined, v: number | undefined;
+  if (s.kind === 'for-time' && r.completed && r.score.timeSec) {
+    seconds = r.score.timeSec;
+    v = metres ? metres / seconds : cals ? speedForCalRate(cals / seconds) : undefined;
+  } else if ((s.kind === 'amrap' || s.kind === 'max') && 'minutes' in s && s.minutes) {
+    seconds = s.minutes * 60;
+    if (r.score.distanceM) v = r.score.distanceM / seconds;
+    else if (r.score.calories) v = speedForCalRate(r.score.calories / seconds);
+  }
+  if (!seconds || !v) return undefined;
+  const watts = monoPowerW(v);
+  const power = watts / J_PER_FTLB;
+  return { work: Math.round(power * seconds), seconds, power: Math.round(power * 10) / 10, speed: v };
+}
+/** The pieces of a BTWB interval log ("Intervals\nRow, 500 m | 1:30\n…"), or undefined when the text isn't one. */
+export function intervalPieces(text?: string): { metres: number; sec: number }[] | undefined {
+  if (!text || !/^Intervals\b/.test(text.trim())) return undefined;
+  const out: { metres: number; sec: number }[] = [];
+  for (const l of text.split('\n').slice(1)) {
+    const m = /^\s*(?:Run|Row|Ski|Bike)[^,]*,\s*([\d,.]+)\s*(m|km)\s*\|\s*(?:(\d+):)?(\d+(?:\.\d+)?)\s*$/i.exec(l);
+    if (!m) { if (l.trim()) return undefined; continue; }
+    const metres = Number(m[1]!.replace(/,/g, '')) * (m[2]!.toLowerCase() === 'km' ? 1000 : 1);
+    const sec = Number(m[3] ?? 0) * 60 + Number(m[4]);
+    if (sec > 0 && metres > 0) out.push({ metres, sec });
+  }
+  return out.length ? out : undefined;
+}
+
+/** Speed (m/s) of a pure run, row, ski or bike result, for the person's usual pace; undefined for anything else. */
+export function monoSpeed(r: Pick<Result, 'performed' | 'score' | 'completed'>): { family: string; speed: number; metres: number } | undefined {
+  const ms = r.performed.movements;
+  if (!ms.length || !ms.every((m) => isMono(m) && m.distanceM && m.movement.family === ms[0]!.movement.family)) return undefined;
+  const p = pureMono(r);
+  // The length of one piece: an interval log's average piece, else the prescribed distance.
+  const pieces = intervalPieces(r.performed.originalText);
+  const metres = pieces ? pieces.reduce((a, x) => a + x.metres, 0) / pieces.length : ms[0]!.distanceM!;
+  return p ? { family: ms[0]!.movement.family, speed: p.speed, metres } : undefined;
 }
 
 /** Durations (minutes) the fitness curve is read at, on a log scale. */
@@ -209,3 +317,23 @@ export function dimsAt(rows: { kind: string; date: string; value: number; unit: 
  * (L1: "time approximates our change in power output"). Needs no measurements.
  */
 export const powerChange = (t1Sec: number, t2Sec: number) => Math.round((t1Sec / t2Sec - 1) * 100);
+
+/**
+ * BTWB's body-measurement export (DateTime, Height, Weight, … e.g. "2019-04-29 10:19:51 -0400,69 in,174.8 lbs") as
+ * bodyweight rows by date. One row per date (the last one listed); rows without a weight are skipped.
+ */
+export function parseBtwbWeights(csv: string): { date: string; value: number; unit: 'lb' | 'kg' }[] {
+  const lines = csv.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
+  const head = (lines.shift() ?? '').split(',').map((h) => h.trim().toLowerCase());
+  const di = head.indexOf('datetime'), wi = head.indexOf('weight');
+  if (di < 0 || wi < 0) throw new Error('This is not a BTWB measurements export (no DateTime and Weight columns).');
+  const out = new Map<string, { date: string; value: number; unit: 'lb' | 'kg' }>();
+  for (const l of lines) {
+    const c = l.split(',');
+    const date = (c[di] ?? '').trim().slice(0, 10);
+    const m = /^([\d.]+)\s*(lbs?|kg)/i.exec((c[wi] ?? '').trim());
+    if (!/^\d{4}-\d\d-\d\d$/.test(date) || !m) continue;
+    out.set(date, { date, value: Number(m[1]), unit: m[2]!.toLowerCase().startsWith('kg') ? 'kg' : 'lb' });
+  }
+  return [...out.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
