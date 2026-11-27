@@ -49,3 +49,14 @@ describe('Individual Rx rounding', () => {
     expect(rx.workout.movements.map((m) => m.reps)).toEqual([40, 16]);
   });
 });
+
+describe('Individual Rx: load step only when it helps', () => {
+  it('keeps the Rx weights when lighter loads would barely change the time', () => {
+    const w: Workout = { id: 'c', structure: { kind: 'for-time', rounds: 6 }, scoreType: 'time', movements: [
+      { movement: { family: 'push-press', implement: 'barbell' }, reps: 12, load: { male: 135, unit: 'lb' } }, { movement: { family: 'box-jump' }, reps: 12 }, { movement: { family: 'run' }, distanceM: 800 }] };
+    const tg = { modalityPattern: ['W' as const, 'G' as const, 'M' as const], movementCount: 3, load: 'medium' as const, volume: 'medium' as const, timeDomain: 'long' as const, priority: 'task' as const, pathway: 'oxidative' as const };
+    const rx = individualRx(w, tg, 1, null);
+    expect(rx.changes.some((c) => c.kind === 'load')).toBe(false);
+    expect(rx.changes.some((c) => c.kind === 'volume')).toBe(true);
+  });
+});
