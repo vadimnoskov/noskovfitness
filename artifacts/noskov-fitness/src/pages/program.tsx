@@ -118,6 +118,9 @@ function WhyCard({ d }: { d: PlannedDay }) {
   return (
     <details className="why small">
       <summary>Why this workout</summary>
+      <div className="why-body">
+      <button type="button" className="btn sm why-close" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; }}>Close</button>
+      <b className="why-title">{d.name ?? 'Workout'} · {d.date}</b>
       {d.origin.by !== 'engine' ? <p>Chosen by the coach.</p> : !why ? <p>Proposed before explanations were stored; re-plan the day to see one.</p> : (
         <>
           {s!.notes.length ? <p><b>Deciding points:</b> {s!.notes.map(plain).join('; ')}.</p> : null}
@@ -129,6 +132,7 @@ function WhyCard({ d }: { d: PlannedDay }) {
           {d.alternatives.length ? <p>{d.alternatives.length} close alternatives are under More…</p> : null}
         </>
       )}
+      </div>
     </details>
   );
 }
