@@ -7,6 +7,7 @@ import type { PlannedDay as BasePlannedDay } from '@/lib/data';
 import { addDays, weekStart, longDate, short, DOW } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
 import { usePage, PageStatus, ActionForm } from '@/lib/api';
+import { ProgramPicker } from '@/lib/program';
 
 type PlannedDay = BasePlannedDay & { repeat?: { everyDays: number; until: string | null } | null; warmUp: DayWarmUp };
 type ProgramData = { days: PlannedDay[]; profiles: { id: string; name: string }[]; group: { training_days: number[]; default_equipment_id?: string | null } };
@@ -33,7 +34,7 @@ export default function ProgramPage() {
   const q = usePage<ProgramData>({ screen: 'program', from, to });
   const { run, pending, error } = useRun();
   const [dragId, setDragId] = useState<string | null>(null);
-  if (!q.data) return <><h1>Program</h1><PageStatus q={q} /></>;
+  if (!q.data) return <><h1>Program</h1><ProgramPicker /><PageStatus q={q} /></>;
   const { days, profiles, group } = q.data;
   const proposed = days.filter((d) => d.status === 'proposed').length;
   const trainingNames = group.training_days.map((d) => DOW[d - 1]).join(', ');
@@ -48,7 +49,7 @@ export default function ProgramPage() {
 
   return (
     <>
-      <h1>Program</h1>
+      <h1>Program</h1><ProgramPicker />
       <p className="small">The engine proposes a workout for each training day ({trainingNames}). Approve, or drag a workout to another day: onto an empty day it moves (the old day becomes rest), onto another workout the two swap. "More…" on each day has move, time cap, repeat, pick any workout and alternatives. Targets and rules are in <Link href="/settings">Settings</Link>.</p>
 
       <div className="panel">

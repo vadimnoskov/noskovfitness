@@ -4,6 +4,7 @@ import { dayHeader, type Day } from '@/lib/data';
 import { addDays, weekStart, DOW, short, longDate } from '@/lib/dates';
 import { Chips, Legend } from '@/components/Chips';
 import { usePage, PageStatus } from '@/lib/api';
+import { ProgramPicker } from '@/lib/program';
 
 type View = 'year' | '8w' | 'week';
 type CalendarData = { latestDate: string; days: [string, Day][] };
@@ -20,7 +21,7 @@ export default function CalendarPage() {
     : [weekStart(anchor), addDays(weekStart(anchor), 6)];
   const q = usePage<CalendarData>({ screen: 'calendar', from, to }, !!anchor);
 
-  if (!anchor) return <><h1>Program calendar</h1><PageStatus q={latest} /></>;
+  if (!anchor) return <><h1>Program calendar</h1><ProgramPicker /><PageStatus q={latest} /></>;
   const step = view === 'year' ? 364 : view === '8w' ? 56 : 7;
   const prev = addDays(anchor, -step), next = addDays(anchor, step);
   const href = (v: View, d: string) => `/calendar?view=${v}&d=${d}`;
@@ -29,7 +30,7 @@ export default function CalendarPage() {
 
   return (
     <>
-      <h1>Program calendar</h1>
+      <h1>Program calendar</h1><ProgramPicker />
       <p className="small">Past days come from the imported history (everyone's results listed under each workout). Future days come from the <Link href="/program">Program</Link>: faded = proposed, solid = approved.</p>
       <div className="bar">
         <Link className="btn" aria-current={view === 'year'} href={href('year', anchor)}>Year</Link>

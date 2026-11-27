@@ -1,6 +1,7 @@
 import { scoreText, structureLabel, movementLine } from '@workspace/fitness-core';
 import { short } from '@/lib/dates';
 import { usePage, PageStatus } from '@/lib/api';
+import { ProgramPicker } from '@/lib/program';
 
 const CATS = [['girl', 'The Girls'], ['hero', 'Heroes'], ['test', 'Tests and notable workouts'], ['lift', 'Lifts'], ['open', 'CrossFit Open']] as const;
 
@@ -11,11 +12,11 @@ type BenchmarksData = { rows: BenchmarkRow[]; athletes: { id: string; name: stri
 
 export default function Benchmarks() {
   const q = usePage<BenchmarksData>({ screen: 'benchmarks' });
-  if (!q.data) return <><h1>Benchmarks</h1><PageStatus q={q} /></>;
+  if (!q.data) return <><h1>Benchmarks</h1><ProgramPicker /><PageStatus q={q} /></>;
   const { rows, athletes, today } = q.data;
   return (
     <>
-      <h1>Benchmarks</h1>
+      <h1>Benchmarks</h1><ProgramPicker />
       <p className="small">{rows.length} benchmark workouts from your sheet's Girls, Hero, Misc WODs and Open tabs, plus lift tests. "Due" means the last test by anyone in the group is older than the retest interval. The engine will use this to place benchmarks into the program.</p>
       {CATS.map(([cat, label]) => {
         const list = rows.filter((r) => r.benchmark.category === cat);

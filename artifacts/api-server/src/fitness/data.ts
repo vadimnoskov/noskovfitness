@@ -2,7 +2,46 @@ import { sql } from '@workspace/fitness-db';
 import { workMinutes, type Workout, type WorkoutTags, type Result } from '@workspace/fitness-core';
 
 export const COACH_ID = 'vadim';
+/** The family's program. Other programs (each coach's own athletes) are groups too; see programFor. */
 export const GROUP_ID = 'family';
+
+export interface Program { id: string; name: string; coachId: string | null; members: { id: string; name: string }[] }
+/** Every program (group) with its members. */
+export async function allPrograms(): Promise<Program[]> {
+  const rows = await sql`SELECT g.id, g.name, g.coach_id,
+      coalesce(json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.is_coach DESC, a.birth_year NULLS FIRST, a.name) FILTER (WHERE a.id IS NOT NULL), '[]') AS members
+    FROM groups g LEFT JOIN group_members gm ON gm.group_id = g.id LEFT JOIN athletes a ON a.id = gm.athlete_id
+    GROUP BY g.id ORDER BY (g.id = ${GROUP_ID}) DESC, g.name`;
+  return rows.map((r) => ({ id: r.id as string, name: r.name as string, coachId: (r.coach_id as string | null) ?? null, members: r.members as Program['members'] }));
+}
+/** The programs a person coaches: the head coach coaches all of them; another coach only their own. */
+export async function programsFor(user: { id: string; isCoach: boolean }): Promise<Program[]> {
+  const all = await allPrograms();
+  return user.isCoach ? all : all.filter((p) => p.coachId === user.id);
+}
+/** The program a coach screen or action is about (header X-Program), checked against what the person coaches. */
+export async function programFor(user: { id: string; isCoach: boolean }, requested?: string | null): Promise<string> {
+  const id = requested || GROUP_ID;
+  if (!(await programsFor(user)).some((p) => p.id === id)) throw Object.assign(new Error('You do not coach this program.'), { status: 403 });
+  return id;
+}
+/** The program an athlete trains in (their group). */
+export async function programOfAthlete(athleteId: string): Promise<string> {
+  const [r] = await sql`SELECT group_id FROM group_members WHERE athlete_id = ${athleteId} ORDER BY (group_id = ${GROUP_ID}) DESC, group_id LIMIT 1`;
+  return (r?.group_id as string | undefined) ?? GROUP_ID;
+}
+/**
+ * The people someone may see and log for: themselves; everyone, for the head coach; the members of programs they
+ * coach; and, for a family member allowed to log for others, the members of their own program (not other clients).
+ */
+export async function visibleAthleteIds(user: { id: string; isCoach: boolean; canLogForOthers: boolean }): Promise<Set<string>> {
+  if (user.isCoach) return new Set((await sql`SELECT id FROM athletes`).map((r) => r.id as string));
+  const rows = await sql`SELECT gm.athlete_id FROM group_members gm JOIN groups g ON g.id = gm.group_id
+    WHERE g.coach_id = ${user.id}
+       OR (${user.canLogForOthers} AND gm.group_id IN (SELECT group_id FROM group_members WHERE athlete_id = ${user.id}))`;
+  return new Set([user.id, ...rows.map((r) => r.athlete_id as string)]);
+}
+const membersOf = async (groupId: string) => (await sql`SELECT athlete_id FROM group_members WHERE group_id = ${groupId}`).map((r) => r.athlete_id as string);
 
 export interface Part {
   workoutId: string;
@@ -18,12 +57,13 @@ export interface Part {
 export interface Day { date: string; parts: Part[] }
 
 /** Training history (and later the program) for the group between two dates, grouped by day. */
-export async function getDays(from: string, to: string): Promise<Map<string, Day>> {
+export async function getDays(from: string, to: string, groupId = GROUP_ID): Promise<Map<string, Day>> {
+  const members = await membersOf(groupId);
   const rows = await sql`
     SELECT r.date::text AS date, r.workout_id, w.name, w.benchmark, r.performed, r.tags, r.score, r.as_prescribed, r.completed, r.notes,
            r.athlete_id, a.name AS athlete, r.created_at
     FROM results r JOIN workouts w ON w.id = r.workout_id JOIN athletes a ON a.id = r.athlete_id
-    WHERE r.date BETWEEN ${from} AND ${to}
+    WHERE r.date BETWEEN ${from} AND ${to} AND r.athlete_id IN ${sql(members.length ? members : [''])}
     ORDER BY r.date, r.created_at DESC`;
   const days = new Map<string, Day>();
   for (const r of rows) {
@@ -40,7 +80,7 @@ export async function getDays(from: string, to: string): Promise<Map<string, Day
   const planned = await sql`
     SELECT d.date::text AS date, d.status, w.id, w.name, w.benchmark, w.structure, w.movements, w.score_type, w.tags
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
-    WHERE d.group_id = ${GROUP_ID} AND d.date BETWEEN ${from} AND ${to} AND d.status IN ('proposed','approved')`;
+    WHERE d.group_id = ${groupId} AND d.date BETWEEN ${from} AND ${to} AND d.status IN ('proposed','approved')`;
   for (const r of planned) {
     const day: Day = days.get(r.date) ?? { date: r.date, parts: [] };
     days.set(r.date, day);
@@ -92,6 +132,12 @@ export async function getBenchmarks() {
     WHERE w.benchmark IS NOT NULL GROUP BY w.id ORDER BY w.name`;
 }
 
-export async function getAthletes() {
-  return sql`SELECT id, name, sex FROM athletes ORDER BY CASE id WHEN 'vadim' THEN 1 WHEN 'olga' THEN 2 WHEN 'sasha' THEN 3 ELSE 4 END`;
+export async function getAthletes(groupId = GROUP_ID) {
+  return sql`SELECT a.id, a.name, a.sex FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id AND gm.group_id = ${groupId}
+    ORDER BY a.is_coach DESC, CASE a.sex WHEN 'female' THEN 0 ELSE 1 END, a.birth_year NULLS FIRST, a.name`;
+}
+/** The person whose results stand for a program in Analysis: the coach in the family, else the first member. */
+export async function analysisAthlete(groupId: string) {
+  if (groupId === GROUP_ID) return COACH_ID;
+  return (await membersOf(groupId))[0] ?? COACH_ID;
 }

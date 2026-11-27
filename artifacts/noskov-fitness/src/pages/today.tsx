@@ -19,13 +19,19 @@ type Planned = { dayId: string; status: string; workout: Workout; standard: Work
   weaknessWork?: { title: string; lines: string[]; why: string; source: string } | null };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
+/** Whose page this is: a dropdown of everyone you may see, grouped by program. */
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const me = useMe();
   if (!me || me.logFor.length < 2) return null;
+  const programs = me.programs ?? [];
+  const groups = programs.length > 1 ? programs.map((g) => ({ ...g, people: me.logFor.filter((p) => (p.program ?? 'family') === g.id) })).filter((g) => g.people.length) : null;
+  const opt = (p: { id: string; name: string }) => <option key={p.id} value={p.id}>{p.id === me.user.id ? `${p.name} (me)` : p.name}</option>;
   return (
-    <div className="seg people" role="group" aria-label="Whose results">
-      {me.logFor.map((p) => <button key={p.id} type="button" aria-pressed={p.id === value} onClick={() => onChange(p.id)}>{p.name}</button>)}
-    </div>
+    <label className="athletepick">Athlete{' '}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {groups ? groups.map((g) => <optgroup key={g.id} label={g.name}>{g.people.map(opt)}</optgroup>) : me.logFor.map(opt)}
+      </select>
+    </label>
   );
 }
 

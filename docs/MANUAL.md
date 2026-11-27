@@ -12,12 +12,15 @@ The planning engine is called **Chalkboard**. It proposes workouts from a librar
 
 | Role | Sees |
 |---|---|
-| Coach | Everything: Today, History, Benchmarks, Fitness, Program, Calendar, Analysis, Chalkboard, Settings, Account and Family. Can log results for anyone. |
-| Athlete | Today, History, their own Benchmarks column, their own Fitness page, Account. |
+| Head coach | Everything: Today, History, Benchmarks, Fitness, Athletes, Program, Calendar, Analysis, Chalkboard, Settings, Account and Family, for every program. Can log results for anyone. |
+| Coach of a program | Athletes, and Today, History and Fitness for the athletes in the programs they coach. |
+| Athlete | Today, History, their own Benchmarks column, their own Fitness page, Account. A family member allowed to log for others can do so only within their own program, never for another coach's clients. |
 
 The rules are enforced by the server, not only hidden in the menu.
 
 On a phone the menu folds into the ☰ button at the top right; your own settings are under **Account**.
+
+**Programs.** Athletes train in programs: the family's, and one for each client (or a small group of clients). Each program has its own coach, usual training days, locations (equipment) and programming settings, and Chalkboard plans each one separately. On Today, History and Fitness the **Athlete** dropdown (grouped by program) chooses whose page it is; on Program, Calendar, Analysis, Settings and Benchmarks the **Program** dropdown chooses the program (it shows only for someone who coaches more than one).
 
 ## 2. Architecture
 
@@ -155,6 +158,14 @@ What it's for: seeing each person's fitness as numbers, using CrossFit's own def
 - **Repeated workouts**: the same workout with the same loads, finished for time, done two or more times. The work is the same each time, so the change in power is the ratio of the times (L1 guide). Needs no measurements.
 
 ## 4. Planning (coach)
+
+### 4.0 Athletes and programs
+
+Athletes (menu) lists the programs you coach: each with its coach, usual training days, default location, athletes (with links to their Today, History and Fitness) and locations.
+- **Open program** / **Programming settings** switch the Program and Settings pages to that program.
+- **Edit days and coach**: name, usual training days (the planner plans those; any day can still be moved on Program), coach (head coach only; the family program is always the head coach's) and default location.
+- **Locations**: tick the equipment there, how many, and the weights of fixed-weight implements (e.g. "12kg, 16kg"; dumbbells count as pairs unless "x1"). The planner only proposes workouts the location can do.
+- **Add an athlete**: name, sex (for Rx loads), birth date, units, and either a new program of their own (training days, coach) or an existing program. Then add their location. Names are used to sign in, so they must be unique; a sign-in password is set later on Account → Family.
 
 ### 4.1 Program
 
@@ -303,6 +314,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Athletes and programs: each client gets their own program (coach, days, locations, settings); Athlete dropdown instead of name tabs; Program dropdown on coach pages; access by program. |
 | 2026-11-28 | Phone menu folded into ☰ (top right), "Account" instead of your name, warm-up closed by default, today's workout on a grey background. |
 | 2026-11-28 | Weakness work in each person's warm-up, from the coach's list and the results; the list is on Fitness. |
 | 2026-11-28 | Teens' heavy days: a 1-rep max becomes heavy 3-3-2-2-2 for under-18s unless the coach allows a true 1RM that day. |

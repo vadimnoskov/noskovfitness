@@ -9,7 +9,7 @@ import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesT
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
-import { GROUP_ID } from './data';
+import { programOfAthlete, visibleAthleteIds } from './data';
 import { noteFor, type NoteArgs } from './ai-notes';
 import { resolveWarmUp } from './warmups';
 
@@ -21,8 +21,8 @@ const workoutOf = (r: Record<string, any>): Workout => ({
 });
 
 /** Who may this user log or view results for? */
-export function canActFor(user: User, athleteId: string) {
-  return user.id === athleteId || user.canLogForOthers || user.isCoach;
+export async function canActFor(user: User, athleteId: string) {
+  return user.id === athleteId || (await visibleAthleteIds(user)).has(athleteId);
 }
 
 /** A person, their standing load setting, and the equipment at a program day's location. */
@@ -40,7 +40,8 @@ export async function versionFor(dayId: string, athleteId: string) {
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
     LEFT JOIN athlete_versions v ON v.day_id = d.id AND v.athlete_id = ${athleteId}
-    WHERE d.id = ${dayId} AND d.group_id = ${GROUP_ID}`;
+    WHERE d.id = ${dayId}
+      AND EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = d.group_id AND gm.athlete_id = ${athleteId})`;
   if (!d) throw new InputError('Program day not found.');
   const person = await personFor(athleteId);
   const standard = workoutOf({ id: d.wid, name: d.name, structure: withCap(d.structure, d.original_text), movements: d.movements, score_type: d.score_type, benchmark: d.benchmark });
@@ -60,11 +61,13 @@ export async function versionFor(dayId: string, athleteId: string) {
 
 /** The planned workout(s) for a date, as this person's own version, plus what they already logged that day. */
 export async function getToday(date: string, athleteId: string) {
+  // Each person sees their own program's days (the family's, or their coach's program for them).
+  const group = await programOfAthlete(athleteId);
   const days = await sql`
     SELECT d.id FROM program_days d
-    WHERE d.group_id = ${GROUP_ID} AND d.date = ${date} AND d.status IN ('proposed','approved','done') ORDER BY d.seq`;
+    WHERE d.group_id = ${group} AND d.date = ${date} AND d.status IN ('proposed','approved','done') ORDER BY d.seq`;
   const planned = [];
-  const light = days.length ? await lightDays(GROUP_ID, date, date) : new Set<string>();
+  const light = days.length ? await lightDays(group, date, date) : new Set<string>();
   for (const d of days) {
     const v = await versionFor(d.id, athleteId);
     const history = await previousOn(v.standard.id, athleteId, date);
@@ -80,7 +83,7 @@ export async function getToday(date: string, athleteId: string) {
         bestSec: history.filter((h) => h.completed && h.score.timeSec).reduce<number | undefined>((a, h) => (a === undefined || h.score.timeSec! < a ? h.score.timeSec : a), undefined),
         lastSec: history.find((h) => h.completed && h.score.timeSec)?.score.timeSec,
       }),
-      volumeWarnings: v.day.status === 'done' ? [] : (await volumeWarningsFor([{ id: athleteId, name: v.person.name }], [{ date, workout: v.version }], date)).get(`${athleteId}|${date}`) ?? [],
+      volumeWarnings: v.day.status === 'done' ? [] : (await volumeWarningsFor([{ id: athleteId, name: v.person.name }], [{ date, workout: v.version }], date, group)).get(`${athleteId}|${date}`) ?? [],
     });
   }
   const results = await myResults(athleteId, sql`r.date = ${date}`);
@@ -98,7 +101,7 @@ export async function getCoachingNote(dayId: string, athleteId: string): Promise
 /** Coach's own text for one person's plan on a day; empty text removes it (back to the AI or built-in plan). */
 export async function setPlanNote(dayId: string, athleteId: string, text: string) {
   const body = text.replace(/\r\n/g, '\n').trim();
-  const [d] = await sql`SELECT id FROM program_days WHERE id = ${dayId} AND group_id = ${GROUP_ID}`;
+  const [d] = await sql`SELECT id FROM program_days WHERE id = ${dayId}`;
   if (!d) throw new InputError('Program day not found.');
   if (!body) await sql`DELETE FROM plan_edits WHERE day_id = ${dayId} AND athlete_id = ${athleteId}`;
   else await sql`INSERT INTO plan_edits (day_id, athlete_id, body) VALUES (${dayId}, ${athleteId}, ${body})
@@ -236,13 +239,13 @@ export function cleanScore(type: ScoreType, s: LogInput['score'], completed: boo
 }
 
 export async function logResult(user: User, input: LogInput) {
-  if (!canActFor(user, input.athleteId)) throw new InputError('You can only log your own results.', 403);
+  if (!await canActFor(user, input.athleteId)) throw new InputError('You can only log your own results.', 403);
   const [athlete] = await sql`SELECT id, sex, units FROM athletes WHERE id = ${input.athleteId}`;
   if (!athlete) throw new InputError('Unknown athlete.');
   const [w] = await sql`SELECT id, name, structure, movements, score_type, benchmark FROM workouts WHERE id = ${input.workoutId}`;
   if (!w) throw new InputError('Workout not found.', 404);
   if (input.dayId) {
-    const [d] = await sql`SELECT id FROM program_days WHERE id = ${input.dayId} AND group_id = ${GROUP_ID}`;
+    const [d] = await sql`SELECT id FROM program_days WHERE id = ${input.dayId}`;
     if (!d) throw new InputError('Program day not found.');
   }
   const workout = workoutOf(w);
@@ -279,7 +282,7 @@ export async function deleteResult(user: User, id: string) {
   const [r] = await sql`SELECT athlete_id, source FROM results WHERE id = ${id}`;
   if (!r) throw new InputError('Result not found.', 404);
   if (r.source !== 'app') throw new InputError('Imported history cannot be deleted here.', 403);
-  if (!canActFor(user, r.athlete_id)) throw new InputError('You can only delete your own results.', 403);
+  if (!await canActFor(user, r.athlete_id)) throw new InputError('You can only delete your own results.', 403);
   await sql`DELETE FROM results WHERE id = ${id}`;
   return { ok: true };
 }

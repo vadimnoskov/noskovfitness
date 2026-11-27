@@ -72,6 +72,24 @@ export const GetMeResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
+ * @summary Coach - the programs they coach, with athletes, locations and settings
+ */
+export const GetPeopleResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Coach - add or change an athlete, a program or a location
+ */
+export const PeopleActionParams = zod.object({
+  "action": zod.enum(['addAthlete', 'editAthlete', 'editProgram', 'saveLocation'])
+})
+
+export const PeopleActionBody = zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())]))
+
+export const PeopleActionResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Change your own password
  */
 export const ChangeMyPasswordBody = zod.object({

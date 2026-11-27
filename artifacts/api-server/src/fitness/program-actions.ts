@@ -1,14 +1,16 @@
 import { sql, proposeRange, getGroup, getEquipmentProfiles, getPolicy, refreshAlternatives } from '@workspace/fitness-db';
 import { pushForward, checkEquipment, withCap, type SlotDay, type Workout } from '@workspace/fitness-core';
-import { GROUP_ID } from './data';
+import { GROUP_ID as FAMILY } from './data';
 
 const done = () => {};
 const str = (f: FormData, k: string) => String(f.get(k) ?? '');
+/** The program the action is for (set and checked by the route). */
+const G = (f: FormData) => str(f, 'group') || FAMILY;
 
 export async function propose(f: FormData) {
   const from = str(f, 'from'), weeks = Math.min(8, Math.max(1, Number(str(f, 'weeks')) || 2));
   const to = new Date(Date.parse(from) + (weeks * 7 - 1) * 86400000).toISOString().slice(0, 10);
-  await proposeRange(GROUP_ID, from, to);
+  await proposeRange(G(f), from, to);
   done();
 }
 
@@ -18,7 +20,7 @@ export async function approve(f: FormData) {
 }
 
 export async function approveAll(f: FormData) {
-  await sql`UPDATE program_days SET status = 'approved', updated_at = now() WHERE group_id = ${GROUP_ID} AND status = 'proposed' AND date BETWEEN ${str(f, 'from')} AND ${str(f, 'to')}`;
+  await sql`UPDATE program_days SET status = 'approved', updated_at = now() WHERE group_id = ${G(f)} AND status = 'proposed' AND date BETWEEN ${str(f, 'from')} AND ${str(f, 'to')}`;
   done();
 }
 
@@ -41,12 +43,12 @@ export async function swap(f: FormData) {
  */
 export async function setLocation(f: FormData) {
   const id = str(f, 'id'), loc = str(f, 'equipmentId');
-  const [d] = await sql`UPDATE program_days SET equipment_profile_id = ${loc}, updated_at = now() WHERE id = ${id} AND group_id = ${GROUP_ID}
+  const [d] = await sql`UPDATE program_days SET equipment_profile_id = ${loc}, updated_at = now() WHERE id = ${id} AND group_id = ${G(f)}
     RETURNING date::text AS date, status, main_workout_id`;
   if (!d || d.status !== 'proposed') return done();
   const [[w], profiles, policy] = await Promise.all([
     sql`SELECT id, name, structure, movements, score_type, original_text FROM workouts WHERE id = ${d.main_workout_id}`,
-    getEquipmentProfiles(GROUP_ID), getPolicy(GROUP_ID),
+    getEquipmentProfiles(G(f)), getPolicy(G(f)),
   ]);
   const profile = profiles.find((p) => p.id === loc);
   if (w && profile) {
@@ -54,16 +56,16 @@ export async function setLocation(f: FormData) {
     const check = checkEquipment(workout, profile, policy.rules.groupSize);
     if (check.ok) {
       await sql`UPDATE program_days SET warnings = ${sql.json(check.warnings)} WHERE id = ${id}`;
-      await refreshAlternatives(GROUP_ID, id); // alternatives under More… now fit the new location
+      await refreshAlternatives(G(f), id); // alternatives under More… now fit the new location
       return done();
     }
   }
-  await proposeRange(GROUP_ID, d.date, d.date);
+  await proposeRange(G(f), d.date, d.date);
   done();
 }
 
-async function slots(): Promise<SlotDay[]> {
-  return (await sql`SELECT id, date::text AS date, status, seq FROM program_days WHERE group_id = ${GROUP_ID}`) as unknown as SlotDay[];
+async function slots(groupId: string): Promise<SlotDay[]> {
+  return (await sql`SELECT id, date::text AS date, status, seq FROM program_days WHERE group_id = ${groupId}`) as unknown as SlotDay[];
 }
 async function saveDates(before: SlotDay[], after: SlotDay[]) {
   const prev = new Map(before.map((d) => [d.id, d]));
@@ -78,8 +80,8 @@ async function saveDates(before: SlotDay[], after: SlotDay[]) {
 export async function skip(f: FormData) {
   const id = str(f, 'id'), mode = str(f, 'mode');
   if (mode === 'drop') { await sql`UPDATE program_days SET status = 'skipped', updated_at = now() WHERE id = ${id}`; done(); return; }
-  const group = await getGroup(GROUP_ID);
-  const before = await slots();
+  const group = await getGroup(G(f));
+  const before = await slots(G(f));
   const day = before.find((d) => d.id === id);
   if (!day) return;
   await saveDates(before, pushForward(before, day.date, group.training_days));
@@ -90,28 +92,28 @@ export async function skip(f: FormData) {
 export async function insert(f: FormData) {
   const date = str(f, 'date');
   if (!/^\d{4}-\d\d-\d\d$/.test(date)) return;
-  await proposeRange(GROUP_ID, date, date, { extraDates: [date] });
+  await proposeRange(G(f), date, date, { extraDates: [date] });
   done();
 }
 
 export async function neverPropose(f: FormData) {
   await sql`UPDATE workouts SET programmable = false, programmable_reason = 'excluded by coach' WHERE id = ${str(f, 'workoutId')}`;
   const [d] = await sql`SELECT date::text AS date, status FROM program_days WHERE id = ${str(f, 'id')}`;
-  if (d?.status === 'proposed') await proposeRange(GROUP_ID, d.date, d.date);
+  if (d?.status === 'proposed') await proposeRange(G(f), d.date, d.date);
   done();
 }
 
 /** One-tap fix for a day that breaks a rule where it now sits: re-plan it (an approved day goes back to proposed first). */
 export async function fixDay(f: FormData) {
   const id = str(f, 'id');
-  const [d] = await sql`UPDATE program_days SET status = 'proposed', updated_at = now() WHERE id = ${id} AND group_id = ${GROUP_ID} AND status IN ('proposed','approved')
+  const [d] = await sql`UPDATE program_days SET status = 'proposed', updated_at = now() WHERE id = ${id} AND group_id = ${G(f)} AND status IN ('proposed','approved')
     RETURNING date::text AS date`;
-  if (d) await proposeRange(GROUP_ID, d.date, d.date);
+  if (d) await proposeRange(G(f), d.date, d.date);
   done();
 }
 
 export async function replan(f: FormData) {
-  await proposeRange(GROUP_ID, str(f, 'from'), str(f, 'to'));
+  await proposeRange(G(f), str(f, 'from'), str(f, 'to'));
   done();
 }
 
@@ -121,9 +123,9 @@ export async function replan(f: FormData) {
  */
 export async function move(f: FormData) {
   const id = str(f, 'id'), to = str(f, 'date');
-  const [d] = await sql`SELECT id, date::text AS date, seq FROM program_days WHERE id = ${id} AND group_id = ${GROUP_ID} AND status IN ('proposed','approved')`;
+  const [d] = await sql`SELECT id, date::text AS date, seq FROM program_days WHERE id = ${id} AND group_id = ${G(f)} AND status IN ('proposed','approved')`;
   if (!d || d.date === to) return;
-  const [other] = await sql`SELECT id FROM program_days WHERE group_id = ${GROUP_ID} AND date = ${to} AND status IN ('proposed','approved') ORDER BY seq LIMIT 1`;
+  const [other] = await sql`SELECT id FROM program_days WHERE group_id = ${G(f)} AND date = ${to} AND status IN ('proposed','approved') ORDER BY seq LIMIT 1`;
   await sql.begin(async (tx) => {
     if (other) {
       // Park one day out of the way so (group, date, seq) never collides mid-swap.
@@ -132,7 +134,7 @@ export async function move(f: FormData) {
       await tx`UPDATE program_days SET date = ${to}, seq = seq - 1000, updated_at = now() WHERE id = ${id}`;
     } else {
       // A skipped day may still occupy the date: give the moved day the next free seq there.
-      const [{ next } = { next: 1 }] = await tx`SELECT coalesce(max(seq), 0) + 1 AS next FROM program_days WHERE group_id = ${GROUP_ID} AND date = ${to}`;
+      const [{ next } = { next: 1 }] = await tx`SELECT coalesce(max(seq), 0) + 1 AS next FROM program_days WHERE group_id = ${G(f)} AND date = ${to}`;
       await tx`UPDATE program_days SET date = ${to}, seq = ${next}, updated_at = now() WHERE id = ${id}`;
     }
   });

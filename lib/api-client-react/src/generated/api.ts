@@ -544,6 +544,196 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+export const getGetPeopleUrl = () => {
+
+
+
+
+  return `/api/fitness/people`
+}
+
+/**
+ * @summary Coach - the programs they coach, with athletes, locations and settings
+ */
+export const getPeople = async ( options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetPeopleUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPeopleQueryKey = () => {
+    return [
+    `/api/fitness/people`
+    ] as const;
+    }
+
+
+export const getGetPeopleQueryOptions = <TData = Awaited<ReturnType<typeof getPeople>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPeopleQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPeople>>> = ({ signal }) => getPeople({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPeopleQueryResult = NonNullable<Awaited<ReturnType<typeof getPeople>>>
+export type GetPeopleQueryError = ErrorType<unknown>
+
+
+export function useGetPeople<TData = Awaited<ReturnType<typeof getPeople>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPeople>>,
+          TError,
+          Awaited<ReturnType<typeof getPeople>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPeople<TData = Awaited<ReturnType<typeof getPeople>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPeople>>,
+          TError,
+          Awaited<ReturnType<typeof getPeople>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPeople<TData = Awaited<ReturnType<typeof getPeople>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Coach - the programs they coach, with athletes, locations and settings
+ */
+
+export function useGetPeople<TData = Awaited<ReturnType<typeof getPeople>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPeople>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPeopleQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPeopleActionUrl = (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation',) => {
+
+
+
+
+  return `/api/fitness/people/${action}`
+}
+
+/**
+ * @summary Coach - add or change an athlete, a program or a location
+ */
+export const peopleAction = async (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation',
+    fitnessForm: FitnessForm, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getPeopleActionUrl(action),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(fitnessForm)
+  }
+);}
+
+
+
+
+
+export const getPeopleActionMutationKey = () => ['peopleAction'] as const;
+
+export const getPeopleActionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof peopleAction>>, TError,PeopleActionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof peopleAction>>, TError,PeopleActionMutationVariables, TContext> => {
+
+const mutationKey = getPeopleActionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof peopleAction>>, PeopleActionMutationVariables> = (props) => {
+          const {action,data} = props ?? {};
+
+          return  peopleAction(action,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PeopleActionMutationResult = NonNullable<Awaited<ReturnType<typeof peopleAction>>>
+    export type PeopleActionMutationBody = BodyType<FitnessForm>
+    export type PeopleActionMutationError = ErrorType<unknown>
+    export type PeopleActionMutationVariables = {action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation';data: BodyType<FitnessForm>}
+
+    /**
+ * @summary Coach - add or change an athlete, a program or a location
+ */
+export const usePeopleAction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof peopleAction>>, TError,PeopleActionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof peopleAction>>,
+        TError,
+        PeopleActionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPeopleActionMutationOptions(options), queryClient);
+    }
+
 export const getChangeMyPasswordUrl = () => {
 
 

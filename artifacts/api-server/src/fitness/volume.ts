@@ -9,11 +9,11 @@ import { GROUP_ID } from './data';
 type Row = Pick<Result, 'performed' | 'score' | 'completed'> & { date: string };
 
 /** Warnings for each (person, date, workout), keyed "athleteId|date". Only dates from `today` on are checked. */
-export async function volumeWarningsFor(athletes: { id: string; name: string }[], items: { date: string; workout: Workout }[], today: string) {
+export async function volumeWarningsFor(athletes: { id: string; name: string }[], items: { date: string; workout: Workout }[], today: string, groupId = GROUP_ID) {
   const out = new Map<string, string[]>();
   const todo = items.filter((i) => i.date >= today);
   if (!todo.length || !athletes.length) return out;
-  const policy = await getPolicy(GROUP_ID);
+  const policy = await getPolicy(groupId);
   const rules = { factor: policy.rules.volumeJumpFactor, minReps: policy.rules.volumeJumpMinReps, layoffDays: policy.rules.returnAfterDays };
   const earliest = todo.reduce((a, i) => (i.date < a ? i.date : a), todo[0]!.date);
   for (const a of athletes) {
