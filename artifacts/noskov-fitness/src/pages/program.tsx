@@ -110,6 +110,29 @@ export default function ProgramPage() {
   );
 }
 
+/** "Why this workout": the facts behind the planner's pick, in plain words. */
+function WhyCard({ d }: { d: PlannedDay }) {
+  const s = d.origin.score;
+  const why = s?.why;
+  const plain = (n: string) => n.replace(/^fills (.*) gap$/, 'fills a gap in $1');
+  return (
+    <details className="why small">
+      <summary>Why this workout</summary>
+      {d.origin.by !== 'engine' ? <p>Chosen by the coach.</p> : !why ? <p>Proposed before explanations were stored; re-plan the day to see one.</p> : (
+        <>
+          {s!.notes.length ? <p><b>Deciding points:</b> {s!.notes.map(plain).join('; ')}.</p> : null}
+          <p><b>The mix</b> over the last {why.windowDays} days ({why.windowWorkouts} workouts, done and planned), share against your target:</p>
+          <ul>{why.mix.map((m, i) => <li key={i}>{m.label}: <b>{m.bucket}</b> {m.recent}% vs {m.target}%{m.recent < m.target - 3 ? ' (below target)' : m.recent > m.target + 3 ? ' (above target)' : ''}</li>)}</ul>
+          <p><b>Movements:</b> {why.movements.map((m) => `${m.name} ${m.daysSince === null ? `not in the last ${why.lookbackDays ?? 180} days` : m.daysSince === 0 ? 'planned the same day' : `${m.daysSince} days ago`}`).join('; ')}.</p>
+          <p><b>Rules checked:</b></p>
+          <ul>{why.rules.map((r) => <li key={r}>{r}</li>)}</ul>
+          {d.alternatives.length ? <p>{d.alternatives.length} close alternatives are under More…</p> : null}
+        </>
+      )}
+    </details>
+  );
+}
+
 function ScoreBars({ s }: { s?: ScoreBreakdown }) {
   if (!s) return null;
   const rows: [string, number][] = [['variety', s.variety], ['freshness', s.freshness], ['benchmark', s.benchmark], ['weakness', s.weakness]];
@@ -168,6 +191,7 @@ function DayCard({ d, zoom, profiles, run, onDragStart, onDragEnd }: {
       {d.volume?.length ? (zoom === 2
         ? <div className="warn" role="note"><b>Volume</b>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</div>
         : <details className="warn small"><summary>Volume warning: {d.volume.map((v) => v.name).join(', ')}</summary>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</details>) : null}
+      {zoom >= 1 && (d.status === 'proposed' || d.status === 'approved') ? <WhyCard d={d} /> : null}
       {zoom === 2 && d.origin.by === 'engine' ? <ScoreBars s={d.origin.score} /> : null}
       <div className="actions">
         {d.status === 'proposed' ? <ActionForm action="approve"><input type="hidden" name="id" value={d.id} /><button className="btn primary sm">Approve</button></ActionForm> : null}
