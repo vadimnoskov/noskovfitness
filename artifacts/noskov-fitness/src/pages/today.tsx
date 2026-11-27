@@ -15,7 +15,7 @@ type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
   totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[]; stimulus?: Stimulus;
-  rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; pace: number; paceN: number; level: number | null } };
+  rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; teenMax?: boolean; pace: number; paceN: number; level: number | null } };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -294,11 +294,11 @@ function RxBox({ p, athleteId, coach, self, name }: { p: Planned; athleteId: str
   if (!rx.changes.length && !rx.suggestions.length && !rx.standard) return null;
   return (
     <div className="rxbox">
-      <b>{self ? 'Your version' : `${name}'s version`}{rx.standard ? ': the standard workout today (set by the coach)' : ''}</b>
+      <b>{self ? 'Your version' : `${name}'s version`}{rx.standard ? (rx.teenMax ? ': a true 1-rep max today (approved by the coach)' : ': the standard workout today (set by the coach)') : ''}</b>
       {!rx.standard ? <ul>{rx.changes.map((c, i) => <li key={i}>{c.text}.</li>)}</ul> : null}
       {!rx.standard && rx.suggestions.length ? <p className="small">Still long for the window; easier versions to consider: {rx.suggestions.join('; ')}.</p> : null}
       <p className="small">{rx.paceN >= 5 ? `Predicted from ${self ? 'your' : 'their'} pace (${rx.paceN} timed results, ${rx.pace.toFixed(2)}× the estimate)` : 'Predicted from the estimate (fewer than 5 timed results to set a personal pace)'}{rx.level !== null ? `; conditioning level ${rx.level.toFixed(2)}` : ''}.</p>
-      {coach ? <button type="button" className="btn sm" disabled={m.isPending} onClick={toggle}>{rx.standard ? 'Back to Individual Rx' : `Use the standard reps and rounds for ${self ? 'me' : name} today`}</button> : null}
+      {coach ? <button type="button" className="btn sm" disabled={m.isPending} onClick={toggle}>{rx.standard ? (rx.teenMax ? 'Back to heavy 2–3s' : 'Back to Individual Rx') : rx.teenMax ? `Allow a true 1-rep max for ${self ? 'me' : name} today` : `Use the standard reps and rounds for ${self ? 'me' : name} today`}</button> : null}
     </div>
   );
 }

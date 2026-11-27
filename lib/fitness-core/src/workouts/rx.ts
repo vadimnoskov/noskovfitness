@@ -22,7 +22,7 @@ export const WINDOW_MAX: Record<Exclude<TimeDomain, 'heavy'>, number> = { short:
 const WINDOW_MIN: Record<Exclude<TimeDomain, 'heavy'>, number> = { short: 1, medium: 4, long: 12, endurance: 20 };
 export const rampFactor = (level: number | null | undefined) => (level === null || level === undefined || level >= 1 ? 1 : Math.max(0.6, 0.6 + 0.4 * Math.max(0, level)));
 
-export interface RxChange { kind: 'load' | 'volume' | 'ramp'; text: string }
+export interface RxChange { kind: 'load' | 'volume' | 'ramp' | 'teen'; text: string }
 export interface IndividualRx {
   workout: Workout;
   changes: RxChange[];
@@ -103,9 +103,28 @@ function scaleLoads(w: Workout, f: number): { workout: Workout; text: string } |
  * The person's Individual Rx for a workout. `version` = their load-personalized workout; `tags` = the standard workout's
  * tags (its intended time domain); `pace` = paceFactor; `level` = conditioning level (null = unknown).
  */
-export function individualRx(version: Workout, tags: WorkoutTags | undefined, pace: number, level: number | null): IndividualRx {
+/** A heavy day of single-rep attempts: a 1-rep max, or sets of singles. */
+export function isSingleRepMax(w: Workout): boolean {
+  const s = w.structure;
+  if (s.kind === 'sets') return s.scheme.length > 0 && s.scheme.every((n) => n <= 1);
+  if (s.kind === 'max' && s.what === 'load') {
+    const m = /(\d+)\s*(?:-|\s)?\s*(?:rep max|rm\b)/i.exec(w.name ?? '');
+    return !m || Number(m[1]) <= 1;
+  }
+  return false;
+}
+/** Teens (under 18): heavy 2–3s instead of single-rep maxes (Kids guide; coach, 2026-11-26). */
+export const TEEN_HEAVY_SCHEME = [3, 3, 2, 2, 2];
+
+export function individualRx(version: Workout, tags: WorkoutTags | undefined, pace: number, level: number | null, age?: number | null): IndividualRx {
   const out: IndividualRx = { workout: version, changes: [], suggestions: [] };
   const td = tags?.timeDomain;
+  // Teens: a single-rep max day becomes heavy 3s and 2s at the same lift, unless the coach approves a true 1RM.
+  if (age !== undefined && age !== null && age < 18 && (td === 'heavy' || version.structure.kind === 'max' || version.structure.kind === 'sets') && isSingleRepMax(version)) {
+    out.workout = { ...version, name: version.name ? `${version.name} (teen: heavy 3-3-2-2-2)` : undefined, structure: { kind: 'sets', scheme: TEEN_HEAVY_SCHEME }, scoreType: 'load' };
+    out.changes.push({ kind: 'teen', text: `single-rep max → work up to heavy sets of ${TEEN_HEAVY_SCHEME.join('-')}, no single max attempt: teens do heavy 2–3s, and a true 1RM needs the coach's approval` });
+    return out;
+  }
   if (!td || td === 'heavy' || version.structure.kind === 'sets' || version.structure.kind === 'max') return out;
   let w = version;
   let windowF = 1;

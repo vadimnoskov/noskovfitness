@@ -74,3 +74,19 @@ describe('Individual Rx: rounds only when close to the cut needed', () => {
     expect(scaleVolume(w5, 0.8)!.text).toBe('5 rounds → 4');
   });
 });
+
+describe('teen heavy days', () => {
+  const heavy = { modalityPattern: ['W' as const], movementCount: 1, load: 'heavy' as const, volume: 'low' as const, timeDomain: 'heavy' as const, priority: 'task' as const, pathway: 'phosphagen' as const };
+  const oneRm: Workout = { id: 'h', name: 'Back Squat : 1 Rep Max', structure: { kind: 'max', what: 'load' }, scoreType: 'load', movements: [{ movement: { family: 'back-squat', implement: 'barbell' } }] };
+  it('turns a 1RM into heavy 3s and 2s for under-18s only', () => {
+    const t = individualRx(oneRm, heavy, 1, null, 15);
+    expect(t.workout.structure).toEqual({ kind: 'sets', scheme: [3, 3, 2, 2, 2] });
+    expect(t.changes[0]!.kind).toBe('teen');
+    expect(individualRx(oneRm, heavy, 1, null, 45).changes).toEqual([]);
+  });
+  it('leaves 3RM and 5RM days and sets of 3 alone', () => {
+    expect(individualRx({ ...oneRm, name: 'Back Squat : 3 Rep Max' }, heavy, 1, null, 13).changes).toEqual([]);
+    expect(individualRx({ ...oneRm, structure: { kind: 'sets', scheme: [3, 3, 3] } }, heavy, 1, null, 13).changes).toEqual([]);
+    expect(individualRx({ ...oneRm, name: 'Snatch', structure: { kind: 'sets', scheme: [1, 1, 1, 1] } }, heavy, 1, null, 13).changes[0]!.kind).toBe('teen');
+  });
+});
