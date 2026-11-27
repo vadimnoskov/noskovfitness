@@ -1,15 +1,20 @@
 /**
- * Stored tags are derived data. When the derivation changes (heavy days became their own time-domain category;
- * modality now follows the implement), the stored copies are recomputed once. Cheap check first, so a normal start
- * does no work.
+ * Stored tags are derived data. When the derivation changes (TAGS_VERSION in fitness-core is bumped), the stored
+ * copies are recomputed once and the version is recorded in app_meta. Cheap check first, so a normal start does no work.
  */
-import { deriveTags, movementModality, type Workout, type MovementRef } from '@workspace/fitness-core';
+import { deriveTags, movementModality, TAGS_VERSION, type Workout, type MovementRef } from '@workspace/fitness-core';
 import { sql } from './client';
 
 const chunk = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 
+const ensureMeta = () => sql`CREATE TABLE IF NOT EXISTS app_meta (key text PRIMARY KEY, value text NOT NULL)`;
+
 /** True when stored tags predate the current derivation. */
 export async function tagsAreStale(): Promise<boolean> {
+  await ensureMeta();
+  const [v] = await sql`SELECT value FROM app_meta WHERE key = 'tags_version'`;
+  if (v?.value !== String(TAGS_VERSION)) return true;
+  // Older derivation changes from before the version was recorded.
   const [w] = await sql`
     SELECT EXISTS (SELECT 1 FROM workouts WHERE coalesce(tags->>'timeDomain', '') <> 'heavy'
       AND (structure->>'kind' = 'sets' OR (structure->>'kind' = 'max' AND structure->>'what' = 'load'))) AS stale`;
@@ -50,5 +55,8 @@ export async function refreshDerivedTags(): Promise<{ workouts: number; results:
     const mod = movementModality({ movement: m.ref as MovementRef });
     if (mod !== m.modality) { await sql`UPDATE movements SET modality = ${mod} WHERE key = ${m.key}`; movements++; }
   }
+  await ensureMeta();
+  await sql`INSERT INTO app_meta (key, value) VALUES ('tags_version', ${String(TAGS_VERSION)})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`;
   return { workouts: wUpd.length, results: rUpd.length, movements };
 }

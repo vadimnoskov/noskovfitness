@@ -8,7 +8,8 @@
     "migrate": "tsx src/migrate.ts",
     "import": "tsx src/import.ts",
     "build:library": "tsx src/build-library.ts",
-    "import:library": "tsx src/import-library-cli.ts"
+    "import:library": "tsx src/import-library-cli.ts",
+    "calibrate:estimate": "tsx src/calibrate-estimate.ts"
   },
   "dependencies": {
     "postgres": "^3.4.5",
