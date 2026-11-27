@@ -274,3 +274,19 @@ describe('coach rules 2026-11-28', () => {
     expect(picks.length).toBeLessThanOrEqual(1);
   });
 });
+
+describe('no copying the published programming', () => {
+  it('blocks a third day in the published order and nudges away from a second', () => {
+    const [a, b, c2, d] = C.slice(0, 4).map((x) => x.id) as [string, string, string, string];
+    const next = new Map([[a, new Set([b])], [b, new Set([c2])]]);
+    const hist = [
+      { date: '2026-12-03', workoutIds: [a], tags: [C[0]!.tags], movementKeys: [], heavy: false, benchmarkCount: 0 },
+      { date: '2026-12-04', workoutIds: [b], tags: [C[1]!.tags], movementKeys: [], heavy: false, benchmarkCount: 0 },
+    ];
+    const p = plan(input({ dates: ['2026-12-05'], history: hist, candidates: C.slice(2, 4), publishedNext: next }));
+    expect(p[0]!.candidateId).toBe(d);
+    expect(p[0]!.alternatives.map((x) => x.candidateId)).not.toContain(c2);
+    const two = plan(input({ dates: ['2026-12-05'], history: hist.slice(1), candidates: [C[2]!], publishedNext: next }));
+    expect(two[0]!.score.notes.join(' ')).toMatch(/published order/);
+  });
+});

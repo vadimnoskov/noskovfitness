@@ -140,6 +140,11 @@ export const METHODOLOGY_CARDS: KnowledgeCard[] = [
     engine: { does: 'One main workout per day; workouts over the maximum length are not proposed.', state: 'built', settings: ['rules.maxMinutes'] } }),
 
   // ───────────────────────── Variance and benchmarks
+  C({ id: 'variance-no-copy', area: 'variance', kind: 'rule', strength: 'hard', status: 'confirmed',
+    title: 'Never reproduce a stretch of the published programming',
+    statement: 'The library is a source of single workouts, not of weeks: the plan never runs three days in the published order, and two in a row is avoided.',
+    sources: [{ doc: 'coach', where: 'Chalkboard plan, Phase 6' }],
+    engine: { does: 'The planner never proposes a workout that would make three days in a row follow the published order (each published within 3 days of the one before); two in a row costs a small penalty and is noted.', state: 'built', notePattern: 'published order' } }),
   C({ id: 'var-not-random', area: 'variance', kind: 'principle', strength: 'hard', status: 'confirmed',
     title: 'Constantly varied is not random',
     statement: 'Variance means movements, loads, rep schemes and durations within and across workouts. Effective programming reviews recent workouts and plans variety so that every fitness test is covered; the hopper is a test, not a method.',
