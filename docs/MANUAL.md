@@ -100,6 +100,7 @@ What it's for: the day's workout and everything a person needs to do it.
 - **The workout**, as the coach approved it, and **your version** of it: your loads for the standard Rx, snapped to the weights that exist at the day's location (e.g. 45 lb dumbbells become 40 or 50 lb by person). The coach can override a person's version for a day.
 - **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have a general part, a rehearsal of today's movements at low volume, and a short primer only before short hard workouts. On heavy lifting days the build-up sets are the warm-up. Everyone gets the same warm-up.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
+- **Volume warning** (when it applies): the workout asks for far more of a movement than this person's usual (more than the set multiple of their most reps of it in one workout in the last 12 months), or for a movement they haven't done in 12 months, or they have logged nothing for a month (scale volume for the first two weeks back). Jumping pull-ups and GHD sit-ups warn sooner. Source: L1, mitigating rhabdo risk (pp. 151–152): increase volume gradually; the guide gives no exact numbers, so the thresholds are settings.
 - **Your earlier results** on this workout.
 - **Log your result** (below).
 - The coach can rewrite one person's Plan for today for a day; it replaces the suggested plan until the coach goes back to it.
@@ -147,6 +148,7 @@ What it's for: the weeks ahead.
 - **Skip → drop**: only that day is skipped; the rest of the plan keeps its dates.
 - **Skip → push forward**: that day's workout and every later proposed or approved workout move one training day later, in order. The day you pushed from is left empty and the plan ends one training day later. Nothing is re-planned and the rules are not re-checked on the new dates (planned: flag new rule conflicts after a push).
 - **+ Add** fills a rest day; the planner checks the days before and after it.
+- **Volume warnings**: proposed and approved days from today on show who would face a volume jump (tap to see the details at normal zoom; listed in full at the largest zoom). The same warning appears on that person's Today.
 
 ### 4.2 Calendar and Analysis
 
@@ -166,6 +168,7 @@ What it's for: the weeks ahead.
     - People training together (default 4; used for the equipment check).
     - Avoid the same movement on two consecutive days, but allow it once every N days (default 28).
     - Avoid heavy days back to back, but allow it once every N days (default 28). The two are separate settings.
+    - Volume warnings: warn when a workout asks for more than N× a person's most reps of a movement in one workout in 12 months (default 2), from this many reps up (default 30; half for jumping pull-ups and GHD sit-ups); and after this many days with nothing logged (default 30).
 - **Workout library**: import or update the published library (safe to repeat); lists the workouts the planner won't propose and why.
 
 ### 4.4 How Chalkboard plans (the engine)
@@ -277,6 +280,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Volume-jump warnings on Program and Today, with three new settings. |
 | 2026-11-28 | Fitness: strengths and weaknesses grid (time domain × modality); the planner's weakness focus now uses it, at most once a week. |
 | 2026-11-27 | Time estimates: expanded round-by-round workouts fixed, scale recalibrated; stored tags recomputed on next start. |
 | 2026-11-27 | Fitness: burpees and lifts from the floor calibrated against BTWB. |
@@ -292,4 +296,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page and the weakness grid are built; next are volume-jump warnings, then conditioning level and readiness. Later: a smoothed fitness curve with the area shaded, and a 3D health view.
+See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page, the weakness grid and volume-jump warnings are built; next are conditioning level and readiness. Later: a smoothed fitness curve with the area shaded, and a 3D health view.
