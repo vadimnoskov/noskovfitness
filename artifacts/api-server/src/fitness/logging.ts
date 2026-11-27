@@ -5,7 +5,7 @@
 import { volumeWarningsFor } from './volume';
 import { rxContext, forgetRxContext } from './rx-context';
 import { lightDays, implementsOf } from './warmups';
-import { stimulusFor, individualRx } from '@workspace/fitness-core';
+import { stimulusFor, individualRx, isSingleRepMax } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -27,15 +27,15 @@ export function canActFor(user: User, athleteId: string) {
 
 /** A person, their standing load setting, and the equipment at a program day's location. */
 async function personFor(athleteId: string) {
-  const [a] = await sql`SELECT id, name, sex, units, load_profile FROM athletes WHERE id = ${athleteId}`;
+  const [a] = await sql`SELECT id, name, sex, units, load_profile, birth_year FROM athletes WHERE id = ${athleteId}`;
   if (!a) throw new InputError('Unknown athlete.');
-  return { id: a.id as string, name: a.name as string, sex: a.sex as 'male' | 'female', units: a.units as 'lb' | 'kg', loadProfile: (a.load_profile as LoadProfile | null) ?? null };
+  return { id: a.id as string, name: a.name as string, sex: a.sex as 'male' | 'female', units: a.units as 'lb' | 'kg', loadProfile: (a.load_profile as LoadProfile | null) ?? null, birthYear: (a.birth_year as number | null) ?? null };
 }
 
 /** The person's own version (their Rx) of a program day's workout: profile + location + the coach's override for that day. */
 export async function versionFor(dayId: string, athleteId: string) {
   const [d] = await sql`
-    SELECT d.id, d.status, d.equipment_profile_id, d.warm_up AS day_warm_up, w.warm_up AS workout_warm_up, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
+    SELECT d.id, d.date, d.status, d.equipment_profile_id, d.warm_up AS day_warm_up, w.warm_up AS workout_warm_up, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
            e.id AS eid, e.name AS ename, e.items, v.changes AS override, coalesce(v.rx_standard, false) AS rx_standard
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
@@ -50,9 +50,12 @@ export async function versionFor(dayId: string, athleteId: string) {
   const v = personalize(standard, person, location, override);
   // Individual Rx: scale to the stimulus window and the conditioning ramp, unless the coach chose the standard today.
   const ctx = await rxContext(athleteId);
-  const rx = d.rx_standard ? { workout: v.workout, changes: [], suggestions: [], predicted: undefined } : individualRx(v.workout, d.tags, ctx.pace, ctx.level);
+  // Age on the day, counted as the youngest it can be from the birth year (so a teen is never treated as an adult early).
+  const age = person.birthYear ? Number(String(d.date instanceof Date ? d.date.toISOString() : d.date).slice(0, 4)) - person.birthYear - 1 : null;
+  const teenMax = age !== null && age < 18 && isSingleRepMax(v.workout);
+  const rx = d.rx_standard ? { workout: v.workout, changes: [], suggestions: [], predicted: undefined } : individualRx(v.workout, d.tags, ctx.pace, ctx.level, age);
   return { day: d, person, standard, version: rx.workout, changes: v.changes, override: !!override, location: location?.name,
-    rx: { changes: rx.changes, suggestions: rx.suggestions, predicted: rx.predicted, standard: !!d.rx_standard, pace: ctx.pace, paceN: ctx.paceN, level: ctx.level } };
+    rx: { changes: rx.changes, suggestions: rx.suggestions, predicted: rx.predicted, standard: !!d.rx_standard, teenMax, pace: ctx.pace, paceN: ctx.paceN, level: ctx.level } };
 }
 
 /** The planned workout(s) for a date, as this person's own version, plus what they already logged that day. */
