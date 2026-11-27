@@ -44,6 +44,16 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
 }
 
+type ExtraHeadersGetter = () => Record<string, string> | null | undefined;
+let _extraHeadersGetter: ExtraHeadersGetter | null = null;
+/**
+ * Register a getter for extra headers sent with every request (the web app sends the coach's selected program as
+ * X-Program). Pass `null` to clear it.
+ */
+export function setExtraHeadersGetter(getter: ExtraHeadersGetter | null): void {
+  _extraHeadersGetter = getter;
+}
+
 function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
@@ -356,6 +366,10 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  for (const [key, value] of Object.entries(_extraHeadersGetter?.() ?? {})) {
+    if (value && !headers.has(key)) headers.set(key, value);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

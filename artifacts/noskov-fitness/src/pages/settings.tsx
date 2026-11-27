@@ -3,6 +3,7 @@ import type { ProgrammingPolicy } from '@workspace/fitness-core';
 import { DOW } from '@/lib/dates';
 import { usePage, PageStatus, ActionForm } from '@/lib/api';
 import { LibrarySection } from '@/components/LibrarySection';
+import { ProgramPicker } from '@/lib/program';
 
 const LABELS: Record<string, string> = {
   movementCount: 'Movements per workout', timeDomain: 'Time domain', priority: 'Priority', load: 'Load', modality: 'Modality (share of movements)',
@@ -19,12 +20,12 @@ type SettingsData = { policy: ProgrammingPolicy; group: { training_days: number[
 export default function Settings() {
   const sp = Object.fromEntries(new URLSearchParams(useSearch())) as { saved?: string };
   const q = usePage<SettingsData>({ screen: 'settings' });
-  if (!q.data) return <><h1>Programming settings</h1><PageStatus q={q} /></>;
+  if (!q.data) return <><h1>Programming settings</h1><ProgramPicker /><PageStatus q={q} /></>;
   const { policy, group, profiles, published } = q.data;
   const pub = (g: string, k: string) => (published ? (published.blend as unknown as Record<string, Record<string, number>>)[g]?.[k] : undefined);
   return (
     <>
-      <h1>Programming settings</h1>
+      <h1>Programming settings</h1><ProgramPicker />
       <p className="small">Everything the engine uses. Targets are the share (%) of workouts you want in each bucket over the last {policy.windowDays} days; each group should add up to about 100. Version {policy.version}.</p>
       {sp.saved ? <p className="ok">Saved. New proposals use these settings; approved days are not changed.</p> : null}
       {published ? (

@@ -98,6 +98,38 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
         "401": { description: Sign-in required }
+  /fitness/people:
+    get:
+      operationId: getPeople
+      summary: Coach - the programs they coach, with athletes, locations and settings
+      responses:
+        "200":
+          description: Programs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/people/{action}:
+    post:
+      operationId: peopleAction
+      summary: Coach - add or change an athlete, a program or a location
+      parameters:
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+            enum: [addAthlete, editAthlete, editProgram, saveLocation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FitnessForm" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/account/password:
     post:
       operationId: changeMyPassword

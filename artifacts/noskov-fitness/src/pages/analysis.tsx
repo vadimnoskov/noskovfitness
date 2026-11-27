@@ -2,6 +2,7 @@ import { Link, useSearch } from 'wouter';
 import { addDays, weekStart, short } from '@/lib/dates';
 import type { WorkoutTags } from '@workspace/fitness-core';
 import { usePage, PageStatus } from '@/lib/api';
+import { ProgramPicker } from '@/lib/program';
 
 const WINDOWS = { '4w': 4, '12w': 12, '52w': 52 } as const;
 /** Reference targets: the default policy (the published programming's measured mix). */
@@ -24,7 +25,7 @@ export default function Analysis() {
   const end = latest.data?.latestDate;
   const start = end ? addDays(weekStart(end), -7 * (n - 1)) : undefined;
   const q = usePage<AnalysisData>({ screen: 'analysis', from: start, to: end }, !!end);
-  if (!end || !start || !q.data) return <><h1>Programming analysis</h1><PageStatus q={end ? q : latest} /></>;
+  if (!end || !start || !q.data) return <><h1>Programming analysis</h1><ProgramPicker /><PageStatus q={end ? q : latest} /></>;
   const per = n === 52 ? 4 : 1; // year: 13 columns of 4 weeks
   const cols = Math.ceil(n / per);
   const colStart = (c: number) => addDays(start, c * 7 * per);
@@ -51,7 +52,7 @@ export default function Analysis() {
 
   return (
     <>
-      <h1>Programming analysis</h1>
+      <h1>Programming analysis</h1><ProgramPicker />
       <p className="small">Vadim's sessions from {short(start)} to {short(end)}, {end.slice(0, 4)} ({mix.length} workouts). Targets are drafts until you set them.</p>
       <div className="bar">{(Object.keys(WINDOWS) as (keyof typeof WINDOWS)[]).map((k) => <Link key={k} className="btn" aria-current={k === win} href={`/analysis?w=${k}`}>{k === '52w' ? 'Year' : `Last ${WINDOWS[k]} weeks`}</Link>)}</div>
       <div className="grid2">

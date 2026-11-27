@@ -258,3 +258,11 @@ details.why{margin:6px 0;border-top:1px dashed var(--line);padding-top:4px}detai
 }
 /* Today: the day's workout stands out from the boxes around it. */
 .dayblock>.wcard{background:var(--panel)}
+/* Athlete and program pickers, Athletes page */
+.athletepick,.programpick{display:inline-flex;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+.athletepick select,.programpick select{min-height:40px;font-size:15px;max-width:70vw}
+section.program{border-top:1px solid var(--line);padding-top:6px}
+.members{padding-left:18px}.members li{margin:4px 0}
+.equip{border-collapse:collapse;font-size:14px}.equip td,.equip th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.equip input[name^="loads"],.equip input[name^="note"]{width:min(260px,40vw);margin:1px 0}
+.stack{display:grid;gap:8px;max-width:720px}

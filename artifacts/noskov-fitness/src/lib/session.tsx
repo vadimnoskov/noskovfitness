@@ -4,7 +4,11 @@ import { useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 import { loginHref } from '@/lib/api';
 
 export interface Person { id: string; name: string; sex: 'male' | 'female'; units: 'lb' | 'kg' }
-export interface Me { user: Person & { isCoach: boolean; canLogForOthers: boolean; hasPassword: boolean }; logFor: Person[]; today: string }
+export interface Me { user: Person & { isCoach: boolean; canLogForOthers: boolean; hasPassword: boolean }; logFor: (Person & { program?: string })[];
+  /** Programs of the people listed; `coached` = this person coaches it (Program, Settings…). */
+  programs?: { id: string; name: string; coached: boolean }[]; today: string }
+/** True for the head coach and anyone who coaches a program. */
+export const isCoaching = (me: Me | undefined) => !!me && (me.user.isCoach || !!me.programs?.some((p) => p.coached));
 
 const Ctx = createContext<Me | undefined>(undefined);
 export const useMe = () => useContext(Ctx);

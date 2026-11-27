@@ -12,6 +12,8 @@ export const athletes = pgTable('athletes', {
   units: text('units').notNull().default('lb'), isCoach: boolean('is_coach').notNull().default(false),
   canLogForOthers: boolean('can_log_for_others').notNull().default(false),
   /** scrypt hash of the athlete's own password; null until the coach sets one. */
+  /** Full birth date when known (clients); birth_year stays for the family. */
+  birthDate: date('birth_date'),
   passwordHash: text('password_hash'),
   /** Standing load setting: fraction of the standard Rx per kind of equipment, e.g. {"dumbbell":0.6}. Null = full Rx. */
   loadProfile: jsonb('load_profile'),
@@ -25,6 +27,8 @@ export const groups = pgTable('groups', {
   id: text('id').primaryKey(), name: text('name').notNull(),
   trainingDays: integer('training_days').array().notNull().default(sql`'{1,2,4,5,6}'::integer[]`),
   defaultEquipmentId: text('default_equipment_id'),
+  /** The program's coach (the head coach coaches every program). Null = the head coach. */
+  coachId: text('coach_id'),
 });
 export const groupMembers = pgTable('group_members', {
   groupId: text('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' }),

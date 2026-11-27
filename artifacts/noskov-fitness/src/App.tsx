@@ -17,13 +17,15 @@ import History from '@/pages/history';
 import WorkoutPage from '@/pages/workout';
 import Account from '@/pages/account';
 import FitnessPage from '@/pages/fitness';
-import { SessionProvider, useMe } from '@/lib/session';
+import { SessionProvider, useMe, isCoaching } from '@/lib/session';
+import '@/lib/program';
+import AthletesPage from '@/pages/athletes';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
 
 const TITLES: Record<string, string> = {
   '/today': 'Today', '/history': 'History', '/account': 'Account', '/calendar': 'Program calendar', '/program': 'Program',
-  '/analysis': 'Programming analysis', '/benchmarks': 'Benchmarks', '/settings': 'Programming settings', '/login': 'Sign in',
+  '/analysis': 'Programming analysis', '/athletes': 'Athletes', '/benchmarks': 'Benchmarks', '/settings': 'Programming settings', '/login': 'Sign in',
 };
 
 function Layout({ children }: { children: ReactNode }) {
@@ -33,6 +35,7 @@ function Layout({ children }: { children: ReactNode }) {
   useEffect(() => { document.title = TITLES[path] ? `${TITLES[path]} · Noskov Fitness` : 'Noskov Fitness'; setMenu(false); }, [path]);
   if (path === '/login') return <main>{children}</main>;
   const coach = !!me?.user.isCoach;
+  const coaching = isCoaching(me);
   return (
     <>
       <header className="top">
@@ -46,6 +49,7 @@ function Layout({ children }: { children: ReactNode }) {
           <Link href="/history">History</Link>
           <Link href="/benchmarks">Benchmarks</Link>
           <Link href="/fitness">Fitness</Link>
+          {coaching ? <Link href="/athletes">Athletes</Link> : null}
           {coach ? (
             <>
               <Link href="/program">Program</Link>
@@ -65,10 +69,10 @@ function Layout({ children }: { children: ReactNode }) {
 }
 
 /** Planning screens are for the coach only (for now). */
-function CoachOnly({ children }: { children: ReactNode }) {
+function CoachOnly({ children, any }: { children: ReactNode; any?: boolean }) {
   const me = useMe();
   if (!me) return <p className="empty">Loading…</p>;
-  if (!me.user.isCoach) return <Redirect to="/today" replace />;
+  if (!(any ? isCoaching(me) : me.user.isCoach)) return <Redirect to="/today" replace />;
   return <>{children}</>;
 }
 
@@ -83,6 +87,7 @@ function Router() {
         <Route path="/account" component={Account} />
         <Route path="/benchmarks" component={Benchmarks} />
         <Route path="/fitness" component={FitnessPage} />
+        <Route path="/athletes"><CoachOnly any><AthletesPage /></CoachOnly></Route>
         <Route path="/calendar"><CoachOnly><CalendarPage /></CoachOnly></Route>
         <Route path="/program"><CoachOnly><ProgramPage /></CoachOnly></Route>
         <Route path="/analysis"><CoachOnly><Analysis /></CoachOnly></Route>

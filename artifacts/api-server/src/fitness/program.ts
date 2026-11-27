@@ -35,7 +35,7 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
   const today = new Date().toISOString().slice(0, 10);
   const issues = await checkPlannedDays(groupId, from < today ? today : from, to);
   const vol = await volumeWarningsFor(members as unknown as { id: string; name: string }[],
-    rows.filter((r) => r.status === 'proposed' || r.status === 'approved').map((r) => ({ date: r.date as string, workout: { id: r.wid, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type } as Workout })), today);
+    rows.filter((r) => r.status === 'proposed' || r.status === 'approved').map((r) => ({ date: r.date as string, workout: { id: r.wid, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type } as Workout })), today, groupId);
   return rows.map((r) => {
     const workout: Workout = { id: r.wid, name: r.name ?? undefined, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type };
     return {

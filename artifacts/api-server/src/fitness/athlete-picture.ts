@@ -6,14 +6,18 @@ import { sql } from '@workspace/fitness-db';
 import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, movementWeaknesses, weaknessList, detectedWhy, SKILL_MOVEMENTS, type Workout } from '@workspace/fitness-core';
 import { forgetWeaknesses } from './rx-context';
 import { InputError } from './logging';
+import { programsFor } from './data';
 import type { User } from './accounts';
 
-function allowed(user: User, athleteId: string) {
-  if (!user.isCoach && user.id !== athleteId) throw new InputError('You can only see your own numbers.', 403);
+/** Yourself, or someone you coach (family members who log for others see only their own numbers here). */
+async function allowed(user: User, athleteId: string) {
+  if (user.isCoach || user.id === athleteId) return;
+  const coached = (await programsFor(user)).some((p) => p.members.some((m) => m.id === athleteId));
+  if (!coached) throw new InputError('You can only see your own numbers.', 403);
 }
 
 export async function getMeasurements(user: User, athleteId: string) {
-  allowed(user, athleteId);
+  await allowed(user, athleteId);
   const rows = await sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId} ORDER BY date DESC`;
   const latest = Object.fromEntries(DIM_KINDS.map((k) => [k, rows.find((r) => r.kind === k) ?? null]));
   const counts: Record<string, number> = {}, range: Record<string, string> = {};
@@ -27,7 +31,7 @@ export async function getMeasurements(user: User, athleteId: string) {
 
 /** Save one set of measurements (any of the six) for a date. Lengths in in or cm, weight in lb or kg. */
 export async function saveMeasurements(user: User, input: { athleteId: string; date: string; lengthUnit: string; weightUnit: string; values: Record<string, number> }) {
-  allowed(user, input.athleteId);
+  await allowed(user, input.athleteId);
   if (!/^\d{4}-\d\d-\d\d$/.test(input.date)) throw new InputError('Choose a valid date.');
   if (!['in', 'cm'].includes(input.lengthUnit) || !['lb', 'kg'].includes(input.weightUnit)) throw new InputError('Unknown unit.');
   const entries = Object.entries(input.values).filter(([, v]) => v !== null && v !== undefined && Number.isFinite(v));
@@ -49,7 +53,7 @@ export async function saveMeasurements(user: User, input: { athleteId: string; d
 
 /** Bodyweight history from a BTWB export. Existing weights on the same dates are replaced; other dates are kept. */
 export async function importWeights(user: User, input: { athleteId: string; csv: string }) {
-  allowed(user, input.athleteId);
+  await allowed(user, input.athleteId);
   let rows;
   try { rows = parseBtwbWeights(input.csv); } catch (e) { throw new InputError((e as Error).message); }
   rows = rows.filter((r) => r.value > 0 && r.value < (r.unit === 'kg' ? 250 : 550));
@@ -63,7 +67,7 @@ export async function importWeights(user: User, input: { athleteId: string; csv:
 
 /** One-tap check-in for a date; 0 removes it. */
 export async function saveCheckIn(user: User, input: { athleteId: string; date: string; feeling: number }) {
-  allowed(user, input.athleteId);
+  await allowed(user, input.athleteId);
   if (!/^\d{4}-\d\d-\d\d$/.test(input.date)) throw new InputError('Choose a valid date.');
   if (!Number.isInteger(input.feeling) || input.feeling < 0 || input.feeling > 5) throw new InputError('Choose 1 to 5.');
   if (input.feeling === 0) await sql`DELETE FROM check_ins WHERE athlete_id = ${input.athleteId} AND date = ${input.date}`;
@@ -92,7 +96,7 @@ export async function setWeaknesses(user: User, input: { athleteId: string; keys
 }
 
 export async function getAthletePicture(user: User, athleteId: string) {
-  allowed(user, athleteId);
+  await allowed(user, athleteId);
   const [[athlete], dims, results] = await Promise.all([
     sql`SELECT id, name, sex, conditioning_prior, weaknesses FROM athletes WHERE id = ${athleteId}`,
     sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId}`,

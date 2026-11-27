@@ -16,6 +16,7 @@ import * as knowledge from '../fitness/knowledge';
 import * as knowledgeAsk from '../fitness/knowledge-ask';
 import * as teaching from '../fitness/knowledge-teach';
 import * as picture from '../fitness/athlete-picture';
+import * as people from '../fitness/people';
 import { libraryGz, getPublishedProfile } from '../fitness/library-data';
 
 const router: IRouter = Router();
@@ -102,12 +103,17 @@ router.get('/fitness/pages', async (req, res) => {
   const latestDate = await data.getLatestDate();
   const start = from ?? `${latestDate.slice(0, 4)}-01-01`, end = to ?? `${latestDate.slice(0, 4)}-12-31`;
   if (start > end || Date.parse(end) - Date.parse(start) > 3660 * 86400000) { res.status(400).json({ error: 'Choose a valid date range of up to 10 years.' }); return; }
+  // Coach screens are about one program (the X-Program header; the family's by default).
+  let g = data.GROUP_ID;
+  if (user && COACH_SCREENS.has(screen) || (user && screen === 'benchmarks' && (user.isCoach || req.get('x-program')))) {
+    try { g = await data.programFor(user!, req.get('x-program')); } catch { res.status(403).json({ error: 'You do not coach this program.' }); return; }
+  }
   let payload: Record<string, unknown>;
   switch (screen) {
-    case 'calendar': payload = { latestDate, days: [...(await data.getDays(start, end)).entries()] }; break;
-    case 'analysis': payload = { latestDate, use: await data.getMovementUse(start, end), mix: await data.getMix(start, end) }; break;
+    case 'calendar': payload = { latestDate, days: [...(await data.getDays(start, end, g)).entries()] }; break;
+    case 'analysis': { const who = await data.analysisAthlete(g); payload = { latestDate, use: await data.getMovementUse(start, end, who), mix: await data.getMix(start, end, who) }; break; }
     case 'benchmarks': {
-      const all = await data.getAthletes();
+      const all = await data.getAthletes(user && !user.isCoach && !req.get('x-program') ? await data.programOfAthlete(user.id) : g);
       const mineOnly = user && !user.isCoach;
       const rows = await data.getBenchmarks();
       payload = {
@@ -118,12 +124,12 @@ router.get('/fitness/pages', async (req, res) => {
     }
     case 'program':
     case 'settings': {
-      const group = await getGroup(data.GROUP_ID);
+      const group = await getGroup(g);
       if (!group) { res.status(503).json({ error: 'The family data has not been imported yet. Restore the existing private database export to use Program and Settings. No training records have been created or changed.' }); return; }
-      const profiles = await getEquipmentProfiles(data.GROUP_ID);
+      const profiles = await getEquipmentProfiles(g);
       payload = screen === 'program'
-        ? { days: await getPlannedDays(data.GROUP_ID, start, end), profiles, group }
-        : { policy: await getPolicy(data.GROUP_ID), profiles, group, published: getPublishedProfile() };
+        ? { days: await getPlannedDays(g, start, end), profiles, group }
+        : { policy: await getPolicy(g), profiles, group, published: getPublishedProfile() };
       break;
     }
   }
@@ -152,9 +158,17 @@ router.post('/fitness/actions/:action', async (req, res) => {
   if (action === 'setLocation' && !f.get('equipmentId')) { res.status(400).json({ error: 'Select a location.' }); return; }
   if (action === 'insert' && !date(f.get('date'))) { res.status(400).json({ error: 'Choose a valid date.' }); return; }
   if (action === 'skip' && !['drop', 'push'].includes(String(f.get('mode')))) { res.status(400).json({ error: 'Choose skip or push forward.' }); return; }
-  if (!await getGroup(data.GROUP_ID)) { res.status(503).json({ error: 'Restore the family database export before changing the program.' }); return; }
-  if (['propose', 'replan', 'insert', 'setLocation', 'neverPropose'].includes(action) && !(await getEquipmentProfiles(data.GROUP_ID)).length) {
-    res.status(409).json({ error: 'Import the family equipment profiles before proposing workouts.' }); return;
+  // The program the action is for (X-Program header), and every program day it names must belong to it.
+  let g: string;
+  try { g = await data.programFor(userOf(res)!, req.get('x-program')); } catch { res.status(403).json({ error: 'You do not coach this program.' }); return; }
+  f.set('group', g);
+  if (f.get('id') && action !== 'deleteWarmUpTemplate') {
+    const [d] = await sql`SELECT group_id FROM program_days WHERE id = ${String(f.get('id'))}`;
+    if (!d || d.group_id !== g) { res.status(404).json({ error: 'That program day is not in this program.' }); return; }
+  }
+  if (!await getGroup(g)) { res.status(503).json({ error: 'Restore the family database export before changing the program.' }); return; }
+  if (['propose', 'replan', 'insert', 'setLocation', 'neverPropose'].includes(action) && !(await getEquipmentProfiles(g)).length) {
+    res.status(409).json({ error: 'Add a location with its equipment (Athletes) before proposing workouts.' }); return;
   }
   if (['propose', 'approveAll', 'replan'].includes(action) && !date(f.get('from'))) { res.status(400).json({ error: 'Choose a start date.' }); return; }
   if (['approveAll', 'replan'].includes(action) && (!date(f.get('to')) || String(f.get('from')) > String(f.get('to')))) { res.status(400).json({ error: 'Choose a valid end date.' }); return; }
@@ -164,20 +178,40 @@ router.post('/fitness/actions/:action', async (req, res) => {
 
 
 // ---------- people ----------
+function wrap(fn: (req: any, res: any) => Promise<unknown>) {
+  return async (req: any, res: any, next: any) => {
+    try { const out = await fn(req, res); if (out !== undefined) res.json(out); }
+    catch (e) { if (e instanceof logging.InputError) res.status(e.status).json({ error: e.message }); else next(e); }
+  };
+}
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 /** The athlete a request is about: yourself, or someone you may log for. */
-const subject = (res: { locals: Record<string, unknown> }, requested?: string) => {
+const subject = async (res: { locals: Record<string, unknown> }, requested?: string) => {
   const user = userOf(res)!;
   const id = requested || user.id;
-  if (!logging.canActFor(user, id)) throw new logging.InputError('You can only see your own results.', 403);
+  if (!await logging.canActFor(user, id)) throw new logging.InputError('You can only see your own results.', 403);
   return id;
 };
 
 router.get('/fitness/me', async (_req, res) => {
   const user = userOf(res)!;
-  const family = (user.canLogForOthers || user.isCoach ? await accounts.listAthletes() : [user]).map((a) => ({ id: a.id, name: a.name, sex: a.sex, units: a.units }));
-  res.json({ user, logFor: family, today: new Date().toISOString().slice(0, 10) });
+  // Everyone this person may see, each with their program; and the programs they coach (for the program picker).
+  const visible = await data.visibleAthleteIds(user);
+  const programs = await data.allPrograms();
+  const programOf = new Map(programs.flatMap((p) => p.members.map((m) => [m.id, p.id] as const)));
+  const logFor = (await accounts.listAthletes()).filter((a) => visible.has(a.id))
+    .map((a) => ({ id: a.id, name: a.name, sex: a.sex, units: a.units, program: programOf.get(a.id) ?? data.GROUP_ID }));
+  const coaches = await data.programsFor(user);
+  res.json({ user, logFor, programs: programs.filter((p) => logFor.some((a) => a.program === p.id)).map((p) => ({ id: p.id, name: p.name, coached: coaches.some((c) => c.id === p.id) })),
+    today: new Date().toISOString().slice(0, 10) });
 });
+
+router.get('/fitness/people', wrap(async (_req, res) => people.getPeople(userOf(res)!)));
+router.post('/fitness/people/:action', wrap(async (req, res) => {
+  const body = FitnessActionBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Invalid form.');
+  return people.peopleAction(userOf(res)!, String(req.params.action), body.data);
+}));
 
 router.post('/fitness/account/password', async (req, res) => {
   const user = userOf(res)!;
@@ -226,21 +260,17 @@ router.post('/fitness/athletes/:athleteId/password', async (req, res) => {
 });
 
 // ---------- logging and history ----------
-const wrap = (fn: (req: any, res: any) => Promise<unknown>) => async (req: any, res: any, next: any) => {
-  try { const out = await fn(req, res); if (out !== undefined) res.json(out); }
-  catch (e) { if (e instanceof logging.InputError) res.status(e.status).json({ error: e.message }); else next(e); }
-};
 
 router.get('/fitness/today', wrap(async (req, res) => {
   const p = GetTodayQueryParams.safeParse(req.query);
   if (!p.success || !date(p.data.date)) throw new logging.InputError('Choose a valid date.');
-  return logging.getToday(p.data.date, subject(res, p.data.athleteId));
+  return logging.getToday(p.data.date, await subject(res, p.data.athleteId));
 }));
 
 router.get('/fitness/coaching-note', wrap(async (req, res) => {
   const p = GetCoachingNoteQueryParams.safeParse(req.query);
   if (!p.success || !UUID.test(p.data.dayId)) throw new logging.InputError('Select a program day.');
-  return logging.getCoachingNote(p.data.dayId, subject(res, p.data.athleteId));
+  return logging.getCoachingNote(p.data.dayId, await subject(res, p.data.athleteId));
 }));
 
 router.post('/fitness/plan-note', wrap(async (req, res) => {
@@ -366,13 +396,13 @@ router.post('/fitness/library/import', wrap(async (_req, res) => {
 router.get('/fitness/history', wrap(async (req, res) => {
   const p = GetHistoryQueryParams.safeParse(req.query);
   if (!p.success) throw new logging.InputError('Invalid history filter.');
-  return logging.getHistory(subject(res, p.data.athleteId), { q: p.data.q?.slice(0, 80), offset: p.data.offset, limit: p.data.limit });
+  return logging.getHistory(await subject(res, p.data.athleteId), { q: p.data.q?.slice(0, 80), offset: p.data.offset, limit: p.data.limit });
 }));
 
 router.get('/fitness/workout', wrap(async (req, res) => {
   const p = GetWorkoutDetailQueryParams.safeParse(req.query);
   if (!p.success || !UUID.test(p.data.workoutId)) throw new logging.InputError('Invalid workout.');
-  return logging.getWorkoutDetail(p.data.workoutId, subject(res, p.data.athleteId));
+  return logging.getWorkoutDetail(p.data.workoutId, await subject(res, p.data.athleteId));
 }));
 
 router.get('/fitness/workout-search', wrap(async (req) => {
