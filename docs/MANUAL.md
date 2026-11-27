@@ -99,7 +99,13 @@ The rules are enforced by the server, not only hidden in the menu.
 What it's for: the day's workout and everything a person needs to do it.
 
 - **The workout**, as the coach approved it, and **your version** of it: your loads for the standard Rx, snapped to the weights that exist at the day's location (e.g. 45 lb dumbbells become 40 or 50 lb by person). The coach can override a person's version for a day.
-- **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have a general part, a rehearsal of today's movements at low volume, and a short primer only before short hard workouts. On heavy lifting days the build-up sets are the warm-up. Everyone gets the same warm-up.
+- **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have:
+    - **General**: easy cardio and a few bodyweight basics.
+    - **Complex** (L2, "Example Warm-Ups to Address Weaknesses"): 2–3 progressive rounds of 5–15 reps, chosen against the day's workout: a barbell, dumbbell or kettlebell complex on gymnastics days, a rings or parallettes routine on weightlifting days, Basic Body Weight rounds otherwise. The implement rotates and only equipment at the day's location is used. None on heavy days (the build-up sets are the warm-up).
+    - **Skill** (about 5 minutes): from the current 5-week skill block, alternating handstands and muscle-up / pull-up strength, with a different focus each week and three levels to pick from (building, wall/strict, free/transitions). If the day's workout already works the block's skill, the other one is practised that day, so the warm-up never tires the workout.
+    - **Specific**: a rehearsal of today's movements at low volume, and a short primer only before short hard workouts.
+    - **Skill practice** (10–15 minutes, the week's lightest day only): on the non-heavy day with the shortest workout, if it is 12 minutes or less. Weeks without such a day have none.
+    Everyone gets the same warm-up; the levels let each person choose.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
 - **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
 - **Stimulus**: the intended effort, from the time domain (sprint under 4 minutes, hard and fast 4–12, sustained 12–20, long 20+, intervals, or a heavy day with sets of 1–5 at about 80–85%+ and long rests); a completion window (from your own earlier times on this workout, ±10%, else the calibrated estimate) with when to scale; expected rounds for an AMRAP; suggested set breaks on demanding movements (at most about one break per 7 reps, as in the L1 Fran lesson plan: 21 → 3, 15 → 2, 9 → 1, with an example split); and checkpoints per round or per set. Easy movements (air squats, sit-ups, rowing…) get no break advice.
@@ -291,6 +297,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 5: warm-up complexes (L2), 5-week skill blocks (handstand; muscle-up / pull-up strength) and a weekly light-day skill practice. |
 | 2026-11-28 | Heavy days need a load (weighted pull-ups/dips count, unweighted don't); workouts over 40 minutes at most once in 90 days. |
 | 2026-11-28 | Planner v2 step 4: Stimulus on Today (intent, completion window, set breaks, checkpoints). |
 | 2026-11-28 | Planner v2 step 3: soft week outline: one heavy day and one interval day a week, on changing weekdays (no fixed sequence), with a new weight. |

@@ -14,7 +14,23 @@ import type { Workout, MovementPrescription, WorkoutTags } from '../model/types'
 import { FAMILY_BY_ID, type Implement } from '../movements/catalog';
 import { distinctMovements, deriveTags } from './tags';
 
-export interface WarmUp { minutes: number; general: string[]; specific: string[]; primer?: string }
+export interface WarmUp {
+  minutes: number; general: string[]; specific: string[]; primer?: string;
+  /** L2 complex, 2–3 progressive rounds of 5–15 reps, chosen against the workout. */
+  complex?: { title: string; rounds: string[] };
+  /** Skill segment from the current skill block, with options by level. */
+  skill?: { title: string; lines: string[] };
+  /** Longer skill practice on the week's lightest day (10–15 min, after the warm-up). */
+  practice?: string[];
+}
+export interface WarmUpOptions {
+  /** Date of the session: picks the skill block and rotates the complex. */
+  date?: string;
+  /** Implements available where the session happens (complexes that need others are skipped). */
+  implementsAvailable?: Set<string>;
+  /** True on the week's lightest day: add a 10–15 minute skill practice. */
+  longPractice?: boolean;
+}
 
 const implementOf = (m: MovementPrescription): Implement | undefined => m.movement.implement ?? FAMILY_BY_ID[m.movement.family]?.implements[0];
 
@@ -95,7 +111,76 @@ function closingLine(w: Workout, heavy: boolean, long: boolean): string {
   }
 }
 
-export function suggestWarmUp(w: Workout, tags: WorkoutTags = deriveTags(w)): WarmUp {
+// ───────────── Complexes (L2 Training Guide, "Example Warm-Ups to Address Weaknesses", pp. 61–62)
+const COMPLEXES: Record<string, { title: string; needs?: string; rounds: string[] }> = {
+  barbell: { title: 'Barbell complex (empty bar or light), 5–10 reps each', needs: 'barbell', rounds: ['Round 1: deadlift, hang power clean, front squat, press, thruster', 'Round 2: deadlift, hang power snatch, overhead squat, snatch'] },
+  dumbbell: { title: 'Dumbbell complex (one or two light dumbbells), 5–10 reps each', needs: 'dumbbell', rounds: ['Round 1: deadlift, hang power clean, front squat, press, thruster', 'Round 2: deadlift, hang power snatch, overhead squat, snatch, Turkish get-up'] },
+  kettlebell: { title: 'Kettlebell complex (light), 5–10 reps each', needs: 'kettlebell', rounds: ['Swing, clean, clean and press, snatch, Turkish get-up (2 rounds, a little harder the second time)'] },
+  rings: { title: 'Rings routine: go down the list, leave out what you can\'t do well yet', needs: 'rings', rounds: ['Tuck or pike to inverted hang, skin the cat', 'Strict muscle-up to support to L-sit (or ring rows and support holds)', 'Ring swings; front-lever and back-lever attempts if you have them'] },
+  parallettes: { title: 'Parallettes routine: go down the list, leave out what you can\'t do well yet', needs: 'parallettes', rounds: ['Push-up or dive-bomber push-up; shoot-through to push-up to frog stand', 'L-sit pass-through to tuck planche or to shoulder stand', 'Tuck up or press to handstand; handstand pirouette walk if you have it'] },
+  bbw: { title: 'Basic Body Weight, 5–10 reps each, each round a little harder', rounds: ['Round 1: squat, push-up, sit-up, strict pull-up, hip extension', 'Round 2: lunge, strict dip, V-up, kipping pull-up, back extension', 'Round 3 (as skill allows): pistol, handstand push-up, toes-to-bar, strict muscle-up, hip and back extension'] },
+};
+const hashStr = (str: string) => { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+
+/** The complex that complements the workout (L2 template: weightlifting warm-ups on gymnastics days and vice versa). */
+function complexFor(tags: WorkoutTags, date: string, have?: Set<string>) {
+  const mods = new Set(tags.modalityPattern);
+  const kind = mods.has('W') && !mods.has('G') ? ['rings', 'parallettes'] : mods.has('G') && !mods.has('W') ? ['barbell', 'dumbbell', 'kettlebell'] : ['bbw'];
+  const usable = kind.filter((k) => !COMPLEXES[k]!.needs || !have || have.has(COMPLEXES[k]!.needs!));
+  const pick = usable.length ? usable[hashStr(date) % usable.length]! : 'bbw';
+  return COMPLEXES[pick]!;
+}
+
+// ───────────── Skill blocks (coach, 2026-11-28: handstands and muscle-up / pull-up strength first; 5-week blocks)
+const BLOCK_WEEKS = 5;
+const SKILLS = {
+  handstand: {
+    title: 'Handstand',
+    uses: ['hspu', 'handstand-walk', 'handstand-hold', 'wall-walk'],
+    weeks: ['holds and lines', 'kick-ups and a safe exit', 'shoulder taps and weight shifts', 'walks and pirouettes', 'pressing: negatives and kipping practice'],
+    levels: ['Building: hollow hold and plank 3 × 20 s, then 3 × 5 s holds against a wall or box', 'Wall: kick up to the wall 3–5 times, holds 3 × 20–30 s, practise the exit (pirouette or forward roll)', 'Free: freestanding kick-up attempts and the week\'s focus, 5–8 short tries with full rest'],
+    source: 'L1 handstand progression: hollow and plank strength, short wall holds, an exit strategy, then freestanding; headstand, kick-up to wall, parallettes, pirouettes, walks, presses',
+  },
+  muscleUp: {
+    title: 'Muscle-up and pull-up strength',
+    uses: ['pull-up', 'muscle-up', 'dip', 'ring-row', 'rope-climb'],
+    weeks: ['strict pull-ups', 'strict dips and support holds', 'slow negatives', 'kip swings and hip drive', 'false grip and transitions'],
+    levels: ['Building: ring rows and box-supported dips, 3 × 5, slow and strict', 'Strict: strict pull-ups and dips 3 × 3–5, well short of failure (muscle-up practice starts around 15 strict of each)', 'Transitions: low-ring or banded transition drills, 3–5 strict or kipping attempts with full rest'],
+    source: 'L1 gymnastics benchmarks: muscle-up practice begins around 15 strict pull-ups and 15 dips',
+  },
+} as const;
+type SkillKey = keyof typeof SKILLS;
+
+/** The skill block for a date: 5-week blocks alternating handstand and muscle-up / pull-up strength, and the week in it. */
+export function skillBlock(date: string): { skill: SkillKey; week: number } {
+  // Weeks counted from Mondays, so a block never changes in the middle of a training week.
+  const t = Date.parse(date), monday = t - ((new Date(t).getUTCDay() + 6) % 7) * 86400000;
+  const weekNo = Math.round((monday - Date.parse('1970-01-05')) / (7 * 86400000));
+  const block = Math.floor(weekNo / BLOCK_WEEKS);
+  return { skill: block % 2 === 0 ? 'handstand' : 'muscleUp', week: weekNo % BLOCK_WEEKS };
+}
+
+function skillSegment(w: Workout, date: string, long: boolean): { title: string; lines: string[]; practice?: string[] } {
+  const fams = new Set(w.movements.map((m) => m.movement.family));
+  const b = skillBlock(date);
+  // No pre-fatigue (L1): if today's workout already works this skill, practise the other one today.
+  const other: SkillKey = b.skill === 'handstand' ? 'muscleUp' : 'handstand';
+  const usesBlock = SKILLS[b.skill].uses.some((f) => fams.has(f));
+  const usesOther = SKILLS[other].uses.some((f) => fams.has(f));
+  const key: SkillKey = usesBlock && !usesOther ? other : b.skill;
+  const sk = SKILLS[key];
+  const focus = sk.weeks[b.week]!;
+  const light = usesBlock && usesOther;
+  const lines = [
+    `This week's focus: ${focus}${key !== b.skill ? ` (today's workout already works ${SKILLS[b.skill].title.toLowerCase()}, so this one instead)` : ''}.`,
+    ...sk.levels.map((l) => `- ${l}`),
+    light ? 'Today\'s workout uses these muscles: technique only, 2–3 easy reps per set.' : 'About 5 minutes, quality only, never to failure.',
+  ];
+  const practice = long ? [`${sk.title}, 10–15 minutes after the warm-up or after the workout: 6–8 short sets of the week's focus at your level, full rest between sets, stop when quality drops.`] : undefined;
+  return { title: `Skill: ${sk.title} (week ${b.week + 1} of ${BLOCK_WEEKS})`, lines: [...lines, `Source: ${sk.source}.`], ...(practice ? { practice } : {}) };
+}
+
+export function suggestWarmUp(w: Workout, tags: WorkoutTags = deriveTags(w), opts: WarmUpOptions = {}): WarmUp {
   const heavy = w.scoreType === 'load';
   // Over ~20 min the first round finishes the warm-up; under ~12 min the workout is hard from the first second.
   const long = !heavy && tags.timeDomain === 'endurance';
@@ -124,13 +209,25 @@ export function suggestWarmUp(w: Workout, tags: WorkoutTags = deriveTags(w)): Wa
 
   const primer = short ? '30 s at workout pace, rest 2–3 min, then go' : undefined;
   const minutes = (long ? 3 : 5) + Math.min(3, specific.length - 1) * 2 + (heavy ? 0 : 2) + (primer ? 3 : 0);
-  return { minutes, general, specific, ...(primer ? { primer } : {}) };
+  if (!opts.date) return { minutes, general, specific, ...(primer ? { primer } : {}) };
+  // Complex: on heavy days the build-up sets are the warm-up, so no complex.
+  const complex = heavy || tags.timeDomain === 'heavy' ? undefined : complexFor(tags, opts.date, opts.implementsAvailable);
+  const sk = skillSegment(w, opts.date, !!opts.longPractice && tags.timeDomain !== 'heavy');
+  return {
+    minutes: minutes + (complex ? 4 : 0) + 5, general, specific, ...(primer ? { primer } : {}),
+    ...(complex ? { complex: { title: complex.title, rounds: complex.rounds } } : {}),
+    skill: { title: sk.title, lines: sk.lines }, ...(sk.practice ? { practice: sk.practice } : {}),
+  };
 }
 
 /** The editable text form: heading lines, "- " item lines. */
 export function warmUpText(wu: WarmUp): string {
-  const lines = [`General`, ...wu.general.map((g) => `- ${g}`), `Specific`, ...wu.specific.map((s) => `- ${s}`)];
+  const lines = [`General`, ...wu.general.map((g) => `- ${g}`)];
+  if (wu.complex) lines.push('Complex', `${wu.complex.title}.`, ...wu.complex.rounds.map((r) => `- ${r}`));
+  if (wu.skill) lines.push('Skill', `${wu.skill.title}.`, ...wu.skill.lines);
+  lines.push(`Specific`, ...wu.specific.map((s) => `- ${s}`));
   if (wu.primer) lines.push('Primer', `- ${wu.primer}`);
+  if (wu.practice) lines.push('Skill practice', ...wu.practice.map((p) => `- ${p}`));
   return lines.join('\n');
 }
 

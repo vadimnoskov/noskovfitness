@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseBtwbRow, suggestWarmUp, warmUpText, parseNoteText, deriveTags } from '../src/index';
+import type { Workout } from '../src/model/types';
 
 const row = (Workout: string, Description: string, fr = '10 mins') => parseBtwbRow({ Date: '2025-01-01', Workout, Description, 'Formatted Result': fr, Result: '0', Performed: 'prescribed', Notes: '' }, 'male').workout;
 
@@ -46,5 +47,34 @@ describe('note text format', () => {
     const plan = parseNoteText('Go out steady and hold pace.\n- Break pull-ups early\n- Breathe at the top of the thruster');
     expect(plan[0]!.paragraphs).toEqual(['Go out steady and hold pace.']);
     expect(plan[0]!.items).toHaveLength(2);
+  });
+});
+
+describe('warm-up complexes and skill blocks', () => {
+  const tags = (p: ('G' | 'W' | 'M')[], td: 'heavy' | 'short' | 'medium' | 'long' = 'medium') =>
+    ({ modalityPattern: p, movementCount: p.length, load: 'light' as const, volume: 'medium' as const, timeDomain: td, priority: 'task' as const, pathway: 'glycolytic' as const });
+  const gym: Workout = { id: 'g', structure: { kind: 'amrap', minutes: 12 }, scoreType: 'rounds-reps', movements: [{ movement: { family: 'push-up' }, reps: 10 }, { movement: { family: 'air-squat' }, reps: 15 }] };
+  it('picks a weightlifting complex on a gymnastics day, using only equipment that is there', async () => {
+    const { suggestWarmUp } = await import('../src');
+    const wu = suggestWarmUp(gym, tags(['G', 'G']), { date: '2026-12-01', implementsAvailable: new Set(['dumbbell']) });
+    expect(wu.complex!.title).toMatch(/^Dumbbell complex/);
+  });
+  it('gives a skill segment from the block, and switches when the workout already works that skill', async () => {
+    const { suggestWarmUp, skillBlock } = await import('../src');
+    const date = '2026-12-01';
+    const b = skillBlock(date);
+    const plain = suggestWarmUp(gym, tags(['G', 'G']), { date });
+    expect(plain.skill!.title).toMatch(b.skill === 'handstand' ? /Handstand/ : /Muscle-up/);
+    const uses = b.skill === 'handstand' ? 'hspu' : 'pull-up';
+    const w2: Workout = { ...gym, movements: [{ movement: { family: uses }, reps: 10 }] };
+    expect(suggestWarmUp(w2, tags(['G']), { date }).skill!.title).not.toMatch(b.skill === 'handstand' ? /Handstand/ : /Muscle-up/);
+  });
+  it('adds the long practice only when asked, and no complex on heavy days', async () => {
+    const { suggestWarmUp, warmUpText } = await import('../src');
+    const heavy: Workout = { id: 'h', structure: { kind: 'sets', scheme: [3, 3, 3] }, scoreType: 'load', movements: [{ movement: { family: 'back-squat', implement: 'barbell' } }] };
+    const wu = suggestWarmUp(heavy, tags(['W'], 'heavy'), { date: '2026-12-01', longPractice: true });
+    expect(wu.complex).toBeUndefined();
+    expect(wu.practice).toBeUndefined();
+    expect(warmUpText(suggestWarmUp(gym, tags(['G', 'G']), { date: '2026-12-01', longPractice: true }))).toMatch(/Skill practice/);
   });
 });
