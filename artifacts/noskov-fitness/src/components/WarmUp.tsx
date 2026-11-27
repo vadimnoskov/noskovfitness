@@ -23,11 +23,11 @@ export function NoteText({ text }: { text: string }) {
 
 const SOURCE: Record<DayWarmUp['source'], string> = { day: "Coach's warm-up for today", workout: "Coach's warm-up for this workout", suggested: 'Suggested' };
 
-/** The warm-up on Today: open by default, with an edit button for the coach. */
+/** The warm-up on Today: closed by default (the workout comes first), with an edit button for the coach. */
 export function WarmUpBox({ dayId, warmUp, coach }: { dayId: string; warmUp: DayWarmUp; coach: boolean }) {
   const [editing, setEditing] = useState(false);
   return (
-    <details className="warmup" open>
+    <details className="warmup">
       <summary><b>Warm-up</b> <span className="small">· about {warmUp.minutes} min{warmUp.source !== 'suggested' ? ` · ${SOURCE[warmUp.source]}` : ''}</span></summary>
       {editing ? <WarmUpEditor dayId={dayId} warmUp={warmUp} onDone={() => setEditing(false)} />
         : <>

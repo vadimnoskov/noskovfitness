@@ -17,6 +17,8 @@ The planning engine is called **Chalkboard**. It proposes workouts from a librar
 
 The rules are enforced by the server, not only hidden in the menu.
 
+On a phone the menu folds into the ☰ button at the top right; your own settings are under **Account**.
+
 ## 2. Architecture
 
 ### 2.1 The pieces
@@ -99,7 +101,7 @@ The rules are enforced by the server, not only hidden in the menu.
 What it's for: the day's workout and everything a person needs to do it.
 
 - **The workout**, as the coach approved it, and **your version** of it: your loads for the standard Rx, snapped to the weights that exist at the day's location (e.g. 45 lb dumbbells become 40 or 50 lb by person). The coach can override a person's version for a day.
-- **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have:
+- **Warm-up** (closed by default, so the day's workout comes first; tap to open): the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have:
     - **General**: easy cardio and a few bodyweight basics.
     - **Complex** (L2, "Example Warm-Ups to Address Weaknesses"): 2–3 progressive rounds of 5–15 reps, chosen against the day's workout: a barbell, dumbbell or kettlebell complex on gymnastics days, a rings or parallettes routine on weightlifting days, Basic Body Weight rounds otherwise. The implement rotates and only equipment at the day's location is used. None on heavy days (the build-up sets are the warm-up).
     - **Skill** (about 5 minutes): from the current 5-week skill block, alternating handstands and muscle-up / pull-up strength, with a different focus each week and three levels to pick from (building, wall/strict, free/transitions). If the day's workout already works the block's skill, the other one is practised that day, so the warm-up never tires the workout.
@@ -110,7 +112,7 @@ What it's for: the day's workout and everything a person needs to do it.
 - **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
 - **Your version (Individual Rx)**: your own version of the workout is scaled to hit its intended stimulus, and each change is listed with its reason. Your time is predicted from your own pace (the median of your actual ÷ estimated times on your last 2 years of finished timed workouts; the estimate alone with fewer than 5). If that falls outside the workout's time domain (short up to 5 minutes, medium 4–12, long 12–20, endurance 20–40), your version is scaled in the L1 order: lighter loads first (up to 15%, and only when that closes at least half of the gap), then fewer rounds or reps (to no less than half); easier movements are only suggested. Volume also follows your conditioning level: 60% + 40% × level (0.75 → 90%, 0.5 → 80%), on reps, rounds and AMRAP minutes, never loads, only when it cuts at least 8%, and not on top of a larger cut for the window. Heavy days are not scaled. The coach can switch a person to the standard reps and rounds for the day ("Use the standard reps and rounds…", and back).
 - **Teens' heavy days**: for anyone under 18 (age counted from the birth year, as the youngest it can be), a 1-rep-max day or sets of singles becomes heavy sets of 3-3-2-2-2 at the same lift, with no single max attempt (Kids guide; coach). 3- and 5-rep max days are not changed. The coach can allow a true 1-rep max for that teen on that day ("Allow a true 1-rep max for … today", and back).
-- **Weakness work**: a short box under the warm-up with about 5 minutes of work on one of your skill weaknesses (L2: weakness work belongs in the warm-up, without pre-fatigue). It does the hardest version you can do with good form, 2–3 easy sets of 3–5 reps, never to fatigue. The movement rotates day to day through your list and is skipped when the workout already has that movement or one with the same pattern, or when the family skill block works it that day. The box says why the movement is on your list.
+- **Weakness work**: a short box under the warm-up, also closed by default, with about 5 minutes of work on one of your skill weaknesses (L2: weakness work belongs in the warm-up, without pre-fatigue). It does the hardest version you can do with good form, 2–3 easy sets of 3–5 reps, never to fatigue. The movement rotates day to day through your list and is skipped when the workout already has that movement or one with the same pattern, or when the family skill block works it that day. The box says why the movement is on your list.
 - **Stimulus**: the intended effort, from the time domain (sprint under 4 minutes, hard and fast 4–12, sustained 12–20, long 20+, intervals, or a heavy day with sets of 1–5 at about 80–85%+ and long rests); a completion window (from your own earlier times on this workout, ±10%, else the calibrated estimate) with when to scale; expected rounds for an AMRAP; suggested set breaks on demanding movements (at most about one break per 7 reps, as in the L1 Fran lesson plan: 21 → 3, 15 → 2, 9 → 1, with an example split); and checkpoints per round or per set. Easy movements (air squats, sit-ups, rowing…) get no break advice.
 - **Volume warning** (when it applies): the workout asks for far more of a movement than this person's usual (more than the set multiple of their most reps of it in one workout in the last 12 months), or for a movement they haven't done in 12 months, or they have logged nothing for a month (scale volume for the first two weeks back). Jumping pull-ups and GHD sit-ups warn sooner. Source: L1, mitigating rhabdo risk (pp. 151–152): increase volume gradually; the guide gives no exact numbers, so the thresholds are settings.
 - **Your earlier results** on this workout.
@@ -301,6 +303,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Phone menu folded into ☰ (top right), "Account" instead of your name, warm-up closed by default, today's workout on a grey background. |
 | 2026-11-28 | Weakness work in each person's warm-up, from the coach's list and the results; the list is on Fitness. |
 | 2026-11-28 | Teens' heavy days: a 1-rep max becomes heavy 3-3-2-2-2 for under-18s unless the coach allows a true 1RM that day. |
 | 2026-11-28 | Individual Rx step 1: each person's version scaled to the stimulus window (own pace) and the conditioning ramp, with reasons and a coach switch. |

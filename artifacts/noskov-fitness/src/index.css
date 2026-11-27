@@ -247,3 +247,14 @@ details.why{margin:6px 0;border-top:1px dashed var(--line);padding-top:4px}detai
 }
 .stimulus{border-left:3px solid var(--acc);padding:4px 0 4px 10px;margin:8px 0}.stimulus p{margin:4px 0}
 .rxbox{border-left:3px solid #257de0;padding:4px 0 4px 10px;margin:8px 0}.rxbox ul{margin:4px 0;padding-left:18px}.rxbox p{margin:4px 0}
+
+/* Phone menu: the nav folds into a button at the top right. */
+.menubtn{display:none;margin-left:auto;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:20px;cursor:pointer}
+@media(max-width:700px){
+  .menubtn{display:inline-flex;align-items:center;justify-content:center}
+  .top nav{display:none;flex-basis:100%;flex-direction:column;gap:0;padding-bottom:6px}
+  .top nav.open{display:flex}
+  .top nav a{padding:12px 8px;border-bottom:1px solid var(--line);font-size:16px}
+}
+/* Today: the day's workout stands out from the boxes around it. */
+.dayblock>.wcard{background:var(--panel)}

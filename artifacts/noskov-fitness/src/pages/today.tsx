@@ -275,12 +275,12 @@ function CheckIn({ date, athleteId, value, self, name }: { date: string; athlete
 /** This person's weakness work, done inside the warm-up (L2). */
 function WeaknessBox({ w, self, name }: { w: NonNullable<Planned['weaknessWork']>; self: boolean; name: string }) {
   return (
-    <div className="stimulus">
-      <b>{w.title}{self ? '' : ` (${name})`}</b>
-      <p className="small">In the warm-up, after the general part. Why: {w.why}.</p>
+    <details className="warmup">
+      <summary><b>{w.title}{self ? '' : ` (${name})`}</b> <span className="small">· in the warm-up, about 5 min</span></summary>
+      <p className="small">After the general part of the warm-up. Why: {w.why}.</p>
       <ul>{w.lines.map((l, i) => <li key={i}>{l.replace(/^- /, '')}</li>)}</ul>
       <p className="small">From {w.source}.</p>
-    </div>
+    </details>
   );
 }
 
