@@ -14,7 +14,8 @@ import { WarmUpBox, NoteText, type DayWarmUp } from '@/components/WarmUp';
 type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
-  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[]; stimulus?: Stimulus };
+  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[]; stimulus?: Stimulus;
+  rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; pace: number; paceN: number; level: number | null } };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -209,6 +210,7 @@ export default function Today() {
               {p.volumeWarnings?.length ? (
                 <div className="warn" role="note"><b>Volume: build up gradually.</b> {p.volumeWarnings.join('; ')}. Consider fewer reps or rounds today (L1: increase volume slowly; prolonged-eccentric movements carry the most rhabdo risk).</div>
               ) : null}
+              {p.rx ? <RxBox p={p} athleteId={athlete.id} coach={me.user.isCoach} self={athlete.id === me.user.id} name={athlete.name} /> : null}
               {p.stimulus ? <StimulusBox s={p.stimulus} /> : null}
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
@@ -279,6 +281,24 @@ function StimulusBox({ s }: { s: Stimulus }) {
       {s.breaks.length ? <p>Set breaks, at most: {s.breaks.map((b) => `${b.movement} ${b.reps}: ${b.maxBreaks} (e.g. ${b.example})`).join('; ')}. Fewer if you can.</p> : null}
       {s.checkpoints.length ? <p>Checkpoints: {s.checkpoints.join(' · ')}.</p> : null}
       <p className="small">From {s.sources.join(' and ')}.</p>
+    </div>
+  );
+}
+
+/** Individual Rx: what changed in this person's version and why; the coach can switch them to the standard today. */
+function RxBox({ p, athleteId, coach, self, name }: { p: Planned; athleteId: string; coach: boolean; self: boolean; name: string }) {
+  const rx = p.rx!;
+  const qc = useQueryClient();
+  const m = useSetAthleteVersion();
+  const toggle = () => m.mutate({ data: { dayId: p.dayId, athleteId, standardVolume: !rx.standard } }, { onSuccess: () => qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).includes('/fitness/today') }) });
+  if (!rx.changes.length && !rx.suggestions.length && !rx.standard) return null;
+  return (
+    <div className="rxbox">
+      <b>{self ? 'Your version' : `${name}'s version`}{rx.standard ? ': the standard workout today (set by the coach)' : ''}</b>
+      {!rx.standard ? <ul>{rx.changes.map((c, i) => <li key={i}>{c.text}.</li>)}</ul> : null}
+      {!rx.standard && rx.suggestions.length ? <p className="small">Still long for the window; easier versions to consider: {rx.suggestions.join('; ')}.</p> : null}
+      <p className="small">{rx.paceN >= 5 ? `Predicted from ${self ? 'your' : 'their'} pace (${rx.paceN} timed results, ${rx.pace.toFixed(2)}× the estimate)` : 'Predicted from the estimate (fewer than 5 timed results to set a personal pace)'}{rx.level !== null ? `; conditioning level ${rx.level.toFixed(2)}` : ''}.</p>
+      {coach ? <button type="button" className="btn sm" disabled={m.isPending} onClick={toggle}>{rx.standard ? 'Back to Individual Rx' : `Use the standard reps and rounds for ${self ? 'me' : name} today`}</button> : null}
     </div>
   );
 }

@@ -66,7 +66,7 @@ The rules are enforced by the server, not only hidden in the menu.
 | `programming_policy` | Settings: targets, weights, rules. |
 | `equipment_profiles` | Locations (gym, home garage) with their equipment and weights. |
 | `measurements` | Bodyweight and the five work-formula heights (and older body measurements), by date. |
-| `athlete_versions`, `coaching_notes`, `plan_edits`, `warm_up_templates` | Per-person versions, cached AI notes, the coach's plan edits, saved warm-ups. |
+| `athlete_versions`, `coaching_notes`, `plan_edits`, `warm_up_templates` | Per-person versions (the coach's weights and the standard-workout switch), cached AI notes, the coach's plan edits, saved warm-ups. |
 | `knowledge_state`, `knowledge_events`, `knowledge_questions`, `knowledge_teachings`, `coach_cards` | Chalkboard: the coach's statuses and notes on cards, the change log, questions asked, teachings and the coach's own cards. |
 
 ### 2.3 How changes reach the app
@@ -108,6 +108,7 @@ What it's for: the day's workout and everything a person needs to do it.
     Everyone gets the same warm-up; the levels let each person choose.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
 - **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
+- **Your version (Individual Rx)**: your own version of the workout is scaled to hit its intended stimulus, and each change is listed with its reason. Your time is predicted from your own pace (the median of your actual ÷ estimated times on your last 2 years of finished timed workouts; the estimate alone with fewer than 5). If that falls outside the workout's time domain (short up to 5 minutes, medium 4–12, long 12–20, endurance 20–40), your version is scaled in the L1 order: lighter loads first (up to 15%), then fewer rounds or reps (to no less than half); easier movements are only suggested. Volume also follows your conditioning level: 60% + 40% × level (0.75 → 90%, 0.5 → 80%), on reps, rounds and AMRAP minutes, never loads, only when it cuts at least 8%, and not on top of a larger cut for the window. Heavy days are not scaled. The coach can switch a person to the standard reps and rounds for the day ("Use the standard reps and rounds…", and back).
 - **Stimulus**: the intended effort, from the time domain (sprint under 4 minutes, hard and fast 4–12, sustained 12–20, long 20+, intervals, or a heavy day with sets of 1–5 at about 80–85%+ and long rests); a completion window (from your own earlier times on this workout, ±10%, else the calibrated estimate) with when to scale; expected rounds for an AMRAP; suggested set breaks on demanding movements (at most about one break per 7 reps, as in the L1 Fran lesson plan: 21 → 3, 15 → 2, 9 → 1, with an example split); and checkpoints per round or per set. Easy movements (air squats, sit-ups, rowing…) get no break advice.
 - **Volume warning** (when it applies): the workout asks for far more of a movement than this person's usual (more than the set multiple of their most reps of it in one workout in the last 12 months), or for a movement they haven't done in 12 months, or they have logged nothing for a month (scale volume for the first two weeks back). Jumping pull-ups and GHD sit-ups warn sooner. Source: L1, mitigating rhabdo risk (pp. 151–152): increase volume gradually; the guide gives no exact numbers, so the thresholds are settings.
 - **Your earlier results** on this workout.
@@ -297,6 +298,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Individual Rx step 1: each person's version scaled to the stimulus window (own pace) and the conditioning ramp, with reasons and a coach switch. |
 | 2026-11-28 | Planner v2 step 6: never reproduces a stretch of the published programming. Phase 6 complete. |
 | 2026-11-28 | Planner v2 step 5: warm-up complexes (L2), 5-week skill blocks (handstand; muscle-up / pull-up strength) and a weekly light-day skill practice. |
 | 2026-11-28 | Heavy days need a load (weighted pull-ups/dips count, unweighted don't); workouts over 40 minutes at most once in 90 days. |

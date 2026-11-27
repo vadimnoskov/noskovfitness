@@ -3,8 +3,9 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { volumeWarningsFor } from './volume';
+import { rxContext, forgetRxContext } from './rx-context';
 import { lightDays, implementsOf } from './warmups';
-import { stimulusFor } from '@workspace/fitness-core';
+import { stimulusFor, individualRx } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -35,7 +36,7 @@ async function personFor(athleteId: string) {
 export async function versionFor(dayId: string, athleteId: string) {
   const [d] = await sql`
     SELECT d.id, d.status, d.equipment_profile_id, d.warm_up AS day_warm_up, w.warm_up AS workout_warm_up, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.benchmark, w.tags, w.original_text,
-           e.id AS eid, e.name AS ename, e.items, v.changes AS override
+           e.id AS eid, e.name AS ename, e.items, v.changes AS override, coalesce(v.rx_standard, false) AS rx_standard
     FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
     LEFT JOIN equipment_profiles e ON e.id = d.equipment_profile_id
     LEFT JOIN athlete_versions v ON v.day_id = d.id AND v.athlete_id = ${athleteId}
@@ -47,7 +48,11 @@ export async function versionFor(dayId: string, athleteId: string) {
   const override = Array.isArray(d.override) && d.override.length
     ? Object.fromEntries((d.override as { index: number; to: number }[]).map((o) => [o.index, o.to])) : undefined;
   const v = personalize(standard, person, location, override);
-  return { day: d, person, standard, version: v.workout, changes: v.changes, override: !!override, location: location?.name };
+  // Individual Rx: scale to the stimulus window and the conditioning ramp, unless the coach chose the standard today.
+  const ctx = await rxContext(athleteId);
+  const rx = d.rx_standard ? { workout: v.workout, changes: [], suggestions: [], predicted: undefined } : individualRx(v.workout, d.tags, ctx.pace, ctx.level);
+  return { day: d, person, standard, version: rx.workout, changes: v.changes, override: !!override, location: location?.name,
+    rx: { changes: rx.changes, suggestions: rx.suggestions, predicted: rx.predicted, standard: !!d.rx_standard, pace: ctx.pace, paceN: ctx.paceN, level: ctx.level } };
 }
 
 /** The planned workout(s) for a date, as this person's own version, plus what they already logged that day. */
@@ -65,6 +70,7 @@ export async function getToday(date: string, athleteId: string) {
       totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
       warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up, { date, implementsAvailable: implementsOf(v.day.items), longPractice: light.has(date) }),
+      rx: v.rx,
       stimulus: stimulusFor(v.version, v.day.tags, {
         bestSec: history.filter((h) => h.completed && h.score.timeSec).reduce<number | undefined>((a, h) => (a === undefined || h.score.timeSec! < a ? h.score.timeSec : a), undefined),
         lastSec: history.find((h) => h.completed && h.score.timeSec)?.score.timeSec,
@@ -117,9 +123,15 @@ async function previousOn(workoutId: string, athleteId: string, before: string):
 }
 
 /** Coach sets (or resets) one person's weights for one program day. */
-export async function setAthleteVersion(user: User, input: { dayId: string; athleteId: string; reset?: boolean; loads?: { index: number; value: number }[] }) {
+export async function setAthleteVersion(user: User, input: { dayId: string; athleteId: string; reset?: boolean; standardVolume?: boolean; loads?: { index: number; value: number }[] }) {
   if (!user.isCoach) throw new InputError('Only the coach can change a version.', 403);
   if (input.reset) { await sql`DELETE FROM athlete_versions WHERE day_id = ${input.dayId} AND athlete_id = ${input.athleteId}`; return { ok: true }; }
+  if (input.standardVolume !== undefined) {
+    const base = await versionFor(input.dayId, input.athleteId);
+    await sql`INSERT INTO athlete_versions (day_id, athlete_id, workout, changes, rx_standard) VALUES (${input.dayId}, ${input.athleteId}, ${sql.json(base.version as never)}, '[]'::jsonb, ${input.standardVolume})
+      ON CONFLICT (day_id, athlete_id) DO UPDATE SET rx_standard = EXCLUDED.rx_standard`;
+    return { ok: true };
+  }
   const base = await versionFor(input.dayId, input.athleteId);
   const override = (input.loads ?? []).map((l) => ({ index: Math.floor(l.index), to: num(l.value, 2000) })).filter((o): o is { index: number; to: number } => o.to !== undefined && o.index >= 0 && o.index < base.standard.movements.length);
   const v = personalize(base.standard, base.person, undefined, Object.fromEntries(override.map((o) => [o.index, o.to])));

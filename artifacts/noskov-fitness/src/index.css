@@ -246,3 +246,4 @@ details.why{margin:6px 0;border-top:1px dashed var(--line);padding-top:4px}detai
   details.why[open] .why-title{display:block;margin:2px 0 6px}
 }
 .stimulus{border-left:3px solid var(--acc);padding:4px 0 4px 10px;margin:8px 0}.stimulus p{margin:4px 0}
+.rxbox{border-left:3px solid #257de0;padding:4px 0 4px 10px;margin:8px 0}.rxbox ul{margin:4px 0;padding-left:18px}.rxbox p{margin:4px 0}

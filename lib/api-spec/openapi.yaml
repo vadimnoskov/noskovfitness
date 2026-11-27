@@ -618,6 +618,7 @@ components:
         dayId: { type: string }
         athleteId: { type: string }
         reset: { type: boolean }
+        standardVolume: { type: boolean }
         loads:
           type: array
           items:

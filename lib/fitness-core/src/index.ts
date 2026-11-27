@@ -20,5 +20,6 @@ export * from './workouts/weakness';
 export * from './workouts/volume';
 export * from './workouts/condition';
 export * from './workouts/stimulus';
+export * from './workouts/rx';
 export * from './engine/profile';
 export * from './knowledge';

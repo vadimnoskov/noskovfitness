@@ -140,6 +140,7 @@ export interface AthleteVersionInput {
   dayId: string;
   athleteId: string;
   reset?: boolean;
+  standardVolume?: boolean;
   loads?: AthleteVersionInputLoadsItem[];
 }
 
