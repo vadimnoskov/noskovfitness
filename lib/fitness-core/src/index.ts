@@ -13,6 +13,7 @@ export * from './engine/schedule';
 export * from './workouts/personalize';
 export * from './workouts/coaching';
 export * from './workouts/warmup';
+export * from './workouts/personal-weakness';
 export * from './import/published';
 export * from './workouts/estimate';
 export * from './workouts/work';

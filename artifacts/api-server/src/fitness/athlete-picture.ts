@@ -3,7 +3,8 @@
  * curve (all time and per year), and power changes on repeated workouts.
  */
 import { sql } from '@workspace/fitness-db';
-import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES } from '@workspace/fitness-core';
+import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, movementWeaknesses, weaknessList, detectedWhy, SKILL_MOVEMENTS, type Workout } from '@workspace/fitness-core';
+import { forgetWeaknesses } from './rx-context';
 import { InputError } from './logging';
 import type { User } from './accounts';
 
@@ -80,10 +81,20 @@ export async function setConditioningPrior(user: User, input: { athleteId: strin
   return { ok: true };
 }
 
+/** Coach: the person's list of skill weaknesses (movement keys from SKILL_MOVEMENTS) for warm-up weakness work. */
+export async function setWeaknesses(user: User, input: { athleteId: string; keys: string[] }) {
+  if (!user.isCoach) throw new InputError('Only the coach can set this.', 403);
+  const keys = [...new Set(input.keys)];
+  if (keys.some((k) => !SKILL_MOVEMENTS.some((m) => m.key === k))) throw new InputError('Choose movements from the list.');
+  await sql`UPDATE athletes SET weaknesses = ${sql.json(keys)} WHERE id = ${input.athleteId}`;
+  forgetWeaknesses(input.athleteId);
+  return { ok: true };
+}
+
 export async function getAthletePicture(user: User, athleteId: string) {
   allowed(user, athleteId);
   const [[athlete], dims, results] = await Promise.all([
-    sql`SELECT id, name, sex, conditioning_prior FROM athletes WHERE id = ${athleteId}`,
+    sql`SELECT id, name, sex, conditioning_prior, weaknesses FROM athletes WHERE id = ${athleteId}`,
     sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId}`,
     sql`SELECT r.id, r.date::text AS date, r.workout_id, r.performed, r.score, r.completed, r.as_prescribed, r.tags, coalesce(w.name, r.performed->>'name', '') AS name,
           md5(r.performed::text) AS sig
@@ -138,5 +149,18 @@ export async function getAthletePicture(user: User, athleteId: string) {
       ...Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
     ],
     paces, grid, conditioning: cond, readiness: { ...ready, checkIns: checks.length },
+    weaknesses: weaknessesOf(results, (Array.isArray(athlete.weaknesses) ? athlete.weaknesses : []) as string[], today),
+  };
+}
+
+/** Weakness work: the coach's list, what the last 2 years show, and older evidence the coach may want to add. */
+function weaknessesOf(results: readonly Record<string, unknown>[], chosen: string[], today: string) {
+  const rows = results.map((r) => ({ date: r.date as string, performed: r.performed as Workout, asPrescribed: r.as_prescribed as boolean }));
+  const recent = movementWeaknesses(rows, today);
+  const older = movementWeaknesses(rows, today, { windowMonths: 1200, minWorkouts: 4, minRate: 0.6, minAboveBaseline: 0.25, max: 6 })
+    .filter((w) => !recent.some((r) => r.key === w.key));
+  return {
+    chosen, list: weaknessList(chosen, recent), options: SKILL_MOVEMENTS,
+    suggestions: [...recent, ...older].filter((w) => !chosen.includes(w.key)).map((w) => ({ key: w.key, name: w.name, why: detectedWhy(w), recent: recent.includes(w) })),
   };
 }

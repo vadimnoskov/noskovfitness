@@ -15,7 +15,8 @@ type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
   totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[]; stimulus?: Stimulus;
-  rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; teenMax?: boolean; pace: number; paceN: number; level: number | null } };
+  rx?: { changes: { kind: string; text: string }[]; suggestions: string[]; predicted?: { before: number; after: number; window: [number, number] }; standard: boolean; teenMax?: boolean; pace: number; paceN: number; level: number | null };
+  weaknessWork?: { title: string; lines: string[]; why: string; source: string } | null };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -206,6 +207,7 @@ export default function Today() {
           {data.planned.map((p) => (
             <div className="dayblock" key={p.dayId}>
             <WarmUpBox dayId={p.dayId} warmUp={p.warmUp} coach={me.user.isCoach} />
+            {p.weaknessWork ? <WeaknessBox w={p.weaknessWork} self={athlete.id === me.user.id} name={athlete.name} /> : null}
             <WorkoutCard workout={p.workout} tags={p.tags} sex={athlete.sex}>
               {p.volumeWarnings?.length ? (
                 <div className="warn" role="note"><b>Volume: build up gradually.</b> {p.volumeWarnings.join('; ')}. Consider fewer reps or rounds today (L1: increase volume slowly; prolonged-eccentric movements carry the most rhabdo risk).</div>
@@ -270,6 +272,18 @@ function CheckIn({ date, athleteId, value, self, name }: { date: string; athlete
 }
 
 /** The intended stimulus: the kind of effort, a completion window or rounds, set breaks and checkpoints. */
+/** This person's weakness work, done inside the warm-up (L2). */
+function WeaknessBox({ w, self, name }: { w: NonNullable<Planned['weaknessWork']>; self: boolean; name: string }) {
+  return (
+    <details className="warmup">
+      <summary><b>{w.title}{self ? '' : ` (${name})`}</b> <span className="small">· in the warm-up, about 5 min</span></summary>
+      <p className="small">After the general part of the warm-up. Why: {w.why}.</p>
+      <ul>{w.lines.map((l, i) => <li key={i}>{l.replace(/^- /, '')}</li>)}</ul>
+      <p className="small">From {w.source}.</p>
+    </details>
+  );
+}
+
 function StimulusBox({ s }: { s: Stimulus }) {
   const w = s.window;
   return (

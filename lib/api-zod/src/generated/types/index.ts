@@ -45,4 +45,5 @@ export * from './searchWorkoutsParams';
 export * from './teachDecision';
 export * from './teachDecisionAction';
 export * from './teachInput';
+export * from './weaknessesInput';
 export * from './weightImportInput';

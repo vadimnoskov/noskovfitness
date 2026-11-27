@@ -17,6 +17,8 @@ export const athletes = pgTable('athletes', {
   loadProfile: jsonb('load_profile'),
   /** The coach's starting estimate of conditioning, 0–1 (blended with results; see fitness-core condition.ts). */
   conditioningPrior: real('conditioning_prior'),
+  /** The coach's list of skill weaknesses (movement keys, e.g. "hspu", "jump-rope:du") for warm-up weakness work. */
+  weaknesses: jsonb('weaknesses').notNull().default(sql`'[]'::jsonb`),
 }, t => [check('athletes_sex_check', sql`${t.sex} IN ('male','female')`), check('athletes_units_check', sql`${t.units} IN ('lb','kg')`)]);
 
 export const groups = pgTable('groups', {

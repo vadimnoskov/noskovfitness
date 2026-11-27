@@ -3,7 +3,7 @@
  * minute, since Today asks for it once per planned workout.
  */
 import { sql } from '@workspace/fitness-db';
-import { paceFactor, powerPoints, conditioning, type Workout } from '@workspace/fitness-core';
+import { paceFactor, powerPoints, conditioning, movementWeaknesses, weaknessList, type Workout, type WeaknessItem } from '@workspace/fitness-core';
 
 const cache = new Map<string, { at: number; v: { pace: number; paceN: number; level: number | null } }>();
 
@@ -26,3 +26,20 @@ export async function rxContext(athleteId: string): Promise<{ pace: number; pace
   return v;
 }
 export const forgetRxContext = (athleteId: string) => cache.delete(athleteId);
+
+/** A person's weakness list for warm-up weakness work: the coach's choices, then the last 2 years of results. Cached a minute. */
+const wcache = new Map<string, { at: number; v: WeaknessItem[] }>();
+export async function weaknessContext(athleteId: string): Promise<WeaknessItem[]> {
+  const hit = wcache.get(athleteId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.v;
+  const [[a], results] = await Promise.all([
+    sql`SELECT weaknesses FROM athletes WHERE id = ${athleteId}`,
+    sql`SELECT date::text AS date, performed, as_prescribed FROM results WHERE athlete_id = ${athleteId} AND date > current_date - 740 ORDER BY date`,
+  ]);
+  const today = new Date().toISOString().slice(0, 10);
+  const detected = movementWeaknesses(results.map((r) => ({ date: r.date as string, performed: r.performed as Workout, asPrescribed: r.as_prescribed as boolean })), today);
+  const v = weaknessList(Array.isArray(a?.weaknesses) ? (a!.weaknesses as string[]) : [], detected);
+  wcache.set(athleteId, { at: Date.now(), v });
+  return v;
+}
+export const forgetWeaknesses = (athleteId: string) => wcache.delete(athleteId);

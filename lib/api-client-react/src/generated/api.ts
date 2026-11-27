@@ -53,6 +53,7 @@ import type {
   SearchWorkoutsParams,
   TeachDecision,
   TeachInput,
+  WeaknessesInput,
   WeightImportInput
 } from './api.schemas';
 
@@ -2529,6 +2530,94 @@ export const useSetConditioningPrior = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSetConditioningPriorMutationOptions(options), queryClient);
+    }
+
+export const getSetWeaknessesUrl = () => {
+
+
+
+
+  return `/api/fitness/weaknesses`
+}
+
+/**
+ * @summary Coach - a person's list of skill weaknesses for warm-up weakness work
+ */
+export const setWeaknesses = async (weaknessesInput: WeaknessesInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSetWeaknessesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(weaknessesInput)
+  }
+);}
+
+
+
+
+
+export const getSetWeaknessesMutationKey = () => ['setWeaknesses'] as const;
+
+export const getSetWeaknessesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setWeaknesses>>, TError,SetWeaknessesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setWeaknesses>>, TError,SetWeaknessesMutationVariables, TContext> => {
+
+const mutationKey = getSetWeaknessesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setWeaknesses>>, SetWeaknessesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  setWeaknesses(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetWeaknessesMutationResult = NonNullable<Awaited<ReturnType<typeof setWeaknesses>>>
+    export type SetWeaknessesMutationBody = BodyType<WeaknessesInput>
+    export type SetWeaknessesMutationError = ErrorType<unknown>
+    export type SetWeaknessesMutationVariables = {data: BodyType<WeaknessesInput>}
+
+    /**
+ * @summary Coach - a person's list of skill weaknesses for warm-up weakness work
+ */
+export const useSetWeaknesses = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setWeaknesses>>, TError,SetWeaknessesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setWeaknesses>>,
+        TError,
+        SetWeaknessesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetWeaknessesMutationOptions(options), queryClient);
     }
 
 export const getGetKnowledgeMovementUrl = (params: GetKnowledgeMovementParams,) => {

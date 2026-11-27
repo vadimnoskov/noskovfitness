@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -29,14 +29,19 @@ const TITLES: Record<string, string> = {
 function Layout({ children }: { children: ReactNode }) {
   const [path] = useLocation();
   const me = useMe();
-  useEffect(() => { document.title = TITLES[path] ? `${TITLES[path]} · Noskov Fitness` : 'Noskov Fitness'; }, [path]);
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { document.title = TITLES[path] ? `${TITLES[path]} · Noskov Fitness` : 'Noskov Fitness'; setMenu(false); }, [path]);
   if (path === '/login') return <main>{children}</main>;
   const coach = !!me?.user.isCoach;
   return (
     <>
       <header className="top">
         <Link href="/today" className="brand">Noskov Fitness</Link>
-        <nav aria-label="Main">
+        {/* On phones the menu folds into a button at the top right. */}
+        <button type="button" className="menubtn" aria-expanded={menu} aria-controls="mainnav" aria-label="Menu" onClick={() => setMenu(!menu)}>
+          <span aria-hidden="true">{menu ? '✕' : '☰'}</span>
+        </button>
+        <nav aria-label="Main" id="mainnav" className={menu ? 'open' : undefined}>
           <Link href="/today">Today</Link>
           <Link href="/history">History</Link>
           <Link href="/benchmarks">Benchmarks</Link>
@@ -50,7 +55,7 @@ function Layout({ children }: { children: ReactNode }) {
               <Link href="/settings">Settings</Link>
             </>
           ) : null}
-          <Link href="/account">{me ? me.user.name : 'Account'}</Link>
+          <Link href="/account">Account</Link>
         </nav>
       </header>
       {/* The program planner uses the whole browser width so each day gets more room on big screens. */}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior } from '@workspace/api-client-react';
+import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior, useSetWeaknesses } from '@workspace/api-client-react';
 import { useMe, localToday } from '@/lib/session';
 import { AthletePicker } from '@/pages/today';
 
@@ -12,7 +12,7 @@ type Picture = {
   allTime: (Curve[number] & { from: { date: string; name?: string; id: string } | null })[];
   byYear: { year: string; curve: Curve; points: number; area: number | null }[]; commonMinutes: number[];
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
-  grid: Grid;
+  grid: Grid; weaknesses?: Weak;
   conditioning: { level: number | null; fromData: number | null; recentN: number; recentDays: number; prior: number | null; best: { from: string; to: string; n: number } | null; perWeek8: number; perWeekUsual: number };
   readiness: { recent: number | null; recentN: number; checkIns: number; checkIn: { pairs: number; correlation: number | null; used: boolean; today: number | null; suggests: number | null } };
   model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
@@ -56,6 +56,7 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
       {!p.hasDims ? <p className="kopen">Runs and rows are counted without measurements. Enter all six measurements above to count the other movements.</p> : null}
       {p.conditioning ? <Condition p={p} athleteId={athleteId} /> : null}
       {p.grid ? <GridSection g={p.grid} /> : null}
+      {p.weaknesses ? <WeaknessSection w={p.weaknesses} athleteId={athleteId} /> : null}
       {p.coverage.counted ? <CurveSection p={p} /> : null}
       <Repeats p={p} />
       <Model p={p} />
@@ -301,6 +302,46 @@ function Condition({ p, athleteId }: { p: Picture; athleteId: string }) {
         <form className="row wrap" onSubmit={save}>
           <label className="small">Coach's starting estimate (0–1){c.prior !== null ? `, now ${c.prior.toFixed(2)}` : ''}: <input type="number" min={0} max={1} step={0.05} value={val} onChange={(e) => setVal(e.target.value)} placeholder={c.prior === null ? 'e.g. 0.75' : String(c.prior)} style={{ width: 90 }} /></label>
           <button type="submit" className="btn sm" disabled={set.isPending}>{val.trim() === '' && c.prior !== null ? 'Clear' : 'Save'}</button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+type Weak = { chosen: string[]; list: { key: string; name: string; why: string; from: 'coach' | 'results' }[]; options: { key: string; name: string }[];
+  suggestions: { key: string; name: string; why: string; recent: boolean }[] };
+/** Skill weaknesses for warm-up weakness work: the coach's list, what the results show, and suggestions. */
+function WeaknessSection({ w, athleteId }: { w: Weak; athleteId: string }) {
+  const me = useMe();
+  const qc = useQueryClient();
+  const set = useSetWeaknesses();
+  const [pick, setPick] = useState('');
+  const coach = !!me?.user.isCoach;
+  const save = (keys: string[]) => set.mutate({ data: { athleteId, keys } }, { onSuccess: () => { setPick(''); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); } });
+  const left = w.options.filter((o) => !w.chosen.includes(o.key));
+  const older = w.suggestions.filter((s) => !s.recent);
+  return (
+    <section>
+      <h2 className="sec">Weakness work</h2>
+      <p className="small">One of these goes into the warm-up on Today, about 5 minutes, rotating day to day. It is skipped when the workout already has that movement or one like it, so it never tires you for the workout (L2: weakness work belongs in the warm-up).</p>
+      {w.list.length ? <ul>{w.list.map((x) => (
+        <li key={x.key}><b>{x.name}</b> <span className="small">({x.why})</span>
+          {coach && x.from === 'coach' ? <> <button type="button" className="btn sm" disabled={set.isPending} onClick={() => save(w.chosen.filter((k) => k !== x.key))}>Remove</button></> : null}</li>))}</ul>
+        : <p className="small">None yet.</p>}
+      {older.length ? (
+        <>
+          <p className="small">Older evidence (more than 2 years ago; not used unless the coach adds it):</p>
+          <ul className="small">{older.map((s) => (
+            <li key={s.key}>{s.name}: {s.why}
+              {coach ? <> <button type="button" className="btn sm" disabled={set.isPending} onClick={() => save([...w.chosen, s.key])}>Add</button></> : null}</li>))}</ul>
+        </>
+      ) : null}
+      {!w.list.some((x) => x.from === 'results') ? <p className="small">The last 2 years of results show no skill movement whose workouts were modified much more often than usual.</p> : null}
+      {coach ? (
+        <form className="row wrap" onSubmit={(e) => { e.preventDefault(); if (pick) save([...w.chosen, pick]); }}>
+          <label className="small">Add a weakness: <select value={pick} onChange={(e) => setPick(e.target.value)}>
+            <option value="">Choose a movement</option>{left.map((o) => <option key={o.key} value={o.key}>{o.name}</option>)}</select></label>
+          <button type="submit" className="btn sm" disabled={!pick || set.isPending}>Add</button>
         </form>
       ) : null}
     </section>
