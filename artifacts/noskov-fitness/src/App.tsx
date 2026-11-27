@@ -49,16 +49,16 @@ function Layout({ children }: { children: ReactNode }) {
           <Link href="/history">History</Link>
           <Link href="/benchmarks">Benchmarks</Link>
           <Link href="/fitness">Fitness</Link>
-          {coaching ? <Link href="/athletes">Athletes</Link> : null}
-          {coach ? (
+          {coaching ? (
             <>
+              <Link href="/athletes">Athletes</Link>
               <Link href="/program">Program</Link>
               <Link href="/calendar">Calendar</Link>
               <Link href="/analysis">Analysis</Link>
-              <Link href="/knowledge">Chalkboard</Link>
-              <Link href="/settings">Settings</Link>
             </>
           ) : null}
+          {coach ? <Link href="/knowledge">Chalkboard</Link> : null}
+          {coaching ? <Link href="/settings">Settings</Link> : null}
           <Link href="/account">Account</Link>
         </nav>
       </header>
@@ -88,16 +88,16 @@ function Router() {
         <Route path="/benchmarks" component={Benchmarks} />
         <Route path="/fitness" component={FitnessPage} />
         <Route path="/athletes"><CoachOnly any><AthletesPage /></CoachOnly></Route>
-        <Route path="/calendar"><CoachOnly><CalendarPage /></CoachOnly></Route>
-        <Route path="/program"><CoachOnly><ProgramPage /></CoachOnly></Route>
-        <Route path="/analysis"><CoachOnly><Analysis /></CoachOnly></Route>
+        <Route path="/calendar"><CoachOnly any><CalendarPage /></CoachOnly></Route>
+        <Route path="/program"><CoachOnly any><ProgramPage /></CoachOnly></Route>
+        <Route path="/analysis"><CoachOnly any><Analysis /></CoachOnly></Route>
         <Route path="/knowledge/movements/:key"><CoachOnly><MovementPage /></CoachOnly></Route>
         <Route path="/knowledge/movements"><CoachOnly><MovementsPage /></CoachOnly></Route>
         <Route path="/knowledge/coach"><CoachOnly><CoachPage /></CoachOnly></Route>
         <Route path="/knowledge/ask"><CoachOnly><KnowledgeAsk /></CoachOnly></Route>
         <Route path="/knowledge/:id"><CoachOnly><KnowledgeCardPage /></CoachOnly></Route>
         <Route path="/knowledge"><CoachOnly><KnowledgeMap /></CoachOnly></Route>
-        <Route path="/settings"><CoachOnly><Settings /></CoachOnly></Route>
+        <Route path="/settings"><CoachOnly any><Settings /></CoachOnly></Route>
         <Route path="/login" component={Login} />
         <Route component={NotFound} />
       </Switch>

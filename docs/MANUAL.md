@@ -13,7 +13,7 @@ The planning engine is called **Chalkboard**. It proposes workouts from a librar
 | Role | Sees |
 |---|---|
 | Head coach | Everything: Today, History, Benchmarks, Fitness, Athletes, Program, Calendar, Analysis, Chalkboard, Settings, Account and Family, for every program. Can log results for anyone. |
-| Coach of a program | Athletes, and Today, History and Fitness for the athletes in the programs they coach. |
+| Coach of a program | Athletes, Program, Calendar, Analysis and Settings for the programs they coach, and Today, History and Fitness for those athletes (logging, journal entries, weights, weakness list, conditioning estimate). Not Chalkboard, and nothing of other coaches' programs. A program's coach is set by the head coach (any adult in the family). |
 | Athlete | Today, History, their own Benchmarks column, their own Fitness page, Account. A family member allowed to log for others can do so only within their own program, never for another coach's clients. |
 
 The rules are enforced by the server, not only hidden in the menu.
@@ -317,6 +317,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Coaches of a program (e.g. Olga for her clients) get Athletes, Program, Calendar, Analysis and Settings for their programs, and can log, write in and set weights, weaknesses and conditioning for their athletes. |
 | 2026-11-28 | Journal entries on Today (coach); "As written" shown when amounts weren't read, bare machine pieces never proposed; small-room location limit; Ask reads the selected program, the workout text and the coach's date. |
 | 2026-11-28 | New clients: location limits (no barbell overhead, strict only, no running route), runs need a route and swims a pool, step-ups onto a bench; planner avoids unfamiliar high skills, first-time 1-rep maxes and big first-time volumes; history import from a BTWB CSV; each program's planning history is its own members' (was everyone's). |
 | 2026-11-28 | Athletes and programs: each client gets their own program (coach, days, locations, settings); Athlete dropdown instead of name tabs; Program dropdown on coach pages; access by program. |

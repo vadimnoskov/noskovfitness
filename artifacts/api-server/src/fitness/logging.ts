@@ -9,7 +9,7 @@ import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesT
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
-import { programOfAthlete, visibleAthleteIds } from './data';
+import { programOfAthlete, visibleAthleteIds, coachesAthlete } from './data';
 import { noteFor, type NoteArgs } from './ai-notes';
 import { resolveWarmUp } from './warmups';
 
@@ -133,7 +133,7 @@ async function previousOn(workoutId: string, athleteId: string, before: string):
 
 /** Coach sets (or resets) one person's weights for one program day. */
 export async function setAthleteVersion(user: User, input: { dayId: string; athleteId: string; reset?: boolean; standardVolume?: boolean; loads?: { index: number; value: number }[] }) {
-  if (!user.isCoach) throw new InputError('Only the coach can change a version.', 403);
+  if (!(await coachesAthlete(user, input.athleteId))) throw new InputError('Only the coach can change a version.', 403);
   if (input.reset) { await sql`DELETE FROM athlete_versions WHERE day_id = ${input.dayId} AND athlete_id = ${input.athleteId}`; return { ok: true }; }
   if (input.standardVolume !== undefined) {
     const base = await versionFor(input.dayId, input.athleteId);

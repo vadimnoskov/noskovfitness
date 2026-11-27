@@ -277,12 +277,12 @@ export default function Today() {
               {p.volumeWarnings?.length ? (
                 <div className="warn" role="note"><b>Volume: build up gradually.</b> {p.volumeWarnings.join('; ')}. Consider fewer reps or rounds today (L1: increase volume slowly; prolonged-eccentric movements carry the most rhabdo risk).</div>
               ) : null}
-              {p.rx ? <RxBox p={p} athleteId={athlete.id} coach={me.user.isCoach} self={athlete.id === me.user.id} name={athlete.name} /> : null}
+              {p.rx ? <RxBox p={p} athleteId={athlete.id} coach={isCoaching(me) && athlete.id !== me.user.id || me.user.isCoach} self={athlete.id === me.user.id} name={athlete.name} /> : null}
               {p.stimulus ? <StimulusBox s={p.stimulus} /> : null}
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
-              {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
-              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} athleteId={athlete.id} coach={me.user.isCoach} />
+              {me.user.isCoach || (isCoaching(me) && athlete.id !== me.user.id) ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
+              <PlanAndHistory p={p} self={athlete.id === me.user.id} name={athlete.name} athleteId={athlete.id} coach={me.user.isCoach || (isCoaching(me) && athlete.id !== me.user.id)} />
               {saved[p.dayId] ? <SavedBanner c={saved[p.dayId]!} /> : null}
               {logging === p.dayId
                 ? <LogForm workout={p.workout} dayId={p.dayId} athlete={athlete} date={date} totalReps={p.totalReps} onSaved={(c) => { setLogging(null); if (c) setSaved((x) => ({ ...x, [p.dayId]: c })); }} />

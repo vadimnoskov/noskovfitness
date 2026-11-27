@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior, useSetWeaknesses } from '@workspace/api-client-react';
-import { useMe, localToday } from '@/lib/session';
+import { useMe, localToday, isCoaching } from '@/lib/session';
 import { AthletePicker } from '@/pages/today';
 
 type Curve = { minutes: number; power: number | null }[];
@@ -34,11 +34,11 @@ export default function FitnessPage() {
   const sp = Object.fromEntries(new URLSearchParams(useSearch())) as { a?: string };
   const [, navigate] = useLocation();
   if (!me) return <p className="empty">Loading…</p>;
-  const athlete = (me.user.isCoach ? me.logFor.find((p) => p.id === sp.a) : undefined) ?? me.user;
+  const athlete = (isCoaching(me) ? me.logFor.find((p) => p.id === sp.a) : undefined) ?? me.user;
   return (
     <>
       <h1>{athlete.id === me.user.id ? 'My fitness' : `${athlete.name}'s fitness`}</h1>
-      {me.user.isCoach ? <AthletePicker value={athlete.id} onChange={(a) => navigate(a === me.user.id ? '/fitness' : `/fitness?a=${a}`)} /> : null}
+      {isCoaching(me) ? <AthletePicker value={athlete.id} onChange={(a) => navigate(a === me.user.id ? '/fitness' : `/fitness?a=${a}`)} /> : null}
       <Body athleteId={athlete.id} lengthUnit={athlete.units === 'kg' ? 'cm' : 'in'} weightUnit={athlete.units} />
     </>
   );
@@ -298,7 +298,7 @@ function Condition({ p, athleteId }: { p: Picture; athleteId: string }) {
             ? <>It predicts your results (correlation {r.checkIn.correlation}), so it is used{r.checkIn.suggests !== null ? `: today's answer suggests about ${r.checkIn.suggests > 0 ? '+' : ''}${r.checkIn.suggests}% vs your usual` : ''}.</>
             : <>Not used yet: it counts once at least 10 check-ins match a result that day and they line up (correlation 0.2 or more{r.checkIn.correlation !== null ? `; now ${r.checkIn.correlation}` : ''}).</>}</li>
       </ul>
-      {me?.user.isCoach ? (
+      {me?.user.isCoach || (isCoaching(me) && athleteId !== me?.user.id) ? (
         <form className="row wrap" onSubmit={save}>
           <label className="small">Coach's starting estimate (0–1){c.prior !== null ? `, now ${c.prior.toFixed(2)}` : ''}: <input type="number" min={0} max={1} step={0.05} value={val} onChange={(e) => setVal(e.target.value)} placeholder={c.prior === null ? 'e.g. 0.75' : String(c.prior)} style={{ width: 90 }} /></label>
           <button type="submit" className="btn sm" disabled={set.isPending}>{val.trim() === '' && c.prior !== null ? 'Clear' : 'Save'}</button>
@@ -316,7 +316,7 @@ function WeaknessSection({ w, athleteId }: { w: Weak; athleteId: string }) {
   const qc = useQueryClient();
   const set = useSetWeaknesses();
   const [pick, setPick] = useState('');
-  const coach = !!me?.user.isCoach;
+  const coach = !!me?.user.isCoach || (isCoaching(me) && athleteId !== me?.user.id);
   const save = (keys: string[]) => set.mutate({ data: { athleteId, keys } }, { onSuccess: () => { setPick(''); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); } });
   const left = w.options.filter((o) => !w.chosen.includes(o.key));
   const older = w.suggestions.filter((s) => !s.recent);

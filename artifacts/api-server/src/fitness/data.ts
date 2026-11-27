@@ -21,10 +21,19 @@ export async function programsFor(user: { id: string; isCoach: boolean }): Promi
 }
 /** The program a coach screen or action is about (header X-Program), checked against what the person coaches. */
 export async function programFor(user: { id: string; isCoach: boolean }, requested?: string | null): Promise<string> {
-  const id = requested || GROUP_ID;
-  if (!(await programsFor(user)).some((p) => p.id === id)) throw Object.assign(new Error('You do not coach this program.'), { status: 403 });
+  const mine = await programsFor(user);
+  // No program chosen yet (or the family's, for a coach of clients only): their first program.
+  const id = requested && (requested !== GROUP_ID || user.isCoach) ? requested : user.isCoach ? GROUP_ID : mine[0]?.id ?? GROUP_ID;
+  if (!mine.some((p) => p.id === id)) throw Object.assign(new Error('You do not coach this program.'), { status: 403 });
   return id;
 }
+/** The head coach, or the coach of a program the athlete trains in. */
+export async function coachesAthlete(user: { id: string; isCoach: boolean }, athleteId: string): Promise<boolean> {
+  if (user.isCoach) return true;
+  return (await programsFor(user)).some((p) => p.members.some((m) => m.id === athleteId));
+}
+/** Anyone who coaches at least one program (Program, Calendar, Analysis, Settings, Athletes). */
+export const isCoaching = async (user: { id: string; isCoach: boolean }) => user.isCoach || (await programsFor(user)).length > 0;
 /** The program an athlete trains in (their group). */
 export async function programOfAthlete(athleteId: string): Promise<string> {
   const [r] = await sql`SELECT group_id FROM group_members WHERE athlete_id = ${athleteId} ORDER BY (group_id = ${GROUP_ID}) DESC, group_id LIMIT 1`;

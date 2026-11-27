@@ -39,8 +39,9 @@ export async function getPeople(user: User) {
     sql`SELECT gm.group_id, a.id, a.name, a.sex, a.units, a.birth_year, a.birth_date::text AS birth_date, a.is_coach, (a.password_hash IS NOT NULL) AS has_password
         FROM group_members gm JOIN athletes a ON a.id = gm.athlete_id WHERE gm.group_id IN ${sql(ids)} ORDER BY a.is_coach DESC, a.birth_year NULLS FIRST, a.name`,
     sql`SELECT id, group_id, name, items, limits FROM equipment_profiles WHERE group_id IN ${sql(ids)} ORDER BY name`,
-    // Who can coach a program: the family's adults (the head coach, and family members who log for others).
-    sql`SELECT a.id, a.name FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id AND gm.group_id = ${GROUP_ID} WHERE a.is_coach OR a.can_log_for_others ORDER BY a.is_coach DESC, a.name`,
+    // Who can coach a program: the family's adults.
+    sql`SELECT a.id, a.name FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id AND gm.group_id = ${GROUP_ID}
+        WHERE a.is_coach OR a.birth_year <= extract(year FROM current_date)::int - 18 ORDER BY a.is_coach DESC, a.name`,
   ]);
   return {
     coaches: user.isCoach ? coaches : coaches.filter((c) => c.id === user.id),
