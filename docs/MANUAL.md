@@ -153,8 +153,9 @@ What it's for: the weeks ahead.
 - **Drag** a workout to another date (it swaps with an open day there).
 - **More…** on a day: Move, Location (the equipment check runs again; the workout stays if it fits, otherwise alternatives are refreshed), Time cap, Repeat (the workout comes back every N days, until a date), Warm-up (write one or pick a saved one), Push / Skip, Never propose.
 - **Skip → drop**: only that day is skipped; the rest of the plan keeps its dates.
-- **Skip → push forward**: that day's workout and every later proposed or approved workout move one training day later, in order. The day you pushed from is left empty and the plan ends one training day later. Nothing is re-planned and the rules are not re-checked on the new dates (planned: flag new rule conflicts after a push).
+- **Skip → push forward**: that day's workout and every later proposed or approved workout move one training day later, in order. The day you pushed from is left empty and the plan ends one training day later. Nothing is re-planned; instead every day is re-checked where it now sits (see below).
 - **+ Add** fills a rest day; the planner checks the days before and after it.
+- **Rule check**: every proposed and approved day from today on is re-checked against the planner's rules where it now sits (after Push forward, a drag, a swap or an added day): back-to-back heavy days or the same movement two days running beyond their once-every-N-days exception, too many benchmarks in a week, lift tests too close together, the same workout two days running, missing equipment at the day's location. A day that breaks one shows "Breaks a rule here: …" and a one-tap fix, **Re-plan this day** (for an approved day, **Unapprove and re-plan this day**).
 - **Volume warnings**: proposed and approved days from today on show who would face a volume jump (tap to see the details at normal zoom; listed in full at the largest zoom). The same warning appears on that person's Today.
 
 ### 4.2 Calendar and Analysis
@@ -185,7 +186,7 @@ For each open training day, in date order:
 1. **Candidates**: every programmable workout in the library and history.
 2. **Hard filters**: not repeated within the window (unless a due benchmark or coach repeat), not longer than the maximum, equipment exists at the location (fixed weights within one step), benchmark and lift-test limits, and the back-to-back rules when their exception was already used inside its window.
 3. **Score**: how much the workout closes the gaps between the recent mix and the targets (variety), how long since its movements were done (freshness), weakness focus, benchmark or lift test due. Weakness focus favours workouts in a cell flagged Declining or Rarely trained on the Fitness grid, averaged over the family, at most once in any 7 days so balance stays first; the day's note says "works a declining or rarely trained area".
-4. **Penalties**: same modality mix as yesterday, back-to-back exceptions (allowed rarely, noted on the day), crowded equipment (fewer than half the group can work at once), Turkish get-ups in a metcon (small, or strong if one was done in the last 4 weeks).
+4. **Penalties**: a big volume jump for at least half of the family (more than the volume-warning multiple of their most reps of a movement in one workout in 12 months; strong, noted on the day as "big volume jump for N of M"), same modality mix as yesterday, back-to-back exceptions (allowed rarely, noted on the day), crowded equipment (fewer than half the group can work at once), Turkish get-ups in a metcon (small, or strong if one was done in the last 4 weeks).
 5. The best scorer is proposed; the next four are its alternatives. The choice becomes part of the picture for the next day.
 
 **Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max; the rest by estimated or logged minutes), task or time priority, load, volume.
@@ -287,6 +288,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 1: volume-aware picks; every planned day re-checked against the rules where it sits, with a one-tap re-plan. |
 | 2026-11-28 | Conditioning level and readiness on Fitness; one-tap check-in on Today. |
 | 2026-11-28 | Volume-jump warnings on Program and Today, with three new settings. |
 | 2026-11-28 | Fitness: strengths and weaknesses grid (time domain × modality); the planner's weakness focus now uses it, at most once a week. |

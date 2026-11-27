@@ -160,6 +160,11 @@ function DayCard({ d, zoom, profiles, run, onDragStart, onDragEnd }: {
         </>
       ) : null}
       {zoom === 2 && d.warnings.length ? <p className="warn">{d.warnings.join(' · ')}</p> : null}
+      {d.ruleIssue ? (
+        <div className="warn" role="note">Breaks a rule here: {d.ruleIssue}.
+          <ActionForm action="fixDay"><input type="hidden" name="id" value={d.id} /><button className="btn sm">{d.status === 'approved' ? 'Unapprove and re-plan this day' : 'Re-plan this day'}</button></ActionForm>
+        </div>
+      ) : null}
       {d.volume?.length ? (zoom === 2
         ? <div className="warn" role="note"><b>Volume</b>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</div>
         : <details className="warn small"><summary>Volume warning: {d.volume.map((v) => v.name).join(', ')}</summary>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</details>) : null}

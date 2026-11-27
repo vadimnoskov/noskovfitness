@@ -24,7 +24,7 @@ export const GetFitnessPageResponse = zod.record(zod.string(), zod.unknown())
  * @summary Perform an existing coach action
  */
 export const FitnessActionParams = zod.object({
-  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'savePolicyAction', 'resetPolicyAction', 'usePublishedProfileAction', 'move', 'setCap', 'setRepeat', 'setWarmUp', 'saveWarmUpTemplate', 'deleteWarmUpTemplate'])
+  "action": zod.enum(['propose', 'approve', 'approveAll', 'unapprove', 'swap', 'setLocation', 'skip', 'insert', 'neverPropose', 'replan', 'fixDay', 'savePolicyAction', 'resetPolicyAction', 'usePublishedProfileAction', 'move', 'setCap', 'setRepeat', 'setWarmUp', 'saveWarmUpTemplate', 'deleteWarmUpTemplate'])
 })
 
 export const FitnessActionBody = zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())]))

@@ -28,3 +28,15 @@ describe('volume warnings', () => {
     expect(volumeWarnings(ft([pu(10)]), u, '2027-01-30', undefined, '2026-12-15')).toEqual([]);
   });
 });
+
+describe('volume-aware picks', () => {
+  it('flags a candidate that is a big jump for at least half the people who have done the movement', async () => {
+    const { volumeJumpFor, DEFAULT_POLICY, usualVolume } = await import('../src');
+    const usual = (n: number) => usualVolume([{ date: '2026-10-20', performed: ft([{ movement: { family: 'step-up' }, reps: n }]), score: { timeSec: 300 }, completed: true }], '2026-11-01');
+    const c = { id: 'chad', workout: ft([{ movement: { family: 'step-up' }, reps: 1000 }]), tags: {} as never };
+    const j = volumeJumpFor(c, { policy: DEFAULT_POLICY, usualVolumes: [usual(36), usual(36), usual(600), usual(700)] });
+    expect(j).toMatchObject({ people: 2, of: 4 });
+    expect(j!.what).toMatch(/^1000 .*step-ups/);
+    expect(volumeJumpFor(c, { policy: DEFAULT_POLICY, usualVolumes: [usual(36), usual(600), usual(700)] })).toBeUndefined();
+  });
+});

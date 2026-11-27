@@ -3,8 +3,8 @@
  * runs the pure planner from @nf/core, and saves proposed days.
  */
 import {
-  isHeavyDay, plan, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
-  type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags, powerPoints, weaknessGrid, plannerWeakness,
+  isHeavyDay, plan, blocked, withDefaults, workMinutes, keyOf, withCap, trainingDatesBetween, addDays,
+  type Candidate, type PastDay, type ProgrammingPolicy, type EquipmentProfile, type Workout, type WorkoutTags, powerPoints, weaknessGrid, plannerWeakness, usualVolume, type UsualVolume,
 } from '@workspace/fitness-core';
 import { sql } from './client';
 
@@ -98,8 +98,14 @@ export async function proposeRange(groupId: string, from: string, to: string, op
  * each member's own results and measurements; empty when nobody has enough data.
  */
 export async function groupWeakness(groupId: string, asOf: string): Promise<Map<string, number>> {
+  return (await groupPicture(groupId, asOf)).weaknessCells;
+}
+
+/** Per-member inputs the planner needs from results: the weakness grid (group) and each person's usual volume. */
+export async function groupPicture(groupId: string, asOf: string): Promise<{ weaknessCells: Map<string, number>; usualVolumes: UsualVolume[] }> {
   const members = await sql`SELECT a.id, a.sex FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id WHERE gm.group_id = ${groupId}`;
   const grids = [];
+  const usualVolumes: UsualVolume[] = [];
   for (const m of members) {
     const [results, dims] = await Promise.all([
       sql`SELECT id, date::text AS date, workout_id, performed, score, completed, tags FROM results
@@ -109,8 +115,9 @@ export async function groupWeakness(groupId: string, asOf: string): Promise<Map<
     const { points } = powerPoints(results as never, m.sex, dims as never);
     const grid = weaknessGrid(points, results.map((r) => ({ date: r.date, timeDomain: r.tags?.timeDomain, modalities: r.tags?.modalityPattern })), asOf);
     if (grid.fit) grids.push(grid);
+    usualVolumes.push(usualVolume(results as never, asOf));
   }
-  return plannerWeakness(grids);
+  return { weaknessCells: plannerWeakness(grids), usualVolumes };
 }
 
 export async function planRange(groupId: string, from: string, to: string, opts: { extraDates?: string[]; policy?: ProgrammingPolicy } = {}) {
@@ -127,8 +134,8 @@ export async function planRange(groupId: string, from: string, to: string, opts:
   const dates = [...new Set([...trainingDatesBetween(from, to, group.training_days), ...proposedDates, ...(opts.extraDates ?? [])])].filter((d) => !fixed.has(d)).sort();
   const defaultProfile = profiles.find((p) => p.id === group.default_equipment_id) ?? profiles[0]!;
   const profileFor = (date: string) => profiles.find((p) => p.id === locByDate.get(date)) ?? defaultProfile;
-  const weaknessCells = await groupWeakness(groupId, from);
-  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, alternatives: 4 });
+  const { weaknessCells, usualVolumes } = await groupPicture(groupId, from);
+  const proposals = plan({ dates, history, candidates, policy, equipmentFor: profileFor, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, alternatives: 4 });
   return { proposals, policy, dates, profileFor, candidates };
 }
 
@@ -142,11 +149,38 @@ export async function refreshAlternatives(groupId: string, dayId: string) {
   const [policy, profiles, candidates] = await Promise.all([getPolicy(groupId), getEquipmentProfiles(groupId), loadCandidates()]);
   const { history, lastWorkout, lastMovement } = await loadPicture(groupId, addDays(day.date, -Math.max(policy.windowDays, policy.rules.noRepeatWorkoutDays)), { from: day.date, to: day.date });
   const profile = profiles.find((p) => p.id === day.equipment_profile_id) ?? profiles[0]!;
-  const weaknessCells = await groupWeakness(groupId, day.date);
-  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, alternatives: 5 });
+  const { weaknessCells, usualVolumes } = await groupPicture(groupId, day.date);
+  const [p] = plan({ dates: [day.date], history, candidates, policy, equipmentFor: () => profile, lastWorkoutDate: lastWorkout, lastMovementDate: lastMovement, weaknessCells, usualVolumes, alternatives: 5 });
   if (!p) return;
   const options = [{ candidateId: p.candidateId, score: p.score }, ...p.alternatives].filter((a) => a.candidateId !== day.main_workout_id).slice(0, 4);
   await sql`UPDATE program_days SET alternatives = ${sql.json(options as never)}, updated_at = now() WHERE id = ${dayId}`;
 }
 
 export { keyOf };
+
+/**
+ * Re-check the planner's rules on the planned days in [from, to] as they now sit, e.g. after Push forward, a drag or a
+ * swap moved them: back-to-back heavy days or movements beyond their exception, benchmarks per week, lift-test spacing,
+ * the same workout two days running, equipment at the day's location. Returns the first broken rule per day id.
+ */
+export async function checkPlannedDays(groupId: string, from: string, to: string): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const [policy, group, profiles] = await Promise.all([getPolicy(groupId), getGroup(groupId), getEquipmentProfiles(groupId)]);
+  const days = await sql`
+    SELECT d.id, d.date::text AS date, d.equipment_profile_id, w.id AS wid, w.name, w.structure, w.movements, w.score_type, w.tags, w.benchmark, w.original_text
+    FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
+    WHERE d.group_id = ${groupId} AND d.status IN ('proposed','approved') AND d.date BETWEEN ${from} AND ${to}`;
+  if (!days.length) return out;
+  const { history } = await loadPicture(groupId, addDays(from, -policy.windowDays));
+  const byDate = new Map(history.map((h) => [h.date, h]));
+  const defaultProfile = profiles.find((p) => p.id === group?.default_equipment_id) ?? profiles[0]!;
+  for (const d of days) {
+    const c: Candidate = { id: d.wid, workout: { id: d.wid, name: d.name ?? undefined, structure: withCap(d.structure, d.original_text), movements: d.movements, scoreType: d.score_type }, tags: d.tags, benchmark: d.benchmark };
+    const window = history.filter((h) => h.date < d.date && h.date >= addDays(d.date, -policy.windowDays));
+    const near = (n: number) => byDate.get(addDays(d.date, n));
+    const profile = profiles.find((p) => p.id === d.equipment_profile_id) ?? defaultProfile;
+    const reason = blocked(c, d.date, { dates: [], history, candidates: [], policy, equipmentFor: () => profile, lastWorkoutDate: new Map(), lastMovementDate: new Map() }, window, near(-1), near(1));
+    if (reason && reason !== 'too long' && reason !== 'repeat not due yet') out.set(d.id, reason);
+  }
+  return out;
+}

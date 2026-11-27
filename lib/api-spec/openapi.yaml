@@ -46,7 +46,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, savePolicyAction, resetPolicyAction, usePublishedProfileAction, move, setCap, setRepeat, setWarmUp, saveWarmUpTemplate, deleteWarmUpTemplate]
+            enum: [propose, approve, approveAll, unapprove, swap, setLocation, skip, insert, neverPropose, replan, fixDay, savePolicyAction, resetPolicyAction, usePublishedProfileAction, move, setCap, setRepeat, setWarmUp, saveWarmUpTemplate, deleteWarmUpTemplate]
       requestBody:
         required: true
         content:
