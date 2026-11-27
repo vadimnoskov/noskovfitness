@@ -285,6 +285,14 @@ export function score(c: Candidate, date: string, input: PlanInput, window: Past
   const slot = input.outline?.get(date);
   const outline = slot ? slotFit(slot, c.tags, c.workout.structure.kind) : 0;
   if (slot && outline >= 0.99) notes.push(`fits the week outline: ${slot.label}`);
+  // Heavy days at least once a week (L2, strong): a non-heavy pick on the week's heavy day costs a penalty.
+  if (slot?.kind === 'heavy' && outline < 0.99 && (w.outline ?? 0) > 0) penalty += 0.25;
+  // …and the other days of that week lean away from a second heavy day.
+  if (isHeavyDay(c.tags) && slot?.kind !== 'heavy' && (w.outline ?? 0) > 0) {
+    const mon = mondayOf(date);
+    const hd = [...(input.outline ?? [])].find(([d, sl]) => sl.kind === 'heavy' && d !== date && mondayOf(d) === mon)?.[0];
+    if (hd) { penalty += 0.3; notes.push(`this week's heavy day is ${hd}`); }
+  }
   const wo = slot ? w.outline ?? 0 : 0;
   const wsum = w.variety + w.freshness + w.weakness + w.benchmark + wo || 1;
   // A coach-set repeat that is due is an explicit instruction: it outranks the engine's own preferences.

@@ -35,7 +35,7 @@ const garage: EquipmentProfile = { id: 'garage', name: 'Home garage', items: [
 
 const input = (over: Partial<PlanInput> = {}): PlanInput => ({
   dates: trainingDates('2026-12-07', 10, [1, 2, 4, 5, 6]), history: [], candidates: C, policy: DEFAULT_POLICY,
-  equipmentFor: () => garage, lastWorkoutDate: new Map(), lastMovementDate: new Map(), ...over,
+  equipmentFor: () => garage, lastWorkoutDate: new Map(), lastMovementDate: new Map(), outline: new Map(), ...over,
 });
 
 describe('equipment', () => {
