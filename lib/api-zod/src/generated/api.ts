@@ -141,6 +141,7 @@ export const SetAthleteVersionBody = zod.object({
   "dayId": zod.string(),
   "athleteId": zod.string(),
   "reset": zod.boolean().optional(),
+  "standardVolume": zod.boolean().optional(),
   "loads": zod.array(zod.object({
   "index": zod.int(),
   "value": zod.number()

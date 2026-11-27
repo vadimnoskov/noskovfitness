@@ -65,6 +65,8 @@ export const athleteVersions = pgTable('athlete_versions', {
   dayId: uuid('day_id').notNull().references(() => programDays.id, { onDelete: 'cascade' }),
   athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
   workout: jsonb('workout').notNull(), changes: jsonb('changes').notNull().default([]), coachingNote: jsonb('coaching_note'),
+  /** Coach: give this person the standard reps and rounds today (no Individual Rx scaling). */
+  rxStandard: boolean('rx_standard').notNull().default(false),
 }, t => [primaryKey({ columns: [t.dayId, t.athleteId] })]);
 export const results = pgTable('results', {
   id: uuid('id').primaryKey().defaultRandom(), athleteId: text('athlete_id').notNull().references(() => athletes.id, { onDelete: 'cascade' }),
