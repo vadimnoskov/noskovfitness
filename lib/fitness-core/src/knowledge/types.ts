@@ -34,7 +34,7 @@ export interface EngineUse {
   /** built: the engine does it today · planned: in a later phase. */
   state: 'built' | 'planned';
   phase?: number;
-  /** Settings paths whose current values belong next to the card (e.g. "rules.rareExceptionDays"). */
+  /** Settings paths whose current values belong next to the card (e.g. "rules.heavyExceptionDays"). */
   settings?: string[];
   /** Regular expression (source) matching the planner's notes when this card changed a pick; used to count it. */
   notePattern?: string;

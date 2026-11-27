@@ -18,7 +18,7 @@ export function mergeCards(cards: KnowledgeCard[], states: CardState[]): MergedC
   });
 }
 
-/** Value at a dotted settings path ("rules.rareExceptionDays") in a plain object. */
+/** Value at a dotted settings path ("rules.heavyExceptionDays") in a plain object. */
 export function settingAt(obj: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((o, k) => (o && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), obj);
 }

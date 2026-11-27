@@ -22,7 +22,8 @@ export async function savePolicyAction(f: FormData) {
       maxBenchmarksPerWeek: num(f, 'rules.maxBenchmarksPerWeek', cur.rules.maxBenchmarksPerWeek),
       maxMinutes: num(f, 'rules.maxMinutes', cur.rules.maxMinutes),
       groupSize: num(f, 'rules.groupSize', cur.rules.groupSize),
-      rareExceptionDays: num(f, 'rules.rareExceptionDays', cur.rules.rareExceptionDays),
+      heavyExceptionDays: num(f, 'rules.heavyExceptionDays', cur.rules.heavyExceptionDays),
+      movementExceptionDays: num(f, 'rules.movementExceptionDays', cur.rules.movementExceptionDays),
       minDaysBetweenLiftTests: num(f, 'rules.minDaysBetweenLiftTests', cur.rules.minDaysBetweenLiftTests),
     },
   };

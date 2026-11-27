@@ -64,9 +64,10 @@ export default function Settings() {
           <label>Longest workout (minutes) <input type="number" name="rules.maxMinutes" min={5} max={120} defaultValue={policy.rules.maxMinutes} /></label>
           <label>People training together <input type="number" name="rules.groupSize" min={1} max={30} defaultValue={policy.rules.groupSize} /></label>
           <label className="check"><input type="checkbox" name="rules.noSameMovementConsecutiveDays" defaultChecked={policy.rules.noSameMovementConsecutiveDays} /> Avoid the same movement on two consecutive days</label>
+          <label>…but allow it once every (days) <input type="number" name="rules.movementExceptionDays" min={0} max={365} defaultValue={policy.rules.movementExceptionDays} /></label>
           <label className="check"><input type="checkbox" name="rules.noConsecutiveHeavyDays" defaultChecked={policy.rules.noConsecutiveHeavyDays} /> Avoid heavy days back to back</label>
-          <label>…but allow one exception every (days) <input type="number" name="rules.rareExceptionDays" min={0} max={365} defaultValue={policy.rules.rareExceptionDays} /></label>
-          <p className="small">L2: "a few heavy days back-to-back on occasion may be entirely appropriate." The engine still prefers other days and says so on the day when it uses the exception. 0 makes both rules strict.</p>
+          <label>…but allow it once every (days) <input type="number" name="rules.heavyExceptionDays" min={0} max={365} defaultValue={policy.rules.heavyExceptionDays} /></label>
+          <p className="small">L2: "a few heavy days back-to-back on occasion may be entirely appropriate." The engine still prefers other days and says so on the day when it uses an exception. 0 makes a rule strict. The two are separate, so allowing back-to-back heavy days more often doesn't let the same movement repeat more often.</p>
         </fieldset>
         <div className="bar"><button className="btn primary" type="submit">Save settings</button></div>
       </ActionForm>

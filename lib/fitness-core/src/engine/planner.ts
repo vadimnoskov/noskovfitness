@@ -77,14 +77,15 @@ function conflictsWith(c: Candidate, nb: PastDay, rules: ProgrammingPolicy['rule
   }
   return out;
 }
-/** Was a back-to-back exception already used in the last rareExceptionDays (consecutive days that conflict)? */
-function exceptionUsedRecently(window: PastDay[], date: string, rules: ProgrammingPolicy['rules']): boolean {
-  const recent = window.filter((d) => days(d.date, date) <= (rules.rareExceptionDays ?? 28)).sort((a, b) => a.date.localeCompare(b.date));
+/** Was this kind of back-to-back exception already used within its window (consecutive days that conflict)? */
+function exceptionUsedRecently(window: PastDay[], date: string, rules: ProgrammingPolicy['rules'], kind: Conflict): boolean {
+  const span = kind === 'heavy' ? rules.heavyExceptionDays ?? 28 : rules.movementExceptionDays ?? 28;
+  const recent = window.filter((d) => days(d.date, date) <= span).sort((a, b) => a.date.localeCompare(b.date));
   for (let i = 1; i < recent.length; i++) {
     const a = recent[i - 1]!, b = recent[i]!;
     if (days(a.date, b.date) !== 1) continue;
-    if (rules.noConsecutiveHeavyDays && a.heavy && b.heavy) return true;
-    if (rules.noSameMovementConsecutiveDays) {
+    if (kind === 'heavy' && a.heavy && b.heavy) return true;
+    if (kind === 'movement') {
       const fa = new Set(a.movementKeys.map(familyOf));
       if (b.movementKeys.some((k) => fa.has(familyOf(k)))) return true;
     }
@@ -204,9 +205,8 @@ export function blocked(c: Candidate, date: string, input: PlanInput, window: Pa
   for (const [nb, when] of [[yesterday, 'yesterday'], [tomorrow, 'tomorrow']] as const) {
     if (!nb) continue;
     if (nb.workoutIds.includes(c.id)) return `same workout ${when}`;
-    const conflicts = conflictsWith(c, nb, rules);
-    if (conflicts.length && exceptionUsedRecently(window, date, rules)) {
-      return conflicts[0] === 'heavy' ? 'heavy two days in a row (exception already used recently)' : `movement used ${when} (exception already used recently)`;
+    for (const k of conflictsWith(c, nb, rules)) {
+      if (exceptionUsedRecently(window, date, rules, k)) return k === 'heavy' ? 'heavy two days in a row (exception already used recently)' : `movement used ${when} (exception already used recently)`;
     }
   }
   if (c.benchmark) {
