@@ -179,7 +179,7 @@ For each open training day, in date order:
 
 **Tags** are computed, never typed: modality pattern (G gymnastics, W weightlifting, M monostructural; modality follows the load, so bodyweight lunges are G), movement count, time domain (heavy days by their structure: sets of 1–5 or a max; the rest by estimated or logged minutes), task or time priority, load, volume.
 
-**Time estimates**: workouts nobody has logged get an estimated duration from per-rep and pace tables, calibrated on the family's logged results (74% within 1.5×).
+**Time estimates**: workouts nobody has logged get an estimated duration from per-rep and pace tables, calibrated on the coach's logged results (75% within 1.5× of the real time, 70% in the right time domain). Imported workouts that list every round and also keep the rep scheme are no longer counted ten times over.
 
 **Benchmarks** come due again after: Girls 150 days, Heroes 240, tests 120, Open workouts 730.
 
@@ -276,6 +276,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-27 | Time estimates: expanded round-by-round workouts fixed, scale recalibrated; stored tags recomputed on next start. |
 | 2026-11-27 | Fitness: burpees and lifts from the floor calibrated against BTWB. |
 | 2026-11-27 | Fitness: runs, rows, skis and bikes (Concept2 formula, matches BTWB), double-unders, BTWB interval logs, BTWB bodyweight import. |
 | 2026-11-27 | Fitness page: body measurements, work and power per result, power-over-duration curve by year, repeated-workout power changes. |

@@ -80,6 +80,8 @@ export const programmingPolicy = pgTable('programming_policy', {
   groupId: text('group_id').primaryKey().references(() => groups.id, { onDelete: 'cascade' }), policy: jsonb('policy').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+/** Small app-wide values, e.g. tags_version (which tag derivation the stored tags were computed with). */
+export const appMeta = pgTable('app_meta', { key: text('key').primaryKey(), value: text('value').notNull() });
 export const schemaMigrations = pgTable('schema_migrations', {
   name: text('name').primaryKey(), appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),
 });

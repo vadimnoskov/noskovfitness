@@ -14,8 +14,9 @@ import type { Workout, WorkoutTags, TimeDomain, MovementPrescription } from '../
  * Version of the tag derivation (this file, estimate.ts and their tables). Bump it whenever a change can move a stored
  * tag: the server recomputes stored tags once on start when the stored version differs.
  * 2: expanded round-by-round movement lists no longer multiplied by the scheme in time estimates.
+ * 3: ESTIMATE_SCALE recalibrated after that fix (1.26 → 1.21).
  */
-export const TAGS_VERSION = 2;
+export const TAGS_VERSION = 3;
 
 export const TAG_POLICY = {
   timeDomainMin: { short: 4, medium: 12, long: 20 }, // upper bounds; above long = endurance

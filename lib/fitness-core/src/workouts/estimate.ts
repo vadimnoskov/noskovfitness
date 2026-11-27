@@ -26,12 +26,12 @@ const SEC_PER_M: Record<string, number> = { run: 0.27, row: 0.23, bike: 0.11, sk
 const SEC_PER_CAL: Record<string, number> = { row: 4.0, bike: 3.3, ski: 4.5 };
 const TRANSITION_SEC = 4;
 /**
- * Calibrated on 782 of the coach's logged Rx timed results (median actual / table estimate = 1.26).
- * With it: 74% of estimates within ×1.5 of the actual time, 89% within ×2, 66% in the same time domain.
- * Measured before the expanded-scheme fix (TAGS_VERSION 2); re-run with `pnpm --filter @workspace/fitness-db run
- * calibrate:estimate` against the real results and update both lines (and MANUAL.md 4.4) if they move.
+ * Calibrated on 1,115 of the coach's logged Rx timed results (median actual / table estimate = 1.21), after the
+ * expanded-scheme fix. With it: 75% of estimates within ×1.5 of the actual time, 90% within ×2, 70% in the same time
+ * domain. Re-run with `pnpm --filter @workspace/fitness-db run calibrate:estimate` and update these lines, TAGS_VERSION
+ * and MANUAL.md 4.4 if they move.
  */
-export const ESTIMATE_SCALE = 1.26;
+export const ESTIMATE_SCALE = 1.21;
 
 function movementSec(m: MovementPrescription, schemeReps?: number): number {
   const f = m.movement.family;
