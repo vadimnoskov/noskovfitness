@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import cookieParser from 'cookie-parser';
 import { timingSafeEqual } from 'node:crypto';
 import { getGroup, getPolicy, getEquipmentProfiles, sql, importLibrary, libraryCounts, flaggedWorkouts, readLibrary } from '@workspace/fitness-db';
-import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody } from '@workspace/api-zod';
+import { FamilyLoginBody, FitnessActionBody, FitnessActionParams, GetFitnessPageQueryParams, GetFitnessPageResponse, ChangeMyPasswordBody, SetAthletePasswordBody, SetAthletePasswordParams, GetTodayQueryParams, GetCoachingNoteQueryParams, SetPlanNoteBody, GetHistoryQueryParams, GetWorkoutDetailQueryParams, SearchWorkoutsQueryParams, LogResultBody, DeleteResultParams, SetLoadProfileBody, SetLoadProfileParams, SetAthleteVersionBody, SetKnowledgeCardBody, AskKnowledgeBody, TeachKnowledgeBody, DecideTeachingBody, SaveMeasurementsBody } from '@workspace/api-zod';
 import { COOKIE } from '../fitness/auth';
 import * as accounts from '../fitness/accounts';
 import { SESSION_COOKIE, SESSION_DAYS } from '../fitness/accounts';
@@ -15,6 +15,7 @@ import * as warmups from '../fitness/warmups';
 import * as knowledge from '../fitness/knowledge';
 import * as knowledgeAsk from '../fitness/knowledge-ask';
 import * as teaching from '../fitness/knowledge-teach';
+import * as picture from '../fitness/athlete-picture';
 import { libraryGz, getPublishedProfile } from '../fitness/library-data';
 
 const router: IRouter = Router();
@@ -258,6 +259,24 @@ router.get('/fitness/warm-up-templates', wrap(async (_req, res) => {
 router.get('/fitness/knowledge', wrap(async (_req, res) => {
   if (!userOf(res)?.isCoach) throw new logging.InputError("Only the coach can see Chalkboard's knowledge.", 403);
   return knowledge.getKnowledge();
+}));
+
+router.get('/fitness/picture', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  return picture.getAthletePicture(user, String(req.query.athleteId ?? ''));
+}));
+router.get('/fitness/measurements', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  return picture.getMeasurements(user, String(req.query.athleteId ?? ''));
+}));
+router.post('/fitness/measurements', wrap(async (req, res) => {
+  const user = userOf(res);
+  if (!user) throw new logging.InputError('Sign in first.', 401);
+  const body = SaveMeasurementsBody.safeParse(req.body);
+  if (!body.success) throw new logging.InputError('Check the measurements form.');
+  return picture.saveMeasurements(user, body.data);
 }));
 
 router.get('/fitness/knowledge/movements', wrap(async (_req, res) => {

@@ -31,6 +31,16 @@ describe('work and power', () => {
     expect(w.work).toBe(Math.round((10 * round + 5 * 200 * 21 + 2 * 200 * 26) / 12));
     expect(w.seconds).toBe(1200);
   });
+  it('does not repeat a scheme over movements that already list their reps', () => {
+    const expanded: Workout = { ...fran, movements: [21, 15, 9].flatMap((n) => fran.movements.map((m) => ({ ...m, reps: n }))) };
+    const a = resultWork({ performed: expanded, score: { timeSec: 168 }, completed: true }, 'male', greg);
+    const b = resultWork({ performed: fran, score: { timeSec: 168 }, completed: true }, 'male', greg);
+    expect(a.work).toBe(b.work);
+  });
+  it('leaves out multi-part workouts', () => {
+    const w = resultWork({ performed: { ...fran, originalText: '5x 3:00 AMRAP: 3 cleans. Resting 1 min between each AMRAP.' }, score: { timeSec: 60 }, completed: true }, 'male', greg);
+    expect(w.missing).toEqual(['multi-part workout']);
+  });
   it('uses the female load for women', () => {
     const m = resultWork({ performed: fran, score: { timeSec: 300 }, completed: true }, 'female', greg);
     const f = resultWork({ performed: fran, score: { timeSec: 300 }, completed: true }, 'male', greg);

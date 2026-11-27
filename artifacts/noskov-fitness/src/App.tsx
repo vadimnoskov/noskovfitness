@@ -16,6 +16,7 @@ import Today from '@/pages/today';
 import History from '@/pages/history';
 import WorkoutPage from '@/pages/workout';
 import Account from '@/pages/account';
+import FitnessPage from '@/pages/fitness';
 import { SessionProvider, useMe } from '@/lib/session';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
@@ -39,6 +40,7 @@ function Layout({ children }: { children: ReactNode }) {
           <Link href="/today">Today</Link>
           <Link href="/history">History</Link>
           <Link href="/benchmarks">Benchmarks</Link>
+          <Link href="/fitness">Fitness</Link>
           {coach ? (
             <>
               <Link href="/program">Program</Link>
@@ -75,6 +77,7 @@ function Router() {
         <Route path="/workout/:id" component={WorkoutPage} />
         <Route path="/account" component={Account} />
         <Route path="/benchmarks" component={Benchmarks} />
+        <Route path="/fitness" component={FitnessPage} />
         <Route path="/calendar"><CoachOnly><CalendarPage /></CoachOnly></Route>
         <Route path="/program"><CoachOnly><ProgramPage /></CoachOnly></Route>
         <Route path="/analysis"><CoachOnly><Analysis /></CoachOnly></Route>

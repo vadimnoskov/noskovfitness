@@ -30,11 +30,13 @@ import type {
   FitnessActionResult,
   FitnessForm,
   FitnessPage,
+  GetAthletePictureParams,
   GetCoachingNoteParams,
   GetFitnessPageParams,
   GetHistoryParams,
   GetKnowledgeMovementParams,
   GetLibraryParams,
+  GetMeasurementsParams,
   GetTodayParams,
   GetWorkoutDetailParams,
   HealthStatus,
@@ -42,6 +44,7 @@ import type {
   KnowledgeQuestionInput,
   LoadProfileInput,
   LogResultInput,
+  MeasurementsInput,
   PasswordChange,
   PasswordSet,
   PlanNoteInput,
@@ -1956,6 +1959,310 @@ export function useGetKnowledgeMovements<TData = Awaited<ReturnType<typeof getKn
 
 
 
+
+export const getGetAthletePictureUrl = (params: GetAthletePictureParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/picture?${stringifiedParams}` : `/api/fitness/picture`
+}
+
+/**
+ * @summary One person's work and power - fitness curve, curve per year, repeated workouts (self, or coach for anyone)
+ */
+export const getAthletePicture = async (params: GetAthletePictureParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetAthletePictureUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAthletePictureQueryKey = (params?: GetAthletePictureParams,) => {
+    return [
+    `/api/fitness/picture`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAthletePictureQueryOptions = <TData = Awaited<ReturnType<typeof getAthletePicture>>, TError = ErrorType<unknown>>(params: GetAthletePictureParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAthletePictureQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAthletePicture>>> = ({ signal }) => getAthletePicture(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAthletePictureQueryResult = NonNullable<Awaited<ReturnType<typeof getAthletePicture>>>
+export type GetAthletePictureQueryError = ErrorType<unknown>
+
+
+export function useGetAthletePicture<TData = Awaited<ReturnType<typeof getAthletePicture>>, TError = ErrorType<unknown>>(
+ params: GetAthletePictureParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAthletePicture>>,
+          TError,
+          Awaited<ReturnType<typeof getAthletePicture>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAthletePicture<TData = Awaited<ReturnType<typeof getAthletePicture>>, TError = ErrorType<unknown>>(
+ params: GetAthletePictureParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAthletePicture>>,
+          TError,
+          Awaited<ReturnType<typeof getAthletePicture>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAthletePicture<TData = Awaited<ReturnType<typeof getAthletePicture>>, TError = ErrorType<unknown>>(
+ params: GetAthletePictureParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary One person's work and power - fitness curve, curve per year, repeated workouts (self, or coach for anyone)
+ */
+
+export function useGetAthletePicture<TData = Awaited<ReturnType<typeof getAthletePicture>>, TError = ErrorType<unknown>>(
+ params: GetAthletePictureParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAthletePicture>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAthletePictureQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMeasurementsUrl = (params: GetMeasurementsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fitness/measurements?${stringifiedParams}` : `/api/fitness/measurements`
+}
+
+/**
+ * @summary One person's body measurements for the work formula (self, or coach for anyone)
+ */
+export const getMeasurements = async (params: GetMeasurementsParams, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+  return customFetch<FitnessPage>(getGetMeasurementsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeasurementsQueryKey = (params?: GetMeasurementsParams,) => {
+    return [
+    `/api/fitness/measurements`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMeasurementsQueryOptions = <TData = Awaited<ReturnType<typeof getMeasurements>>, TError = ErrorType<unknown>>(params: GetMeasurementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeasurementsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMeasurements>>> = ({ signal }) => getMeasurements(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMeasurementsQueryResult = NonNullable<Awaited<ReturnType<typeof getMeasurements>>>
+export type GetMeasurementsQueryError = ErrorType<unknown>
+
+
+export function useGetMeasurements<TData = Awaited<ReturnType<typeof getMeasurements>>, TError = ErrorType<unknown>>(
+ params: GetMeasurementsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMeasurements>>,
+          TError,
+          Awaited<ReturnType<typeof getMeasurements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMeasurements<TData = Awaited<ReturnType<typeof getMeasurements>>, TError = ErrorType<unknown>>(
+ params: GetMeasurementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMeasurements>>,
+          TError,
+          Awaited<ReturnType<typeof getMeasurements>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMeasurements<TData = Awaited<ReturnType<typeof getMeasurements>>, TError = ErrorType<unknown>>(
+ params: GetMeasurementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary One person's body measurements for the work formula (self, or coach for anyone)
+ */
+
+export function useGetMeasurements<TData = Awaited<ReturnType<typeof getMeasurements>>, TError = ErrorType<unknown>>(
+ params: GetMeasurementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMeasurements>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMeasurementsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveMeasurementsUrl = () => {
+
+
+
+
+  return `/api/fitness/measurements`
+}
+
+/**
+ * @summary Save body measurements for a date (self, or coach for anyone)
+ */
+export const saveMeasurements = async (measurementsInput: MeasurementsInput, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FitnessPage>(getSaveMeasurementsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(measurementsInput)
+  }
+);}
+
+
+
+
+
+export const getSaveMeasurementsMutationKey = () => ['saveMeasurements'] as const;
+
+export const getSaveMeasurementsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMeasurements>>, TError,SaveMeasurementsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveMeasurements>>, TError,SaveMeasurementsMutationVariables, TContext> => {
+
+const mutationKey = getSaveMeasurementsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveMeasurements>>, SaveMeasurementsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveMeasurements(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveMeasurementsMutationResult = NonNullable<Awaited<ReturnType<typeof saveMeasurements>>>
+    export type SaveMeasurementsMutationBody = BodyType<MeasurementsInput>
+    export type SaveMeasurementsMutationError = ErrorType<unknown>
+    export type SaveMeasurementsMutationVariables = {data: BodyType<MeasurementsInput>}
+
+    /**
+ * @summary Save body measurements for a date (self, or coach for anyone)
+ */
+export const useSaveMeasurements = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMeasurements>>, TError,SaveMeasurementsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveMeasurements>>,
+        TError,
+        SaveMeasurementsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveMeasurementsMutationOptions(options), queryClient);
+    }
 
 export const getGetKnowledgeMovementUrl = (params: GetKnowledgeMovementParams,) => {
   const normalizedParams = new URLSearchParams();

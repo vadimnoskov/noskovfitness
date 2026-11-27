@@ -12,8 +12,8 @@ The planning engine is called **Chalkboard**. It proposes workouts from a librar
 
 | Role | Sees |
 |---|---|
-| Coach | Everything: Today, History, Benchmarks, Program, Calendar, Analysis, Chalkboard, Settings, Account and Family. Can log results for anyone. |
-| Athlete | Today, History, their own Benchmarks column, Account. |
+| Coach | Everything: Today, History, Benchmarks, Fitness, Program, Calendar, Analysis, Chalkboard, Settings, Account and Family. Can log results for anyone. |
+| Athlete | Today, History, their own Benchmarks column, their own Fitness page, Account. |
 
 The rules are enforced by the server, not only hidden in the menu.
 
@@ -48,7 +48,7 @@ The rules are enforced by the server, not only hidden in the menu.
 |---|---|---|
 | Web app | `artifacts/noskov-fitness` | All screens. Phone-first. Talks only to the API. |
 | API server | `artifacts/api-server` | Sign-in and sessions, every read and coach action, AI calls. One bundled file in production. |
-| Engine | `lib/fitness-core` | Pure TypeScript with tests: movement catalog, workout parser, tags, time estimates, planner, equipment checks, warm-ups, coaching numbers, the knowledge cards and movement facts. |
+| Engine | `lib/fitness-core` | Pure TypeScript with tests: movement catalog, workout parser, tags, time estimates, work and power, planner, equipment checks, warm-ups, coaching numbers, the knowledge cards and movement facts. |
 | Database helpers | `lib/fitness-db` | SQL for the planner (load candidates and history, propose and dry-run), the workout library import, history imports, and the stored-tag refresh. |
 | Schema | `lib/db` | The database tables (Drizzle). Replit applies changes on publish. |
 | API contract | `lib/api-spec` | OpenAPI file; generates the web app's data hooks (`lib/api-client-react`) and the server's input checks (`lib/api-zod`). |
@@ -64,6 +64,7 @@ The rules are enforced by the server, not only hidden in the menu.
 | `program_days` | The plan: date, workout, status (proposed, approved, done, skipped), location, warm-up, the planner's score and notes, alternatives. |
 | `programming_policy` | Settings: targets, weights, rules. |
 | `equipment_profiles` | Locations (gym, home garage) with their equipment and weights. |
+| `measurements` | Bodyweight and the five work-formula heights (and older body measurements), by date. |
 | `athlete_versions`, `coaching_notes`, `plan_edits`, `warm_up_templates` | Per-person versions, cached AI notes, the coach's plan edits, saved warm-ups. |
 | `knowledge_state`, `knowledge_events`, `knowledge_questions`, `knowledge_teachings`, `coach_cards` | Chalkboard: the coach's statuses and notes on cards, the change log, questions asked, teachings and the coach's own cards. |
 
@@ -116,6 +117,17 @@ What it's for: the day's workout and everything a person needs to do it.
 - **History**: your results, newest first, with search.
 - **Workout page**: everything about one workout, with all of a person's results on it and their best.
 - **Benchmarks**: benchmark workouts and lifts with each person's results over time (athletes see their own column).
+
+### 3.5 Fitness (work, power, health)
+
+What it's for: seeing each person's fitness as numbers, using CrossFit's own definitions (L1 guide, "What Is Fitness? Part 2"; "Fooling Around with Fran"). Everyone sees their own page; the coach can pick anyone.
+
+- **Body measurements**: bodyweight and the five heights from BTWB's work-formula form (squat low, squat high, shoulder, overhead, deadlift/knuckle height), with a date. They are only used to compute work, and stay in the app's database. Re-enter bodyweight when it changes; each result uses the measurements in effect on its date.
+- **Work and power**: work = bodyweight × how far the centre of mass travels + load × how far the load travels; power = work ÷ time (ft-lb/s, with watts). Counted for finished for-time results and AMRAPs. It is an estimate (the sources call it zero-order), but its errors repeat every time, so comparisons over time hold.
+- **Which movements count**: each counted movement has a rule (Fitness → "How each movement's work is counted", and the sheet "Chalkboard – Work formula rules" in Drive, 03). Rules are marked *as in the source*, *derived* (the same rule from the five heights) or *assumed* (needs a stated simplification; for the coach to review). Runs, rows, bikes, double-unders, toes-to-bar, carries and a few others have no distance rule, so a result that includes them gets no number rather than a guessed one. Multi-part workouts ("5 × 3:00 AMRAP, rest 1 min") and anything above twice the best power in the Fran tables (676 ft-lb/s) are left out as probably misread.
+- **Power over duration**: for each duration (1 to 60 minutes, log scale), the best average power held for at least that long: the all-time curve (dashed), the last three years in colour, older years in gray. Hover or tab to a point to see the workout behind it. Fitness is the area under this curve; health is the curve holding up over the years.
+- **By year**: results counted, the area (compared only over durations every year reached, so it's like for like), and power at 1, 4, 12 and 30 minutes.
+- **Repeated workouts**: the same workout with the same loads, finished for time, done two or more times. The work is the same each time, so the change in power is the ratio of the times (L1 guide). Needs no measurements.
 
 ## 4. Planning (coach)
 
@@ -261,6 +273,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-27 | Fitness page: body measurements, work and power per result, power-over-duration curve by year, repeated-workout power changes. |
 | 2026-11-26 | Back-to-back exceptions split into two settings (heavy days; same movement), 28 days each. |
 | 2026-11-26 | Chalkboard Coach (teach, dry-run preview, conflicts, confirm, undo) and Movements pages. |
 | 2026-11-26 | Chalkboard Map, Card and Ask; about 110 methodology cards. |
@@ -271,4 +284,4 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 ## 10. What's next
 
-See "Chalkboard: the plan" in Drive (02 Plans and design). Next up: Phase 5, the athlete picture from data (fitness curve and health over time, weaknesses with evidence, conditioning level and readiness, volume-jump warnings).
+See "Chalkboard: the plan" in Drive (02 Plans and design). Phase 5 is in progress: the Fitness page is built; next are weaknesses with evidence (time domain × modality), conditioning level and readiness, and volume-jump warnings.

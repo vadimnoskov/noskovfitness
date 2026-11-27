@@ -304,6 +304,44 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/picture:
+    get:
+      operationId: getAthletePicture
+      summary: One person's work and power - fitness curve, curve per year, repeated workouts (self, or coach for anyone)
+      parameters:
+        - { in: query, name: athleteId, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Athlete picture
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+  /fitness/measurements:
+    get:
+      operationId: getMeasurements
+      summary: One person's body measurements for the work formula (self, or coach for anyone)
+      parameters:
+        - { in: query, name: athleteId, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Measurements
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
+    post:
+      operationId: saveMeasurements
+      summary: Save body measurements for a date (self, or coach for anyone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MeasurementsInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FitnessPage" }
   /fitness/knowledge/movement:
     get:
       operationId: getKnowledgeMovement
@@ -452,6 +490,17 @@ components:
       required: [question]
       properties:
         question: { type: string }
+    MeasurementsInput:
+      type: object
+      required: [athleteId, date, lengthUnit, weightUnit, values]
+      properties:
+        athleteId: { type: string }
+        date: { type: string }
+        lengthUnit: { type: string, enum: [in, cm] }
+        weightUnit: { type: string, enum: [lb, kg] }
+        values:
+          type: object
+          additionalProperties: { type: number }
     KnowledgeCardInput:
       type: object
       required: [cardId]

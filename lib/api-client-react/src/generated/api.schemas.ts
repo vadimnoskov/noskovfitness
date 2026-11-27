@@ -32,6 +32,32 @@ export interface KnowledgeQuestionInput {
   question: string;
 }
 
+export type MeasurementsInputLengthUnit = typeof MeasurementsInputLengthUnit[keyof typeof MeasurementsInputLengthUnit];
+
+
+export const MeasurementsInputLengthUnit = {
+  in: 'in',
+  cm: 'cm',
+} as const;
+
+export type MeasurementsInputWeightUnit = typeof MeasurementsInputWeightUnit[keyof typeof MeasurementsInputWeightUnit];
+
+
+export const MeasurementsInputWeightUnit = {
+  lb: 'lb',
+  kg: 'kg',
+} as const;
+
+export type MeasurementsInputValues = {[key: string]: number};
+
+export interface MeasurementsInput {
+  athleteId: string;
+  date: string;
+  lengthUnit: MeasurementsInputLengthUnit;
+  weightUnit: MeasurementsInputWeightUnit;
+  values: MeasurementsInputValues;
+}
+
 export type KnowledgeCardInputStatus = typeof KnowledgeCardInputStatus[keyof typeof KnowledgeCardInputStatus];
 
 
@@ -169,6 +195,14 @@ athleteId?: string;
 
 export type GetLibraryParams = {
 offset?: number;
+};
+
+export type GetAthletePictureParams = {
+athleteId: string;
+};
+
+export type GetMeasurementsParams = {
+athleteId: string;
 };
 
 export type GetKnowledgeMovementParams = {

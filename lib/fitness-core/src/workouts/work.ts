@@ -37,13 +37,15 @@ type PerRep = (d: BodyDims, loadLb: number, m: MovementPrescription, sex: Sex) =
 const sq = (d: BodyDims) => d.squatHigh - d.squatLow;
 /** Hands from shoulders to overhead: the pull-up and press travel. */
 const arm = (d: BodyDims) => d.overhead - d.shoulder;
+/** Box height for a box movement: the workout's, else the standard 24/20 in. */
+const boxIn = (m: MovementPrescription, sex: Sex) => (sex === 'female' ? m.heightIn?.female ?? m.heightIn?.male : m.heightIn?.male) ?? (sex === 'female' ? 20 : 24);
 const squatReceive = (m: MovementPrescription) => m.movement.receive === 'squat';
 
 /**
  * Inch-pounds per rep. "source": the distance rule is the one the Fran tables use. "derived": the same rule applied
  * to another movement from the five heights. Families not listed are not counted.
  */
-const MODEL: Record<string, { basis: 'source' | 'derived'; perRep: PerRep; rule: string }> = {
+const MODEL: Record<string, { basis: 'source' | 'derived' | 'assumed'; perRep: PerRep; rule: string }> = {
   thruster: { basis: 'source', rule: 'body × squat travel + load × (squat travel + shoulder-to-overhead)', perRep: (d, l) => d.weight * sq(d) + l * (sq(d) + arm(d)) },
   'pull-up': { basis: 'source', rule: 'body × shoulder-to-overhead', perRep: (d) => d.weight * arm(d) },
   'air-squat': { basis: 'source', rule: 'body × squat travel', perRep: (d) => d.weight * sq(d) },
@@ -66,8 +68,22 @@ const MODEL: Record<string, { basis: 'source' | 'derived'; perRep: PerRep; rule:
   'ground-to-overhead': { basis: 'derived', rule: 'load × (overhead height − bar height)', perRep: (d, l) => l * (d.overhead - BAR_FROM_FLOOR_IN) },
   'wall-ball': { basis: 'derived', rule: 'body × squat travel + ball × (target − shoulder height in the squat)',
     perRep: (d, l, m, sex) => { const t = (sex === 'female' ? m.heightIn?.female : m.heightIn?.male) ?? (sex === 'female' ? 108 : 120); return d.weight * sq(d) + l * (t - (d.shoulder - sq(d))); } },
-  'box-jump': { basis: 'derived', rule: 'body × box height', perRep: (d, _l, m, sex) => { const h = sex === 'female' ? m.heightIn?.female ?? m.heightIn?.male : m.heightIn?.male; return h ? d.weight * h : undefined; } },
-  'step-up': { basis: 'derived', rule: '(body + load) × box height', perRep: (d, l, m, sex) => { const h = sex === 'female' ? m.heightIn?.female ?? m.heightIn?.male : m.heightIn?.male; return h ? (d.weight + l) * h : undefined; } },
+  'box-jump': { basis: 'derived', rule: 'body × box height (24/20 in when not given)', perRep: (d, _l, m, sex) => d.weight * boxIn(m, sex) },
+  'step-up': { basis: 'derived', rule: '(body + load) × box height (24/20 in when not given)', perRep: (d, l, m, sex) => (d.weight + l) * boxIn(m, sex) },
+  'bench-press': { basis: 'derived', rule: 'load × shoulder-to-overhead (the arm’s length)', perRep: (d, l) => l * arm(d) },
+  pistol: { basis: 'derived', rule: 'body × squat travel', perRep: (d) => d.weight * sq(d) },
+  'kb-swing': { basis: 'derived', rule: 'load × (shoulder − knuckle height); American: load × (overhead − knuckle height); the hinge is not counted',
+    perRep: (d, l, m) => l * ((m.movement.variant === 'american' ? d.overhead : d.shoulder) - d.knuckle) },
+  // Assumed: the rule needs a stated fraction or simplification on top of the five heights (for the coach to review).
+  burpee: { basis: 'assumed', rule: 'body × squat high height (lying to standing; the centre of mass on the floor is taken as 0, the jump is not counted)',
+    perRep: (d) => d.weight * d.squatHigh },
+  'push-up': { basis: 'assumed', rule: 'body × half of shoulder-to-overhead (the chest moves an arm’s length, the feet don’t move)', perRep: (d) => d.weight * arm(d) / 2 },
+  dip: { basis: 'assumed', rule: 'body × half of shoulder-to-overhead', perRep: (d) => d.weight * arm(d) / 2 },
+  hspu: { basis: 'assumed', rule: 'body × half of shoulder-to-overhead (head to lockout)', perRep: (d) => d.weight * arm(d) / 2 },
+  'muscle-up': { basis: 'assumed', rule: 'pull-up + dip: body × 1.5 × shoulder-to-overhead', perRep: (d) => d.weight * arm(d) * 1.5 },
+  'sit-up': { basis: 'assumed', rule: 'half the body × half the torso (torso = shoulder − squat high height)', perRep: (d) => (d.weight / 2) * ((d.shoulder - d.squatHigh) / 2) },
+  lunge: { basis: 'assumed', rule: '(body + load) × half the squat travel (reps only; distance lunges are not counted)', perRep: (d, l) => (d.weight + l) * sq(d) / 2 },
+  'rope-climb': { basis: 'assumed', rule: 'body × (15 ft rope − overhead height)', perRep: (d) => d.weight * Math.max(0, 180 - d.overhead) },
 };
 export const WORK_MODEL = Object.fromEntries(Object.entries(MODEL).map(([k, v]) => [k, { basis: v.basis, rule: v.rule }]));
 
@@ -92,16 +108,25 @@ export interface WorkResult {
   power?: number;
   /** Families that kept this result from a number. */
   missing: string[];
-  /** Families counted with a "derived" rule. */
+  /** Families counted with a "derived" or "assumed" rule. */
   derived: string[];
 }
+
+const MULTI_PART = /\b\d+\s*x\s*\d+:\d\d|\brest(ing)?\b[^.\n]{0,20}\b(between|in between|then)\b|-- ?then ?--|\bthen,? in the remaining time\b/i;
+/**
+ * Twice the best average power in the Fran tables (338 ft-lb/s, an elite athlete at about 2:30). Anything above it is
+ * almost certainly a workout read wrongly from its text, so it is left out rather than shown.
+ */
+export const MAX_PLAUSIBLE = 676;
 
 /** One pass through the workout as a list of (movement, reps) in order. */
 function pass(w: Workout): { m: MovementPrescription; reps: number }[] | undefined {
   const s = w.structure;
   const scheme = 'scheme' in s && s.scheme ? s.scheme : undefined;
   const out: { m: MovementPrescription; reps: number }[] = [];
-  if (scheme) { for (const n of scheme) for (const m of w.movements) out.push({ m, reps: m.reps ?? n }); }
+  // A scheme (21-15-9) gives the reps of movements that have none; when every movement has its own reps the list is
+  // already the full sequence (imports often expand "10-9-8…" into one entry per round).
+  if (scheme && w.movements.some((m) => m.reps === undefined)) { for (const n of scheme) for (const m of w.movements) out.push({ m, reps: m.reps ?? n }); }
   else for (const m of w.movements) { if (m.reps === undefined) return undefined; out.push({ m, reps: m.reps }); }
   return out;
 }
@@ -111,12 +136,14 @@ export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>,
   const w = r.performed;
   const s = w.structure;
   const missing = [...new Set(w.movements.filter((m) => !MODEL[m.movement.family] || m.distanceM || m.calories || (m.seconds && !m.reps)).map((m) => m.movement.family))];
-  const derived = [...new Set(w.movements.filter((m) => MODEL[m.movement.family]?.basis === 'derived').map((m) => m.movement.family))];
+  const derived = [...new Set(w.movements.filter((m) => (MODEL[m.movement.family]?.basis ?? 'source') !== 'source').map((m) => m.movement.family))];
+  // Multi-part workouts ("5 × 3:00 AMRAP, rest 1 min", "-- then --") are stored as one part; their numbers would be wrong.
+  if (MULTI_PART.test(w.originalText ?? '')) return { missing: ['multi-part workout'], derived };
   if (missing.length || !d) return { missing, derived };
   const seq = pass(w);
   if (!seq?.length) return { missing: ['reps not known'], derived };
   const per = seq.map(({ m, reps }) => ({ reps, inLb: MODEL[m.movement.family]!.perRep(d, loadLb(m, sex), m, sex) }));
-  if (per.some((p) => p.inLb === undefined || !(p.inLb > 0))) return { missing: ['a box or target height'], derived };
+  if (per.some((p) => p.inLb === undefined || !(p.inLb > 0))) return { missing: ['a load or height'], derived };
   const passWork = per.reduce((a, p) => a + p.reps * p.inLb!, 0);
   const passReps = per.reduce((a, p) => a + p.reps, 0);
   // Work for N reps into the sequence (partial rounds walk the movements in order).
@@ -137,6 +164,7 @@ export function resultWork(r: Pick<Result, 'performed' | 'score' | 'completed'>,
   }
   if (inLb === undefined || !seconds) return { missing: s.kind === 'for-time' || s.kind === 'amrap' ? ['score'] : [`format (${s.kind})`], derived };
   const work = inLb / 12;
+  if (work / seconds > MAX_PLAUSIBLE) return { missing: ['implausible (check how the workout was read)'], derived };
   return { work: Math.round(work), seconds, power: Math.round((work / seconds) * 10) / 10, missing: [], derived };
 }
 

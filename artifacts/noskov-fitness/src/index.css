@@ -220,3 +220,8 @@ form[aria-busy=true] button{opacity:.45;cursor:default;pointer-events:none}
 .steps>li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);font-weight:700;display:grid;place-items:center;font-size:13px}
 .kdraft,.kconflict{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
 .kconflict{border-color:#e8b4ae}.kconflict.k-pos-agree{border-color:var(--line)}
+/* Fitness page */
+details.card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:12px 0}details.card summary{cursor:pointer}
+.measform{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;margin-top:8px}.measform label{display:flex;flex-direction:column;gap:3px}
+.measform .row{grid-column:1/-1}.chart{width:100%;height:auto;max-width:720px;display:block;margin:6px 0}.chart g:focus{outline:none}
+.chart g:focus circle{stroke:#257de0}

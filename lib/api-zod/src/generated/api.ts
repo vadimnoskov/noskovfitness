@@ -246,6 +246,40 @@ export const GetKnowledgeMovementsResponse = zod.record(zod.string(), zod.unknow
 
 
 /**
+ * @summary One person's work and power - fitness curve, curve per year, repeated workouts (self, or coach for anyone)
+ */
+export const GetAthletePictureQueryParams = zod.object({
+  "athleteId": zod.coerce.string()
+})
+
+export const GetAthletePictureResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary One person's body measurements for the work formula (self, or coach for anyone)
+ */
+export const GetMeasurementsQueryParams = zod.object({
+  "athleteId": zod.coerce.string()
+})
+
+export const GetMeasurementsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Save body measurements for a date (self, or coach for anyone)
+ */
+export const SaveMeasurementsBody = zod.object({
+  "athleteId": zod.string(),
+  "date": zod.string(),
+  "lengthUnit": zod.enum(['in', 'cm']),
+  "weightUnit": zod.enum(['lb', 'kg']),
+  "values": zod.record(zod.string(), zod.number())
+})
+
+export const SaveMeasurementsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Coach - one movement's facts, points of performance, versions and workouts
  */
 export const GetKnowledgeMovementQueryParams = zod.object({
