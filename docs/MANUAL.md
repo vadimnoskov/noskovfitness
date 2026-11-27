@@ -102,6 +102,7 @@ What it's for: the day's workout and everything a person needs to do it.
 - **Warm-up**: the coach's warm-up for that day, else the coach's saved warm-up for this workout, else a suggested one. Suggested warm-ups have a general part, a rehearsal of today's movements at low volume, and a short primer only before short hard workouts. On heavy lifting days the build-up sets are the warm-up. Everyone gets the same warm-up.
 - **Plan for today** (collapsed; the target is in its header): the approach and tips, then pacing numbers (target time from your last and best result, checkpoints, warm-up sets for lifts). With the API key set, the approach and tips are written by Claude Haiku from the workout, your version, your earlier results and notes, and the coach's day note. The AI follows CrossFit L1/L2 coaching rules: cues name the body part and direction, positive phrasing, threshold advice, set breaks, never lowering the weight mid-workout, drink when thirsty. Without the key, built-in notes are shown.
 - **Check-in**: "How do you feel today?" one tap, 1 (rough) to 5 (great); tap the chosen number again to clear it. Optional. The coach can check in for someone on their Today.
+- **Stimulus**: the intended effort, from the time domain (sprint under 4 minutes, hard and fast 4–12, sustained 12–20, long 20+, intervals, or a heavy day with sets of 1–5 at about 80–85%+ and long rests); a completion window (from your own earlier times on this workout, ±10%, else the calibrated estimate) with when to scale; expected rounds for an AMRAP; suggested set breaks on demanding movements (at most about one break per 7 reps, as in the L1 Fran lesson plan: 21 → 3, 15 → 2, 9 → 1, with an example split); and checkpoints per round or per set. Easy movements (air squats, sit-ups, rowing…) get no break advice.
 - **Volume warning** (when it applies): the workout asks for far more of a movement than this person's usual (more than the set multiple of their most reps of it in one workout in the last 12 months), or for a movement they haven't done in 12 months, or they have logged nothing for a month (scale volume for the first two weeks back). Jumping pull-ups and GHD sit-ups warn sooner. Source: L1, mitigating rhabdo risk (pp. 151–152): increase volume gradually; the guide gives no exact numbers, so the thresholds are settings.
 - **Your earlier results** on this workout.
 - **Log your result** (below).
@@ -290,6 +291,7 @@ Without `ANTHROPIC_API_KEY`, coaching notes fall back to built-in ones and Ask a
 
 | Date | Change |
 |---|---|
+| 2026-11-28 | Planner v2 step 4: Stimulus on Today (intent, completion window, set breaks, checkpoints). |
 | 2026-11-28 | Planner v2 step 3: soft week outline: one heavy day and one interval day a week, on changing weekdays (no fixed sequence), with a new weight. |
 | 2026-11-28 | Planner v2 step 2: "Why this workout" card on every planned day. |
 | 2026-11-28 | Planner v2 step 1: volume-aware picks; every planned day re-checked against the rules where it sits, with a one-tap re-plan. |

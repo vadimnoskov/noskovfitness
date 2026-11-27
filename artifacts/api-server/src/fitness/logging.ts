@@ -3,6 +3,7 @@
  * a result stores exactly what this person did (including scaled loads) in `performed`.
  */
 import { volumeWarningsFor } from './volume';
+import { stimulusFor } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -62,6 +63,10 @@ export async function getToday(date: string, athleteId: string) {
       totalReps: prescribedReps(v.version), previous: history.slice(0, 5), previousCount: history.length,
       best: bestOf(v.standard.scoreType, history) ?? null, coaching: coachingNotes(v.version, history),
       warmUp: resolveWarmUp(v.standard, v.day.tags, v.day.day_warm_up, v.day.workout_warm_up),
+      stimulus: stimulusFor(v.version, v.day.tags, {
+        bestSec: history.filter((h) => h.completed && h.score.timeSec).reduce<number | undefined>((a, h) => (a === undefined || h.score.timeSec! < a ? h.score.timeSec : a), undefined),
+        lastSec: history.find((h) => h.completed && h.score.timeSec)?.score.timeSec,
+      }),
       volumeWarnings: v.day.status === 'done' ? [] : (await volumeWarningsFor([{ id: athleteId, name: v.person.name }], [{ date, workout: v.version }], date)).get(`${athleteId}|${date}`) ?? [],
     });
   }

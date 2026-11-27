@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearch, useLocation } from 'wouter';
 import { useGetToday, getGetTodayQueryKey, useGetCoachingNote, getGetCoachingNoteQueryKey, useSetPlanNote, useSearchWorkouts, getSearchWorkoutsQueryKey, useSetAthleteVersion, useSaveCheckIn } from '@workspace/api-client-react';
-import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags } from '@workspace/fitness-core';
+import { structureLabel, movementLine, workoutTitle, nameOf, keyOf, scoreText, type Workout, type WorkoutTags, type Stimulus } from '@workspace/fitness-core';
 import { useMe, localToday, type Person } from '@/lib/session';
 import { addDays, longDate } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
@@ -14,7 +14,7 @@ import { WarmUpBox, NoteText, type DayWarmUp } from '@/components/WarmUp';
 type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
-  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[] };
+  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[]; stimulus?: Stimulus };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -209,6 +209,7 @@ export default function Today() {
               {p.volumeWarnings?.length ? (
                 <div className="warn" role="note"><b>Volume: build up gradually.</b> {p.volumeWarnings.join('; ')}. Consider fewer reps or rounds today (L1: increase volume slowly; prolonged-eccentric movements carry the most rhabdo risk).</div>
               ) : null}
+              {p.stimulus ? <StimulusBox s={p.stimulus} /> : null}
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
               {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}
@@ -262,6 +263,22 @@ function CheckIn({ date, athleteId, value, self, name }: { date: string; athlete
         {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" aria-pressed={value === n} disabled={m.isPending} onClick={() => pick(n)} title={n === 1 ? 'rough' : n === 5 ? 'great' : undefined}>{n}</button>)}
       </div>
       <span className="small">1 rough · 5 great</span>
+    </div>
+  );
+}
+
+/** The intended stimulus: the kind of effort, a completion window or rounds, set breaks and checkpoints. */
+function StimulusBox({ s }: { s: Stimulus }) {
+  const w = s.window;
+  return (
+    <div className="stimulus">
+      <b>Stimulus</b>
+      <p>{s.intent}</p>
+      {w ? <p>Aim to finish in <b>{w.min}–{w.max} min</b> ({w.from === 'your results' ? 'from your earlier times' : 'estimate'}){s.scaleIf ? `; ${s.scaleIf}` : ''}.</p> : null}
+      {s.rounds ? <p>Expect about <b>{s.rounds.min}–{s.rounds.max} rounds</b> (estimate).</p> : null}
+      {s.breaks.length ? <p>Set breaks, at most: {s.breaks.map((b) => `${b.movement} ${b.reps}: ${b.maxBreaks} (e.g. ${b.example})`).join('; ')}. Fewer if you can.</p> : null}
+      {s.checkpoints.length ? <p>Checkpoints: {s.checkpoints.join(' · ')}.</p> : null}
+      <p className="small">From {s.sources.join(' and ')}.</p>
     </div>
   );
 }
