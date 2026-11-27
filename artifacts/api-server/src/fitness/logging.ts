@@ -5,20 +5,21 @@
 import { volumeWarningsFor } from './volume';
 import { rxContext, forgetRxContext, weaknessContext } from './rx-context';
 import { lightDays, implementsOf } from './warmups';
-import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesToday } from '@workspace/fitness-core';
+import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesToday, amountsMissing } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
-import { programOfAthlete, visibleAthleteIds } from './data';
+import { programOfAthlete, visibleAthleteIds, coachesAthlete } from './data';
 import { noteFor, type NoteArgs } from './ai-notes';
 import { resolveWarmUp } from './warmups';
 
 export class InputError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
-const workoutOf = (r: Record<string, any>): Workout => ({
-  id: r.id, name: r.name ?? undefined, structure: r.structure, movements: r.movements, scoreType: r.score_type,
-  ...(r.benchmark ? { benchmark: r.benchmark } : {}),
-});
+const workoutOf = (r: Record<string, any>): Workout => {
+  const w: Workout = { id: r.id, name: r.name ?? undefined, structure: r.structure, movements: r.movements, scoreType: r.score_type, ...(r.benchmark ? { benchmark: r.benchmark } : {}) };
+  // Amounts not read from the text: keep the workout as written so Today can show it.
+  return r.original_text && amountsMissing(w).length ? { ...w, originalText: r.original_text } : w;
+};
 
 /** Who may this user log or view results for? */
 export async function canActFor(user: User, athleteId: string) {
@@ -44,7 +45,7 @@ export async function versionFor(dayId: string, athleteId: string) {
       AND EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = d.group_id AND gm.athlete_id = ${athleteId})`;
   if (!d) throw new InputError('Program day not found.');
   const person = await personFor(athleteId);
-  const standard = workoutOf({ id: d.wid, name: d.name, structure: withCap(d.structure, d.original_text), movements: d.movements, score_type: d.score_type, benchmark: d.benchmark });
+  const standard = workoutOf({ id: d.wid, name: d.name, structure: withCap(d.structure, d.original_text), movements: d.movements, score_type: d.score_type, benchmark: d.benchmark, original_text: d.original_text });
   const location: EquipmentProfile | undefined = d.eid ? { id: d.eid, name: d.ename, items: d.items } : undefined;
   const override = Array.isArray(d.override) && d.override.length
     ? Object.fromEntries((d.override as { index: number; to: number }[]).map((o) => [o.index, o.to])) : undefined;
@@ -132,7 +133,7 @@ async function previousOn(workoutId: string, athleteId: string, before: string):
 
 /** Coach sets (or resets) one person's weights for one program day. */
 export async function setAthleteVersion(user: User, input: { dayId: string; athleteId: string; reset?: boolean; standardVolume?: boolean; loads?: { index: number; value: number }[] }) {
-  if (!user.isCoach) throw new InputError('Only the coach can change a version.', 403);
+  if (!(await coachesAthlete(user, input.athleteId))) throw new InputError('Only the coach can change a version.', 403);
   if (input.reset) { await sql`DELETE FROM athlete_versions WHERE day_id = ${input.dayId} AND athlete_id = ${input.athleteId}`; return { ok: true }; }
   if (input.standardVolume !== undefined) {
     const base = await versionFor(input.dayId, input.athleteId);

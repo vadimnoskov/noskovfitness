@@ -8,6 +8,7 @@ import { addDays, weekStart, longDate, short, DOW } from '@/lib/dates';
 import { Chips } from '@/components/Chips';
 import { usePage, PageStatus, ActionForm } from '@/lib/api';
 import { ProgramPicker } from '@/lib/program';
+import { AsWritten } from '@/pages/today';
 
 type PlannedDay = BasePlannedDay & { repeat?: { everyDays: number; until: string | null } | null; warmUp: DayWarmUp };
 type ProgramData = { days: PlannedDay[]; profiles: { id: string; name: string }[]; group: { training_days: number[]; default_equipment_id?: string | null } };
@@ -184,6 +185,7 @@ function DayCard({ d, zoom, profiles, run, onDragStart, onDragEnd }: {
       {zoom >= 1 ? (
         <>
           <div className="small">{structureLabel(d.workout.structure)}{cap ? ` · cap ${cap}:00` : ''}</div>
+          {d.workout.originalText ? <AsWritten text={d.workout.originalText} /> : null}
           <ul className="mv">{d.workout.movements.slice(0, zoom === 2 ? 40 : 6).map((m, i) => <li key={i}>{movementLine(m)}</li>)}{zoom < 2 && d.workout.movements.length > 6 ? <li className="small">+{d.workout.movements.length - 6} more</li> : null}</ul>
         </>
       ) : null}

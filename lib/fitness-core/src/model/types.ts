@@ -45,9 +45,10 @@ export interface EquipmentProfile {
 /**
  * no-barbell-overhead: the barbell can't go overhead (a fixed-path rack, a low ceiling): no barbell snatches, jerks,
  * presses, push presses, thrusters, overhead squats. strict-only: the pull-up bar or handles can't take a kip: pull-ups,
- * toes-to-bar and chest-to-bar are done strict, no bar muscle-ups. no-running: no route to run from here.
+ * toes-to-bar and chest-to-bar are done strict, no bar muscle-ups. no-running: no route to run from here. small-space: a small room: no carries, walking lunges, crawls,
+ * handstand walks, sleds or shuttles over 25 m in one go.
  */
-export type LocationLimit = 'no-barbell-overhead' | 'strict-only' | 'no-running';
+export type LocationLimit = 'no-barbell-overhead' | 'strict-only' | 'no-running' | 'small-space';
 export interface EquipmentItem {
   implement: Implement;
   /** How many of this item exist (for fixed-load implements: see loads). */

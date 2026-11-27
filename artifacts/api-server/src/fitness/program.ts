@@ -1,5 +1,5 @@
 import { sql, checkPlannedDays } from '@workspace/fitness-db';
-import { withCap, type Workout, type WorkoutTags, type ScoreBreakdown } from '@workspace/fitness-core';
+import { withCap, type Workout, type WorkoutTags, type ScoreBreakdown, amountsMissing } from '@workspace/fitness-core';
 import { resolveWarmUp, lightDays, implementsOf, type DayWarmUp } from './warmups';
 import { volumeWarningsFor } from './volume';
 
@@ -37,7 +37,9 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
   const vol = await volumeWarningsFor(members as unknown as { id: string; name: string }[],
     rows.filter((r) => r.status === 'proposed' || r.status === 'approved').map((r) => ({ date: r.date as string, workout: { id: r.wid, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type } as Workout })), today, groupId);
   return rows.map((r) => {
-    const workout: Workout = { id: r.wid, name: r.name ?? undefined, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type };
+    const base: Workout = { id: r.wid, name: r.name ?? undefined, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type };
+    // Amounts not read from the text: send the workout as written so the coach can read it.
+    const workout: Workout = amountsMissing(base).length && r.original_text ? { ...base, originalText: r.original_text } : base;
     return {
     id: r.id, date: r.date, seq: r.seq, status: r.status, equipmentId: r.equipment_profile_id, workoutId: r.wid, name: r.name, benchmark: r.benchmark,
     workout, tags: r.tags, origin: r.origin,

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
+import { localToday } from '@/lib/session';
 import { useGetKnowledge, getGetKnowledgeQueryKey, useSetKnowledgeCard, useAskKnowledge, type KnowledgeCardInput } from '@workspace/api-client-react';
 import type { Area, MergedCard, Source, CardStatus } from '@workspace/fitness-core';
 
@@ -210,7 +211,7 @@ export function KnowledgeAsk() {
     e.preventDefault();
     const question = text.trim();
     if (question.length < 3) return;
-    ask.mutate({ data: { question } }, { onSuccess: (r) => { setLast({ ...(r as Answer), question }); setText(''); qc.invalidateQueries({ queryKey: getGetKnowledgeQueryKey() }); } });
+    ask.mutate({ data: { question, today: localToday() } }, { onSuccess: (r) => { setLast({ ...(r as Answer), question }); setText(''); qc.invalidateQueries({ queryKey: getGetKnowledgeQueryKey() }); } });
   };
   const err = ask.error as { data?: { error?: string } } | null;
   const shown = (d?.questions ?? []).filter((x) => x.id !== last?.id);

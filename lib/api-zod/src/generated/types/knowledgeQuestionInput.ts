@@ -8,4 +8,6 @@
 
 export interface KnowledgeQuestionInput {
   question: string;
+  /** The coach's local date (YYYY-MM-DD), for 'today' and 'tomorrow' */
+  today?: string;
 }

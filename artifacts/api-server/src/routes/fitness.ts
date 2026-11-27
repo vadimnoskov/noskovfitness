@@ -98,7 +98,7 @@ router.get('/fitness/pages', async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: 'Unknown fitness screen.' }); return; }
   const { screen, from, to } = parsed.data;
   const user = userOf(res);
-  if (user && !user.isCoach && COACH_SCREENS.has(screen)) { res.status(403).json({ error: 'This page is for the coach.' }); return; }
+  if (user && COACH_SCREENS.has(screen) && !(await data.isCoaching(user))) { res.status(403).json({ error: 'This page is for the coach.' }); return; }
   if ((from && !date(from)) || (to && !date(to))) { res.status(400).json({ error: 'Use a valid YYYY-MM-DD date.' }); return; }
   const latestDate = await data.getLatestDate();
   const start = from ?? `${latestDate.slice(0, 4)}-01-01`, end = to ?? `${latestDate.slice(0, 4)}-12-31`;
@@ -138,7 +138,7 @@ router.get('/fitness/pages', async (req, res) => {
 
 const actions = { ...program, ...settings, setWarmUp: warmups.setWarmUp, saveWarmUpTemplate: warmups.saveWarmUpTemplate, deleteWarmUpTemplate: warmups.deleteWarmUpTemplate };
 router.post('/fitness/actions/:action', async (req, res) => {
-  if (!userOf(res)?.isCoach) { res.status(403).json({ error: 'Only the coach can change the program and settings.' }); return; }
+  if (!userOf(res) || !(await data.isCoaching(userOf(res)!))) { res.status(403).json({ error: 'Only the coach can change the program and settings.' }); return; }
   const params = FitnessActionParams.safeParse(req.params), body = FitnessActionBody.safeParse(req.body);
   if (!params.success || !body.success) { res.status(400).json({ error: 'Invalid coach action or form.' }); return; }
   const action = params.data.action;
@@ -275,14 +275,14 @@ router.get('/fitness/coaching-note', wrap(async (req, res) => {
 
 router.post('/fitness/plan-note', wrap(async (req, res) => {
   const user = userOf(res)!;
-  if (!user.isCoach) throw new logging.InputError('Only the coach can edit the plan.', 403);
   const p = SetPlanNoteBody.safeParse(req.body);
   if (!p.success || !UUID.test(p.data.dayId) || p.data.text.length > 4000) throw new logging.InputError('Select a day and keep the plan under 4000 characters.');
+  if (!(await data.coachesAthlete(user, p.data.athleteId))) throw new logging.InputError('Only the coach can edit the plan.', 403);
   return logging.setPlanNote(p.data.dayId, p.data.athleteId, p.data.text);
 }));
 
 router.get('/fitness/warm-up-templates', wrap(async (_req, res) => {
-  if (!userOf(res)?.isCoach) throw new logging.InputError('Only the coach can see saved warm-ups.', 403);
+  if (!userOf(res) || !(await data.isCoaching(userOf(res)!))) throw new logging.InputError('Only the coach can see saved warm-ups.', 403);
   return { templates: await warmups.listWarmUpTemplates() };
 }));
 
@@ -354,7 +354,9 @@ router.post('/fitness/knowledge/ask', wrap(async (req, res) => {
   if (!user?.isCoach) throw new logging.InputError('Only the coach can ask Chalkboard (for now).', 403);
   const body = AskKnowledgeBody.safeParse(req.body);
   if (!body.success) throw new logging.InputError('Write a question.');
-  return knowledgeAsk.ask(body.data.question, user.id);
+  const g = await data.programFor(user, req.get('x-program')).catch(() => data.GROUP_ID);
+  const today = body.data.today && /^\d{4}-\d\d-\d\d$/.test(body.data.today) ? body.data.today : undefined;
+  return knowledgeAsk.ask(body.data.question, user.id, g, today);
 }));
 
 router.post('/fitness/knowledge/teach', wrap(async (req, res) => {

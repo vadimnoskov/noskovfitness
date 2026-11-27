@@ -176,3 +176,13 @@ export function prescribedReps(w: Workout): number | undefined {
   }
   return total * (s.rounds ?? 1);
 }
+
+/**
+ * Movements whose amount (reps, distance, calories or time) was not read from the text, in a timed workout without a
+ * rep scheme. A card then shows a bare "Air Bike" line; the workout is shown as written so it can still be understood.
+ */
+export function amountsMissing(w: Workout): MovementPrescription[] {
+  const s = w.structure;
+  if (s.kind === 'sets' || s.kind === 'max' || s.kind === 'tabata' || ('scheme' in s && s.scheme?.length)) return [];
+  return w.movements.filter((m) => m.reps === undefined && m.distanceM === undefined && m.calories === undefined && m.seconds === undefined);
+}

@@ -81,7 +81,7 @@ const cardText = (c: MergedCard, settings: (p: string) => unknown) => [
 ].filter(Boolean).join('\n');
 
 /** Answer a question and remember it. */
-export async function ask(question: string, byAthlete: string): Promise<AskAnswer & { id: string }> {
+export async function ask(question: string, byAthlete: string, groupId = GROUP_ID, today = new Date().toISOString().slice(0, 10)): Promise<AskAnswer & { id: string }> {
   const q = question.trim();
   if (q.length < 3 || q.length > 1000) throw new InputError('Ask a question of up to 1,000 characters.');
   const c = getClient();
@@ -89,11 +89,12 @@ export async function ask(question: string, byAthlete: string): Promise<AskAnswe
 
   const [cards, policy, plan] = await Promise.all([
     loadAllCards(),
-    getPolicy(GROUP_ID),
+    getPolicy(groupId),
     sql`SELECT d.date::text AS date, to_char(d.date, 'Dy') AS dow, d.status, coalesce(w.name, '') AS name, w.tags->>'timeDomain' AS td,
-          w.tags->'modalityPattern' AS mods, coalesce(d.origin->'score'->'notes', '[]'::jsonb) AS notes
+          w.tags->'modalityPattern' AS mods, coalesce(d.origin->'score'->'notes', '[]'::jsonb) AS notes, w.movements, w.structure,
+          left(coalesce(w.original_text, ''), 400) AS text
         FROM program_days d JOIN workouts w ON w.id = d.main_workout_id
-        WHERE d.group_id = ${GROUP_ID} AND d.date BETWEEN current_date - 14 AND current_date + 14 ORDER BY d.date, d.seq`,
+        WHERE d.group_id = ${groupId} AND d.date BETWEEN ${today}::date - 14 AND ${today}::date + 14 ORDER BY d.date, d.seq`,
   ]);
   // Cards the plan's notes point to are always relevant to questions about the plan.
   const planNotes = plan.flatMap((r) => r.notes as string[]);
@@ -105,7 +106,8 @@ export async function ask(question: string, byAthlete: string): Promise<AskAnswe
     `Question from the coach: ${q}`,
     `\nAreas of knowledge: ${AREAS.map((a) => a.name).join('; ')}.`,
     `\nKnowledge cards (${picked.length} most related of ${cards.length}):\n\n${picked.map((x) => cardText(x, setting)).join('\n\n') || '(none matched the question)'}`,
-    `\nPlan, two weeks back and ahead (date, day, status, workout, day type, modalities, planner notes):\n${plan.map((r) => `${r.date} ${r.dow} ${r.status} | ${r.name || '(unnamed)'} | ${r.td ?? '?'} | ${(r.mods as string[] | null)?.join('') ?? ''} | ${(r.notes as string[]).join('; ')}`).join('\n') || '(no planned days)'}`,
+    `\nToday is ${today} (the coach's date; "tomorrow" is the day after).`,
+    `\nPlan, two weeks back and ahead (date, day, status, workout, day type, modalities, planner notes), each with the workout as the app reads it and as originally written:\n${plan.map((r) => `${r.date} ${r.dow} ${r.status} | ${r.name || '(unnamed)'} | ${r.td ?? '?'} | ${(r.mods as string[] | null)?.join('') ?? ''} | ${(r.notes as string[]).join('; ')}\n  read as: ${describe(r.structure, r.movements)}${r.text ? `\n  written: ${(r.text as string).replace(/\s*\n\s*/g, ' / ')}` : ''}`).join('\n') || '(no planned days)'}`,
   ].join('\n');
 
   let out: AskAnswer;
@@ -133,4 +135,12 @@ export async function ask(question: string, byAthlete: string): Promise<AskAnswe
 export async function recentQuestions(limit = 30) {
   const rows = await sql`SELECT id, question, answer, card_ids, covered, gap, at::text AS at FROM knowledge_questions ORDER BY at DESC LIMIT ${limit}`;
   return rows.map((r) => ({ id: r.id, question: r.question, answer: r.answer, cardIds: r.card_ids as string[], covered: r.covered, gap: r.gap, at: r.at }));
+}
+
+/** A short reading of a stored workout: structure, then each movement with its amount (or "no amount read"). */
+function describe(structure: { kind?: string; rounds?: number; minutes?: number; scheme?: number[] } | null, movements: { movement: { family: string }; reps?: number; distanceM?: number; calories?: number; seconds?: number }[] | null) {
+  const s = structure ?? {};
+  const head = [s.kind, s.rounds ? `${s.rounds} rounds` : '', s.minutes ? `${s.minutes} min` : '', s.scheme ? s.scheme.join('-') : ''].filter(Boolean).join(' ');
+  const ms = (movements ?? []).map((m) => `${m.movement.family} ${m.reps ? `${m.reps} reps` : m.distanceM ? `${m.distanceM} m` : m.calories ? `${m.calories} cal` : m.seconds ? `${m.seconds} s` : s.scheme ? '(scheme)' : '(no amount read)'}`);
+  return `${head}: ${ms.join(', ')}`;
 }

@@ -6,7 +6,7 @@ import { sql } from '@workspace/fitness-db';
 import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, movementWeaknesses, weaknessList, detectedWhy, SKILL_MOVEMENTS, type Workout } from '@workspace/fitness-core';
 import { forgetWeaknesses } from './rx-context';
 import { InputError } from './logging';
-import { programsFor } from './data';
+import { programsFor, coachesAthlete } from './data';
 import type { User } from './accounts';
 
 /** Yourself, or someone you coach (family members who log for others see only their own numbers here). */
@@ -78,7 +78,7 @@ export async function saveCheckIn(user: User, input: { athleteId: string; date: 
 
 /** Coach: the starting conditioning estimate (0–1) for a person, or null. */
 export async function setConditioningPrior(user: User, input: { athleteId: string; prior?: number | null }) {
-  if (!user.isCoach) throw new InputError('Only the coach can set this.', 403);
+  if (!(await coachesAthlete(user, input.athleteId))) throw new InputError('Only the coach can set this.', 403);
   const v = input.prior ?? null;
   if (v !== null && !(v >= 0 && v <= 1)) throw new InputError('Use a number from 0 to 1.');
   await sql`UPDATE athletes SET conditioning_prior = ${v} WHERE id = ${input.athleteId}`;
@@ -87,7 +87,7 @@ export async function setConditioningPrior(user: User, input: { athleteId: strin
 
 /** Coach: the person's list of skill weaknesses (movement keys from SKILL_MOVEMENTS) for warm-up weakness work. */
 export async function setWeaknesses(user: User, input: { athleteId: string; keys: string[] }) {
-  if (!user.isCoach) throw new InputError('Only the coach can set this.', 403);
+  if (!(await coachesAthlete(user, input.athleteId))) throw new InputError('Only the coach can set this.', 403);
   const keys = [...new Set(input.keys)];
   if (keys.some((k) => !SKILL_MOVEMENTS.some((m) => m.key === k))) throw new InputError('Choose movements from the list.');
   await sql`UPDATE athletes SET weaknesses = ${sql.json(keys)} WHERE id = ${input.athleteId}`;
