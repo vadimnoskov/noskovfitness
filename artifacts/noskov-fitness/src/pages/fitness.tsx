@@ -14,7 +14,7 @@ type Picture = {
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
   model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
 };
-type Meas = { kinds: { kind: string; label: string; how: string }[]; latest: Record<string, { date: string; value: number; unit: string } | null> };
+type Meas = { kinds: { kind: string; label: string; how: string }[]; latest: Record<string, { date: string; value: number; unit: string } | null>; counts?: Record<string, number>; range?: Record<string, string> };
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 const watts = (p: number) => Math.round(p * 1.3558);
@@ -60,6 +60,8 @@ function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: 
   const save = useSaveMeasurements();
   const imp = useImportWeights();
   const [impMsg, setImpMsg] = useState<string | null>(null);
+  // Open on first view when measurements are missing; never folded away by a save or an import.
+  const [startOpen] = useState(open);
   const qc = useQueryClient();
   const [vals, setVals] = useState<Record<string, string>>({});
   const [date, setDate] = useState(localToday());
@@ -78,14 +80,14 @@ function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: 
   };
   const importFile = async (f: File | undefined) => {
     if (!f) return;
-    setImpMsg(null);
+    setImpMsg(`Reading ${f.name}…`);
     imp.mutate({ data: { athleteId, csv: await f.text() } }, {
       onSuccess: (r) => { const x = r as { imported: number; from: string; to: string }; setImpMsg(`Imported ${x.imported} weights, ${x.from} to ${x.to}.`); qc.invalidateQueries({ queryKey: getGetMeasurementsQueryKey({ athleteId }) }); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); },
       onError: (e) => setImpMsg((e as { data?: { error?: string } }).data?.error ?? 'Could not import that file.'),
     });
   };
   return (
-    <details className="card" open={open}>
+    <details className="card" open={startOpen}>
       <summary><b>Body measurements</b> <span className="small">({m.kinds.filter((k) => m.latest[k.kind]).length} of 6 entered)</span></summary>
       <p className="small">Used only to compute work and power; kept in the app's database. Re-enter bodyweight when it changes; the heights rarely change for adults.</p>
       <form onSubmit={submit} className="measform">
@@ -105,9 +107,10 @@ function Measurements({ athleteId, lengthUnit, weightUnit, open }: { athleteId: 
         {ok ? <p className="ok">Saved.</p> : null}
       </form>
       <label className="small" style={{ display: 'block', marginTop: 10 }}>Or import bodyweight history from a BTWB measurements export (.csv):{' '}
-        <input type="file" accept=".csv,text/csv" disabled={imp.isPending} onChange={(e) => { void importFile(e.target.files?.[0]); e.target.value = ''; }} />
+        <input type="file" accept=".csv,text/csv,text/plain,text/comma-separated-values,application/vnd.ms-excel" disabled={imp.isPending} onChange={(e) => { void importFile(e.target.files?.[0]); e.target.value = ''; }} />
       </label>
       {impMsg ? <p className="small" role="status">{impMsg}</p> : null}
+      <p className="small">Bodyweights stored: {m.counts?.weight ?? 0}{m.counts?.weight ? ` (${m.range?.weight})` : ''}.</p>
     </details>
   );
 }

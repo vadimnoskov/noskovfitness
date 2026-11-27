@@ -15,7 +15,13 @@ export async function getMeasurements(user: User, athleteId: string) {
   allowed(user, athleteId);
   const rows = await sql`SELECT kind, date::text AS date, value::float8 AS value, unit FROM measurements WHERE athlete_id = ${athleteId} ORDER BY date DESC`;
   const latest = Object.fromEntries(DIM_KINDS.map((k) => [k, rows.find((r) => r.kind === k) ?? null]));
-  return { kinds: DIM_KINDS.map((k) => ({ kind: k, ...DIM_LABELS[k] })), latest, history: rows.filter((r) => (DIM_KINDS as readonly string[]).includes(r.kind as string)).slice(0, 60) };
+  const counts: Record<string, number> = {}, range: Record<string, string> = {};
+  for (const k of DIM_KINDS) {
+    const ds = rows.filter((r) => r.kind === k).map((r) => r.date as string);
+    counts[k] = ds.length;
+    if (ds.length) range[k] = `${ds[ds.length - 1]} to ${ds[0]}`;
+  }
+  return { kinds: DIM_KINDS.map((k) => ({ kind: k, ...DIM_LABELS[k] })), latest, counts, range, history: rows.filter((r) => (DIM_KINDS as readonly string[]).includes(r.kind as string)).slice(0, 60) };
 }
 
 /** Save one set of measurements (any of the six) for a date. Lengths in in or cm, weight in lb or kg. */

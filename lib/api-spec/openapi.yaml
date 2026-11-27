@@ -510,7 +510,7 @@ components:
       required: [athleteId, csv]
       properties:
         athleteId: { type: string }
-        csv: { type: string, maxLength: 500000 }
+        csv: { type: string, maxLength: 1500000 }
     MeasurementsInput:
       type: object
       required: [athleteId, date, lengthUnit, weightUnit, values]

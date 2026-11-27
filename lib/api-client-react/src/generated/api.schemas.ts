@@ -34,7 +34,7 @@ export interface KnowledgeQuestionInput {
 
 export interface WeightImportInput {
   athleteId: string;
-  /** @maxLength 500000 */
+  /** @maxLength 1500000 */
   csv: string;
 }
 

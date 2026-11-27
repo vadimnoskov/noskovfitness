@@ -282,7 +282,7 @@ export const SaveMeasurementsResponse = zod.record(zod.string(), zod.unknown())
 /**
  * @summary Import a BTWB body-measurement export (bodyweight by date) for one person (self, or coach for anyone)
  */
-export const importWeightsBodyCsvMax = 500000;
+export const importWeightsBodyCsvMax = 1500000;
 
 
 
