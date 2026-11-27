@@ -31,6 +31,12 @@ export interface ProgrammingPolicy {
     movementExceptionDays: number;
     /** Minimum days between lift tests (1RM, 3RM…), so most heavy days stay regular heavy work, not max attempts. */
     minDaysBetweenLiftTests: number;
+    /** Volume-jump warning: more than this × a person's most reps of a movement in one workout in 12 months. */
+    volumeJumpFactor: number;
+    /** …and only from this many reps up (half for jumping pull-ups and GHD sit-ups). */
+    volumeJumpMinReps: number;
+    /** Days without a logged result after which a person is warned to scale volume for two weeks. */
+    returnAfterDays: number;
     maxBenchmarksPerWeek: number;
     /** Longest workout the engine proposes on a normal day, minutes. */
     maxMinutes: number;
@@ -50,7 +56,7 @@ export const DEFAULT_POLICY: ProgrammingPolicy = {
     modality: { G: 44, W: 39, M: 17 },
   },
   weights: { variety: 50, freshness: 20, weakness: 15, benchmark: 15 },
-  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14 },
+  rules: { noRepeatWorkoutDays: 180, noSameMovementConsecutiveDays: true, noConsecutiveHeavyDays: true, maxBenchmarksPerWeek: 1, maxMinutes: 60, groupSize: 4, heavyExceptionDays: 28, movementExceptionDays: 28, minDaysBetweenLiftTests: 14, volumeJumpFactor: 2, volumeJumpMinReps: 30, returnAfterDays: 30 },
 };
 
 /** Fill any missing fields from the defaults (older saved policies keep working when new settings are added). */

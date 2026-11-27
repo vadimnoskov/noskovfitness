@@ -25,6 +25,9 @@ export async function savePolicyAction(f: FormData) {
       heavyExceptionDays: num(f, 'rules.heavyExceptionDays', cur.rules.heavyExceptionDays),
       movementExceptionDays: num(f, 'rules.movementExceptionDays', cur.rules.movementExceptionDays),
       minDaysBetweenLiftTests: num(f, 'rules.minDaysBetweenLiftTests', cur.rules.minDaysBetweenLiftTests),
+      volumeJumpFactor: num(f, 'rules.volumeJumpFactor', cur.rules.volumeJumpFactor),
+      volumeJumpMinReps: num(f, 'rules.volumeJumpMinReps', cur.rules.volumeJumpMinReps),
+      returnAfterDays: num(f, 'rules.returnAfterDays', cur.rules.returnAfterDays),
     },
   };
   await savePolicy(GROUP_ID, next);

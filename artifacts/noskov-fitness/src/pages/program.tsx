@@ -160,6 +160,9 @@ function DayCard({ d, zoom, profiles, run, onDragStart, onDragEnd }: {
         </>
       ) : null}
       {zoom === 2 && d.warnings.length ? <p className="warn">{d.warnings.join(' · ')}</p> : null}
+      {d.volume?.length ? (zoom === 2
+        ? <div className="warn" role="note"><b>Volume</b>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</div>
+        : <details className="warn small"><summary>Volume warning: {d.volume.map((v) => v.name).join(', ')}</summary>{d.volume.map((v) => <div key={v.athleteId}>{v.name}: {v.warnings.join('; ')}</div>)}</details>) : null}
       {zoom === 2 && d.origin.by === 'engine' ? <ScoreBars s={d.origin.score} /> : null}
       <div className="actions">
         {d.status === 'proposed' ? <ActionForm action="approve"><input type="hidden" name="id" value={d.id} /><button className="btn primary sm">Approve</button></ActionForm> : null}

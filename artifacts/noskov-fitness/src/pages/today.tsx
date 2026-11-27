@@ -14,7 +14,7 @@ import { WarmUpBox, NoteText, type DayWarmUp } from '@/components/WarmUp';
 type Change = { index: number; from?: number; to: number; unit: string };
 type Past = { id: string; date: string; score: Record<string, number>; rx: boolean; completed: boolean; notes: string | null };
 type Planned = { dayId: string; status: string; workout: Workout; standard: Workout; changes: Change[]; override: boolean; location?: string; tags: WorkoutTags;
-  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp };
+  totalReps?: number; previous: Past[]; previousCount: number; best: Past | null; coaching: string[]; warmUp: DayWarmUp; volumeWarnings?: string[] };
 type TodayData = { date: string; planned: Planned[]; results: ResultRow[] };
 
 export function AthletePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -205,6 +205,9 @@ export default function Today() {
             <div className="dayblock" key={p.dayId}>
             <WarmUpBox dayId={p.dayId} warmUp={p.warmUp} coach={me.user.isCoach} />
             <WorkoutCard workout={p.workout} tags={p.tags} sex={athlete.sex}>
+              {p.volumeWarnings?.length ? (
+                <div className="warn" role="note"><b>Volume: build up gradually.</b> {p.volumeWarnings.join('; ')}. Consider fewer reps or rounds today (L1: increase volume slowly; prolonged-eccentric movements carry the most rhabdo risk).</div>
+              ) : null}
               <PersonalNote p={p} name={athlete.id === me.user.id ? 'Your' : athlete.name} />
               {p.status === 'proposed' ? <p className="small">Proposed by the engine; the coach hasn't approved it yet.</p> : null}
               {me.user.isCoach ? <VersionEditor key={`${p.dayId}|${athlete.id}|${JSON.stringify(p.workout.movements.map((x) => x.load))}`} p={p} athlete={athlete} /> : null}

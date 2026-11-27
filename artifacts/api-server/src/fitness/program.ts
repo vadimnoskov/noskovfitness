@@ -1,6 +1,7 @@
 import { sql } from '@workspace/fitness-db';
 import { withCap, type Workout, type WorkoutTags, type ScoreBreakdown } from '@workspace/fitness-core';
 import { resolveWarmUp, type DayWarmUp } from './warmups';
+import { volumeWarningsFor } from './volume';
 
 export interface PlannedDay {
   id: string; date: string; seq: number; status: 'proposed' | 'approved' | 'done' | 'skipped';
@@ -8,6 +9,8 @@ export interface PlannedDay {
   workout: Workout; tags: WorkoutTags; origin: { by: string; score?: ScoreBreakdown };
   alternatives: { candidateId: string; score: ScoreBreakdown; name?: string | null; tags?: WorkoutTags; workout?: Workout }[];
   warnings: string[];
+  /** Volume-jump warnings per person (from today on). */
+  volume: { athleteId: string; name: string; warnings: string[] }[];
   repeat: { everyDays: number; until: string | null } | null;
   warmUp: DayWarmUp;
 }
@@ -22,6 +25,10 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
   const altIds = [...new Set(rows.flatMap((r) => (r.alternatives as { candidateId: string }[]).map((a) => a.candidateId)))];
   const alts = altIds.length ? await sql`SELECT id, name, structure, movements, score_type, tags FROM workouts WHERE id = ANY(${altIds})` : [];
   const altById = new Map(alts.map((a) => [a.id as string, a]));
+  const members = await sql`SELECT a.id, a.name FROM athletes a JOIN group_members gm ON gm.athlete_id = a.id WHERE gm.group_id = ${groupId} ORDER BY a.name`;
+  const today = new Date().toISOString().slice(0, 10);
+  const vol = await volumeWarningsFor(members as unknown as { id: string; name: string }[],
+    rows.filter((r) => r.status === 'proposed' || r.status === 'approved').map((r) => ({ date: r.date as string, workout: { id: r.wid, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type } as Workout })), today);
   return rows.map((r) => {
     const workout: Workout = { id: r.wid, name: r.name ?? undefined, structure: withCap(r.structure, r.original_text), movements: r.movements, scoreType: r.score_type };
     return {
@@ -30,6 +37,8 @@ export async function getPlannedDays(groupId: string, from: string, to: string):
     warmUp: resolveWarmUp(workout, r.tags, r.day_warm_up, r.workout_warm_up),
     repeat: r.repeat_every_days ? { everyDays: r.repeat_every_days, until: r.repeat_until } : null,
     warnings: r.warnings,
+    volume: r.status === 'proposed' || r.status === 'approved'
+      ? members.map((m) => ({ athleteId: m.id as string, name: m.name as string, warnings: vol.get(`${m.id}|${r.date}`) ?? [] })).filter((x) => x.warnings.length) : [],
     alternatives: (r.alternatives as PlannedDay['alternatives']).map((a) => {
       const w = altById.get(a.candidateId);
       return { ...a, name: w?.name, tags: w?.tags, workout: w ? { id: w.id, name: w.name ?? undefined, structure: w.structure, movements: w.movements, scoreType: w.score_type } : undefined };
