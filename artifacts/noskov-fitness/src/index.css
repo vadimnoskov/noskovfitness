@@ -267,3 +267,7 @@ section.program{border-top:1px solid var(--line);padding-top:6px}
 .equip input[name^="loads"],.equip input[name^="note"]{width:min(260px,40vw);margin:1px 0}
 .stack{display:grid;gap:8px;max-width:720px}
 .aswritten{border:1px dashed var(--line);border-radius:8px;padding:6px 10px}.aswritten pre{white-space:pre-wrap;font:inherit;font-size:14px;margin:6px 0 0}
+ul.screen { list-style: none; padding-left: 0; }
+ul.screen li { padding: 4px 0; border-bottom: 1px solid var(--line, #e5e5e5); }
+ul.screen label { margin-right: 6px; white-space: nowrap; }
+ul.screen .marks { display: flex; gap: 14px; margin-top: 2px; }

@@ -645,7 +645,7 @@ export function useGetPeople<TData = Awaited<ReturnType<typeof getPeople>>, TErr
 
 
 
-export const getPeopleActionUrl = (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory',) => {
+export const getPeopleActionUrl = (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory' | 'scheduleStarter' | 'saveScreen' | 'clearStarter',) => {
 
 
 
@@ -656,7 +656,7 @@ export const getPeopleActionUrl = (action: 'addAthlete' | 'editAthlete' | 'editP
 /**
  * @summary Coach - add or change an athlete, a program or a location
  */
-export const peopleAction = async (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory',
+export const peopleAction = async (action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory' | 'scheduleStarter' | 'saveScreen' | 'clearStarter',
     fitnessForm: FitnessForm, options?: Parameters<typeof customFetch>[1]): Promise<FitnessPage> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
@@ -718,7 +718,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type PeopleActionMutationResult = NonNullable<Awaited<ReturnType<typeof peopleAction>>>
     export type PeopleActionMutationBody = BodyType<FitnessForm>
     export type PeopleActionMutationError = ErrorType<unknown>
-    export type PeopleActionMutationVariables = {action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory';data: BodyType<FitnessForm>}
+    export type PeopleActionMutationVariables = {action: 'addAthlete' | 'editAthlete' | 'editProgram' | 'saveLocation' | 'importHistory' | 'scheduleStarter' | 'saveScreen' | 'clearStarter';data: BodyType<FitnessForm>}
 
     /**
  * @summary Coach - add or change an athlete, a program or a location

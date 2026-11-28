@@ -21,6 +21,8 @@ export const athletes = pgTable('athletes', {
   conditioningPrior: real('conditioning_prior'),
   /** The coach's list of skill weaknesses (movement keys, e.g. "hspu", "jump-rope:du") for warm-up weakness work. */
   weaknesses: jsonb('weaknesses').notNull().default(sql`'[]'::jsonb`),
+  /** Starter tests: { from, beginner, screen: { movementKey: 'good' | 'needs-work' | 'not-here' }, screenDate }. */
+  starter: jsonb('starter'),
 }, t => [check('athletes_sex_check', sql`${t.sex} IN ('male','female')`), check('athletes_units_check', sql`${t.units} IN ('lb','kg')`)]);
 
 export const groups = pgTable('groups', {

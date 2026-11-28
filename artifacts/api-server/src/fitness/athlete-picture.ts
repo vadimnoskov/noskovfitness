@@ -5,6 +5,7 @@
 import { sql } from '@workspace/fitness-db';
 import { conditioning, readiness, powerPoints, weaknessGrid, type TimeDomain, type Modality, parseBtwbWeights, DIM_KINDS, DIM_LABELS, WORK_MODEL, DOUBLE_UNDER_IN, powerCurve, curveArea, dimsAt, powerChange, CURVE_MINUTES, movementWeaknesses, weaknessList, detectedWhy, SKILL_MOVEMENTS, type Workout } from '@workspace/fitness-core';
 import { forgetWeaknesses } from './rx-context';
+import { getStarter } from './starter';
 import { InputError } from './logging';
 import { programsFor, coachesAthlete } from './data';
 import type { User } from './accounts';
@@ -153,6 +154,7 @@ export async function getAthletePicture(user: User, athleteId: string) {
       ...Object.entries(WORK_MODEL).map(([family, v]) => ({ family, ...v })),
     ],
     paces, grid, conditioning: cond, readiness: { ...ready, checkIns: checks.length },
+    starter: await getStarter(athleteId, today),
     weaknesses: weaknessesOf(results, (Array.isArray(athlete.weaknesses) ? athlete.weaknesses : []) as string[], today),
   };
 }

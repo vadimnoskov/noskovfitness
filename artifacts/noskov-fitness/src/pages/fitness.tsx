@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior, useSetWeaknesses } from '@workspace/api-client-react';
+import { useGetAthletePicture, getGetAthletePictureQueryKey, useGetMeasurements, getGetMeasurementsQueryKey, useSaveMeasurements, useImportWeights, useSetConditioningPrior, useSetWeaknesses, usePeopleAction, getGetFitnessPageQueryKey } from '@workspace/api-client-react';
 import { useMe, localToday, isCoaching } from '@/lib/session';
 import { AthletePicker } from '@/pages/today';
 
@@ -12,7 +12,7 @@ type Picture = {
   allTime: (Curve[number] & { from: { date: string; name?: string; id: string } | null })[];
   byYear: { year: string; curve: Curve; points: number; area: number | null }[]; commonMinutes: number[];
   repeats: { workoutId: string; name: string; rx: boolean; times: number; first: { date: string; sec: number }; best: { date: string; sec: number }; last: { date: string; sec: number }; lastVsFirst: number; bestVsFirst: number }[];
-  grid: Grid; weaknesses?: Weak;
+  grid: Grid; weaknesses?: Weak; starter?: StarterInfo;
   conditioning: { level: number | null; fromData: number | null; recentN: number; recentDays: number; prior: number | null; best: { from: string; to: string; n: number } | null; perWeek8: number; perWeekUsual: number };
   readiness: { recent: number | null; recentN: number; checkIns: number; checkIn: { pairs: number; correlation: number | null; used: boolean; today: number | null; suggests: number | null } };
   model: { family: string; basis: 'source' | 'derived' | 'assumed' | 'machine'; rule: string }[];
@@ -56,6 +56,7 @@ function Body({ athleteId, lengthUnit, weightUnit }: { athleteId: string; length
       {!p.hasDims ? <p className="kopen">Runs and rows are counted without measurements. Enter all six measurements above to count the other movements.</p> : null}
       {p.conditioning ? <Condition p={p} athleteId={athleteId} /> : null}
       {p.grid ? <GridSection g={p.grid} /> : null}
+      {p.starter ? <StarterSection s={p.starter} athleteId={athleteId} /> : null}
       {p.weaknesses ? <WeaknessSection w={p.weaknesses} athleteId={athleteId} /> : null}
       {p.coverage.counted ? <CurveSection p={p} /> : null}
       <Repeats p={p} />
@@ -345,5 +346,83 @@ function WeaknessSection({ w, athleteId }: { w: Weak; athleteId: string }) {
         </form>
       ) : null}
     </section>
+  );
+}
+
+type Mark = 'good' | 'needs-work' | 'not-here';
+type StarterInfo = {
+  starter: { from?: string; beginner?: boolean; screen?: Record<string, Mark>; screenDate?: string } | null;
+  rules: { halfVolumeDays: number; noSingleMaxDays: number; conditioningTestsFrom: number };
+  tests: { key: string; label: string; what: string; last?: { date: string; text: string }; due: boolean; dueOn?: string; level?: string }[];
+  scheduled: { id: string; date: string; status: string; test: string; name: string }[];
+  movements: { key: string; name: string; pages: string }[];
+};
+const MARKS: { v: Mark; label: string }[] = [{ v: 'good', label: 'good' }, { v: 'needs-work', label: 'needs work' }, { v: 'not-here', label: 'not here' }];
+
+/** Starter tests: the movement check, the test schedule, and each test's last result and quarterly re-test. */
+function StarterSection({ s, athleteId }: { s: StarterInfo; athleteId: string }) {
+  const me = useMe();
+  const qc = useQueryClient();
+  const act = usePeopleAction();
+  const coach = !!me?.user.isCoach || (isCoaching(me) && athleteId !== me?.user.id);
+  const [from, setFrom] = useState(localToday());
+  const [beginner, setBeginner] = useState(s.starter?.beginner ?? true);
+  const [marks, setMarks] = useState<Record<string, Mark>>(s.starter?.screen ?? {});
+  const [screenDate, setScreenDate] = useState(s.starter?.screenDate ?? localToday());
+  const [msg, setMsg] = useState<string | null>(null);
+  const run = (action: 'scheduleStarter' | 'saveScreen' | 'clearStarter', data: Record<string, string>, ok: (r: Record<string, unknown>) => string) => {
+    setMsg(null);
+    act.mutate({ action, data: { athleteId, ...data } }, {
+      onSuccess: (r) => { setMsg(ok(r as Record<string, unknown>)); qc.invalidateQueries({ queryKey: getGetAthletePictureQueryKey({ athleteId }) }); qc.invalidateQueries({ queryKey: getGetFitnessPageQueryKey() }); },
+      onError: (e) => setMsg((e as { data?: { error?: string } }).data?.error ?? 'Could not save.'),
+    });
+  };
+  const upcoming = s.scheduled.filter((d) => d.date >= localToday() && d.status !== 'done');
+  const due = s.tests.filter((t) => t.due);
+  const st = s.starter;
+  return (
+    <details className="card" open={coach && (!st?.from || upcoming.length > 0)}>
+      <summary><b>Starter tests</b> <span className="small">({s.tests.length - due.length} of {s.tests.length} done in the last 3 months)</span></summary>
+      <p className="small">A new athlete's first weeks: mechanics first, then consistency, then intensity. A movement check of the nine foundational movements; heavy 5s (no single-rep max); strict pull-ups, push-ups and dips for max reps; and three conditioning tests. Each one is re-tested every 3 months and kept here on one page (L1: Scaling, Gymnastics, Movement Guide; L2: benchmarks).</p>
+      {st?.from ? <p className="small">Started {st.from}{st.beginner ? `. Beginner: half volume until day ${s.rules.halfVolumeDays}, no single-rep max until day ${s.rules.noSingleMaxDays} (Individual Rx shows it on Today).` : '.'}</p> : null}
+      <table className="equip small"><thead><tr><th>Test</th><th>Last</th><th>Next</th></tr></thead><tbody>
+        {s.tests.map((t) => (
+          <tr key={t.key}><td>{t.label}<br /><span className="small">{t.what}</span></td>
+            <td>{t.last ? <>{t.last.text} <span className="small">({t.last.date})</span>{t.level ? <><br /><span className="small">{t.level}</span></> : null}</> : '—'}</td>
+            <td>{t.due ? <b>due</b> : t.dueOn}</td></tr>))}
+      </tbody></table>
+      {upcoming.length ? (
+        <>
+          <p className="small"><b>Scheduled:</b></p>
+          <ul className="small">{upcoming.map((d) => <li key={d.id}>{d.date}: {d.name}</li>)}</ul>
+        </>
+      ) : null}
+      {coach ? (
+        <form className="row wrap" onSubmit={(e) => { e.preventDefault(); run('scheduleStarter', { from, beginner: beginner ? '1' : '0' }, (r) => {
+          const n = (r.scheduled as unknown[]).length, no = r.notPossible as { test: string; why: string }[];
+          return `Scheduled ${n} tests as approved days on the program; the open days around them were re-planned.${no.length ? ` Not scheduled: ${no.map((x) => `${x.test} (${x.why})`).join('; ')}.` : ''}`;
+        }); }}>
+          <label>From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label><input type="checkbox" checked={beginner} onChange={(e) => setBeginner(e.target.checked)} /> New to this training (half volume for 2 weeks; conditioning tests from week 3)</label>
+          <button type="submit" className="btn" disabled={act.isPending}>{upcoming.length ? 'Re-schedule starter tests' : 'Schedule starter tests'}</button>
+          {st?.from ? <button type="button" className="btn sm" disabled={act.isPending} onClick={() => run('clearStarter', { today: localToday() }, () => 'Removed the upcoming starter days and the beginner rules.')}>Stop</button> : null}
+        </form>
+      ) : null}
+      <h3 className="sec">Movement check</h3>
+      <p className="small">Watch each movement against its points of performance (Movement Guide pages in brackets) and mark it. Overhead and barbell movements a location cannot do are "not here".{st?.screenDate ? ` Last checked ${st.screenDate}.` : ''}</p>
+      <ul className="screen">{s.movements.map((m) => (
+        <li key={m.key}>{me?.user.isCoach ? <Link href={`/knowledge/movements/${m.key}`}>{m.name}</Link> : m.name} <span className="small">(pp. {m.pages})</span>{' '}
+          {coach ? <div className="marks">{MARKS.map((x) => (
+            <label key={x.v} className="small"><input type="radio" name={`scr-${m.key}`} checked={marks[m.key] === x.v} onChange={() => setMarks({ ...marks, [m.key]: x.v })} /> {x.label} </label>
+          ))}</div> : <span className="small">{marks[m.key] ? MARKS.find((x) => x.v === marks[m.key])!.label : 'not checked'}</span>}
+        </li>))}</ul>
+      {coach ? (
+        <form className="row wrap" onSubmit={(e) => { e.preventDefault(); run('saveScreen', { date: screenDate, marks: JSON.stringify(marks) }, () => 'Movement check saved.'); }}>
+          <label>Date <input type="date" value={screenDate} onChange={(e) => setScreenDate(e.target.value)} /></label>
+          <button type="submit" className="btn" disabled={act.isPending || !Object.keys(marks).length}>Save the check</button>
+        </form>
+      ) : null}
+      {msg ? <p className="small" role="status">{msg}</p> : null}
+    </details>
   );
 }

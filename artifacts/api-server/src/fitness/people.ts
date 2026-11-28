@@ -8,6 +8,7 @@ import { DEFAULT_POLICY, LOCATION_LIMITS, type EquipmentItem } from '@workspace/
 import { InputError } from './logging';
 import type { User } from './accounts';
 import { programsFor, GROUP_ID } from './data';
+import { scheduleStarter, saveScreen, clearStarter } from './starter';
 
 const IMPLEMENTS = new Set(['bodyweight', 'barbell', 'dumbbell', 'kettlebell', 'medball', 'sandbag', 'plate', 'rings', 'bar', 'parallettes', 'box', 'rope', 'ghd',
   'wall', 'sled', 'rower', 'air-bike', 'bike-erg', 'ski-erg', 'jump-rope', 'none', 'rack', 'bench', 'p-bars']);
@@ -159,7 +160,7 @@ async function importHistory(user: User, f: Record<string, unknown>) {
   return { ok: true, ...(await importAthleteHistory(id, csv, user.id)) };
 }
 
-export const PEOPLE_ACTIONS = { addAthlete, editAthlete, editProgram, saveLocation, importHistory } as const;
+export const PEOPLE_ACTIONS = { addAthlete, editAthlete, editProgram, saveLocation, importHistory, scheduleStarter, saveScreen, clearStarter } as const;
 export async function peopleAction(user: User, action: string, f: Record<string, unknown>) {
   const fn = PEOPLE_ACTIONS[action as keyof typeof PEOPLE_ACTIONS];
   if (!fn) throw new InputError('Unknown action.', 404);

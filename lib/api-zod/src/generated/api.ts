@@ -81,7 +81,7 @@ export const GetPeopleResponse = zod.record(zod.string(), zod.unknown())
  * @summary Coach - add or change an athlete, a program or a location
  */
 export const PeopleActionParams = zod.object({
-  "action": zod.enum(['addAthlete', 'editAthlete', 'editProgram', 'saveLocation', 'importHistory'])
+  "action": zod.enum(['addAthlete', 'editAthlete', 'editProgram', 'saveLocation', 'importHistory', 'scheduleStarter', 'saveScreen', 'clearStarter'])
 })
 
 export const PeopleActionBody = zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())]))

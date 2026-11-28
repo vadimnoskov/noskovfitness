@@ -5,7 +5,7 @@
 import { volumeWarningsFor } from './volume';
 import { rxContext, forgetRxContext, weaknessContext } from './rx-context';
 import { lightDays, implementsOf } from './warmups';
-import { stimulusFor, individualRx, isSingleRepMax, weaknessWork, skillFamiliesToday, amountsMissing } from '@workspace/fitness-core';
+import { stimulusFor, individualRx, starterDay, isSingleRepMax, weaknessWork, skillFamiliesToday, amountsMissing } from '@workspace/fitness-core';
 import { sql } from '@workspace/fitness-db';
 import { nameOf, deriveTags, personalize, withCap, coachingNotes, compareResult, bestOf, prescribedReps, type PastResult, type Workout, type Result, type MovementPrescription, type ScoreType, type LoadProfile, type EquipmentProfile } from '@workspace/fitness-core';
 import type { User } from './accounts';
@@ -28,9 +28,10 @@ export async function canActFor(user: User, athleteId: string) {
 
 /** A person, their standing load setting, and the equipment at a program day's location. */
 async function personFor(athleteId: string) {
-  const [a] = await sql`SELECT id, name, sex, units, load_profile, birth_year FROM athletes WHERE id = ${athleteId}`;
+  const [a] = await sql`SELECT id, name, sex, units, load_profile, birth_year, starter FROM athletes WHERE id = ${athleteId}`;
   if (!a) throw new InputError('Unknown athlete.');
-  return { id: a.id as string, name: a.name as string, sex: a.sex as 'male' | 'female', units: a.units as 'lb' | 'kg', loadProfile: (a.load_profile as LoadProfile | null) ?? null, birthYear: (a.birth_year as number | null) ?? null };
+  return { id: a.id as string, name: a.name as string, sex: a.sex as 'male' | 'female', units: a.units as 'lb' | 'kg', loadProfile: (a.load_profile as LoadProfile | null) ?? null, birthYear: (a.birth_year as number | null) ?? null,
+    starter: (a.starter as { from?: string; beginner?: boolean } | null) ?? null };
 }
 
 /** The person's own version (their Rx) of a program day's workout: profile + location + the coach's override for that day. */
@@ -55,7 +56,10 @@ export async function versionFor(dayId: string, athleteId: string) {
   // Age on the day, counted as the youngest it can be from the birth year (so a teen is never treated as an adult early).
   const age = person.birthYear ? Number(String(d.date instanceof Date ? d.date.toISOString() : d.date).slice(0, 4)) - person.birthYear - 1 : null;
   const teenMax = age !== null && age < 18 && isSingleRepMax(v.workout);
-  const rx = d.rx_standard ? { workout: v.workout, changes: [], suggestions: [], predicted: undefined } : individualRx(v.workout, d.tags, ctx.pace, ctx.level, age);
+  const dayStr = String(d.date instanceof Date ? d.date.toISOString() : d.date).slice(0, 10);
+  // A beginner's first weeks (starter tests): half volume, no single-rep max.
+  const beginnerDay = person.starter?.beginner ? starterDay(person.starter.from, dayStr) : undefined;
+  const rx = d.rx_standard ? { workout: v.workout, changes: [], suggestions: [], predicted: undefined } : individualRx(v.workout, d.tags, ctx.pace, ctx.level, age, beginnerDay);
   return { day: d, person, standard, version: rx.workout, changes: v.changes, override: !!override, location: location?.name,
     rx: { changes: rx.changes, suggestions: rx.suggestions, predicted: rx.predicted, standard: !!d.rx_standard, teenMax, pace: ctx.pace, paceN: ctx.paceN, level: ctx.level } };
 }
